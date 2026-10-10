@@ -26,7 +26,8 @@ export async function apiGet<T>(path: string, params?: Params, signal?: AbortSig
   for (const [key, value] of Object.entries(params ?? {})) {
     if (value !== undefined && value !== null && value !== "") query.set(key, String(value));
   }
-  const url = `${BASE}${path}${query.size ? `?${query}` : ""}`;
+  const qs = query.toString(); // not query.size: missing in Safari < 17
+  const url = `${BASE}${path}${qs ? `?${qs}` : ""}`;
   let res: Response;
   try {
     res = await fetch(url, { signal, headers: { Accept: "application/json" } });

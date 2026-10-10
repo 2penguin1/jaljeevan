@@ -74,3 +74,10 @@ test("people counts read the Indian way", () => {
   expect(formatPeople(12000)).toBe("12,000");
   expect(formatPeople(null)).toBe("—");
 });
+
+test("map legend describes watch zones without claiming a source count", async () => {
+  const { Legend } = await import("@/features/map/Legend");
+  render(<Legend hazard="drought" />);
+  expect(screen.getByText("Watch: not confirmed yet")).toBeInTheDocument();
+  expect(screen.queryByText(/one source/)).toBeNull();
+});

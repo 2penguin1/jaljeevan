@@ -9,7 +9,7 @@ export function Legend({ hazard, indicatorLabel }: { hazard: Hazard; indicatorLa
       <dt className="h-2.5 w-3.5 rounded-[2px] border-[1.5px]" style={{ borderColor: c, background: mix(25) }} />
       <dd>Active zone, marker grows with its score</dd>
       <dt className="h-2.5 w-3.5 rounded-[2px] border-[1.5px] border-dashed" style={{ borderColor: c }} />
-      <dd>Watch: one source so far</dd>
+      <dd>Watch: not confirmed yet</dd>
       <dt className="size-2 justify-self-center rounded-full" style={{ background: c }} />
       <dd>Located post, last 48 hours</dd>
       {indicatorLabel && (

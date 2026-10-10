@@ -100,7 +100,7 @@ export function LandingPage() {
           <p className="mt-6 max-w-[44ch] text-[17px] leading-relaxed text-text-2 md:text-[19px]">
             Live signals from news, social media and citizens, turned into verified relief zones.
           </p>
-          <Figure className="mt-auto md:mt-14" value={s ? formatInt(s.active_zones) : "—"} label="zones confirmed by independent sources right now" />
+          <Figure className="mt-auto md:mt-14" value={s ? formatInt(s.active_zones) : "—"} label="zones confirmed right now" />
         </section>
         <section className="flex min-h-dvh flex-col justify-end px-5 pb-24 md:justify-center md:px-10">
           <Figure value={s ? formatPeople(s.people_affected) : "—"}

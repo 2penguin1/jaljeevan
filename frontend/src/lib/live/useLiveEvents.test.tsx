@@ -57,3 +57,35 @@ test("tracks connection status, parses events and invalidates the right queries"
   expect(FakeEventSource.last.closed).toBe(true);
   vi.unstubAllGlobals();
 });
+
+test("a stream the browser gave up on (CLOSED) is reopened with backoff", () => {
+  vi.useFakeTimers();
+  const created: FakeEventSource[] = [];
+  class Tracking extends FakeEventSource {
+    static CLOSED = 2;
+    readyState = 1;
+    constructor(url: string) {
+      super(url);
+      created.push(this);
+    }
+  }
+  vi.stubGlobal("EventSource", Tracking);
+  const client = new QueryClient();
+  const wrapper = ({ children }: { children: ReactNode }) => <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+  const invalidate = vi.spyOn(client, "invalidateQueries");
+  const { result, unmount } = renderHook(() => useLiveEvents(), { wrapper });
+  act(() => {
+    (created[0] as Tracking).readyState = 2; // e.g. the proxy answered 500 while the API restarted
+    created[0].emit("error");
+  });
+  expect(result.current.status).toBe("reconnecting");
+  act(() => vi.advanceTimersByTime(20_000));
+  expect(created).toHaveLength(2);
+  act(() => created[1].emit("open"));
+  expect(result.current.status).toBe("live");
+  expect(invalidate).toHaveBeenCalledWith({ queryKey: ["map", "zones"] }); // catch up on missed events
+  unmount();
+  expect(created[1].closed).toBe(true);
+  vi.useRealTimers();
+  vi.unstubAllGlobals();
+});

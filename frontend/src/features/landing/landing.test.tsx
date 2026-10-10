@@ -39,6 +39,7 @@ test("one headline, one button to the map, three live numbers", async () => {
   expect(await screen.findByText("39.8 lakh")).toBeInTheDocument();
   expect(screen.getByText("353")).toBeInTheDocument();
   expect(screen.getAllByRole("term")).toHaveLength(3);
+  expect(screen.getByText("zones confirmed right now")).toBeInTheDocument();
 });
 
 test("numbers show a dash when the API is down, and the page still works", async () => {

@@ -89,7 +89,7 @@ export function MapPage() {
             <EmptyState
               className="py-4"
               title={`No ${label} zones right now`}
-              body="A zone appears when posts from at least two independent sources point at the same place."
+              body="A zone appears when two independent sources, an official source or a weather signal point at the same place."
             />
           </div>
         )}

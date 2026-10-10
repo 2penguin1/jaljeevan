@@ -32,3 +32,15 @@ test("network failure becomes ApiError status 0", async () => {
   server.use(http.get("/api/v1/stats/overview", () => HttpResponse.error()));
   await expect(apiGet("/stats/overview")).rejects.toMatchObject({ status: 0 });
 });
+
+test("query strings survive browsers without URLSearchParams.size (Safari < 17)", async () => {
+  const original = Object.getOwnPropertyDescriptor(URLSearchParams.prototype, "size");
+  Object.defineProperty(URLSearchParams.prototype, "size", { get: () => undefined, configurable: true });
+  try {
+    server.use(http.get("/api/v1/map/zones", ({ request }) =>
+      HttpResponse.json({ hazard: new URL(request.url).searchParams.get("hazard") })));
+    expect(await apiGet("/map/zones", { hazard: "heat" })).toEqual({ hazard: "heat" });
+  } finally {
+    if (original) Object.defineProperty(URLSearchParams.prototype, "size", original);
+  }
+});
