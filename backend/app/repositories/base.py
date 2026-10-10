@@ -28,5 +28,9 @@ class BaseRepository(Generic[ModelT]):
         self.session.add_all(objs)
         self.session.flush()
 
+    def flush(self) -> None:
+        """Send pending in-memory changes to the database (still inside the caller's transaction)."""
+        self.session.flush()
+
     def list(self, limit: int = 100) -> list[ModelT]:
         return list(self.session.scalars(select(self.model).limit(limit)))

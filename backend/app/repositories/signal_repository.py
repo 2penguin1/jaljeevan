@@ -1,10 +1,10 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.dialects.postgresql import insert
 
-from app.models import Signal
+from app.models import Signal, SignalLabel
 from app.repositories.base import BaseRepository
 
 
@@ -28,6 +28,12 @@ class SignalRepository(BaseRepository[Signal]):
     def get_many(self, ids) -> list[Signal]:
         ids = list(ids)
         return list(self.session.scalars(select(Signal).where(Signal.id.in_(ids)))) if ids else []
+
+    def replace_labels(self, signal_id: uuid.UUID, labels: list[dict]) -> None:
+        """Idempotent: re-classification replaces the previous labels instead of adding to them."""
+        self.session.execute(delete(SignalLabel).where(SignalLabel.signal_id == signal_id))
+        self.session.add_all([SignalLabel(signal_id=signal_id, **label) for label in labels])
+        self.session.flush()
 
     def pending_ids(self, limit: int) -> list[uuid.UUID]:
         return list(self.session.scalars(select(Signal.id).where(Signal.status == "pending").limit(limit)))
