@@ -61,13 +61,23 @@ The user asked for an industry-standard layered layout, following the `fastapi-t
 | `app/config.py`, `app/db.py` | `app/core/config.py`, `app/core/database.py` | core |
 | `app/models.py` | `app/models/` package (`geo.py`, `intel.py`, `crm.py`, `community.py`, all re-exported in `__init__.py`) | models |
 | `app/main.py` routes | `app/api/v1/endpoints/{health,pipeline}.py` + `app/api/v1/router.py` + `app/api/dependencies.py`; `app/main.py` only builds the app | controllers |
-| `app/pipeline/*.py` (prefilter, normalize, classify, geocode, scoring, zones) | `app/services/intelligence/*.py` | business logic |
-| `app/pipeline/run_local.py` orchestration | `app/services/pipeline_service.py`, with CLI entry `app/cli/run_pipeline.py` | service + CLI |
-| raw SQL inside services | `app/repositories/*_repository.py` (signals, zones, admin areas, pipeline runs) | data access |
-| `app/ingest/*`, `app/llm.py`, `app/storage.py` | `app/integrations/{gdelt,rss,apify,social,weather,bedrock,storage}.py` | external systems |
-| Pydantic request/response models | `app/schemas/*.py` | schemas |
-| `app/taxonomy.py` + YAML | `app/services/intelligence/taxonomy.py` + `app/data/taxonomy.yaml` | business logic |
-| `app/seed/` | `app/cli/seed_geo.py` + `app/data/seed/` | CLI |
+| `app/pipeline/*.py`, `app/ingest/*`, `app/llm.py`, `app/storage.py`, `app/taxonomy.py`, `app/seed/` | **class-based per the v2 LLD**; see the table below | all |
+
+**v2 class-based LLD (approved 2026-10-11), the binding design: `docs/superpowers/specs/2026-10-11-backend-lld.md`.** Each task's behaviour, rules and test cases stay exactly as written. Only the shape changes from functions to classes, with tests calling the methods:
+
+| Task | Plan functions | Classes (file) |
+|---|---|---|
+| 3 | `RawItem`, text utils, `prefilter()` | `domain/entities.py` `RawItem`; `domain/text.py` `TextFingerprinter`; `domain/prefilter.py` `EmptyRule`/`MaxAgeRule`/`IndiaRule`/`KeywordRule` + `Prefilter(rules).check(item, now)` |
+| 4 | `load_*`, `state_code` | `domain/states.py` `StateCodes`; `cli/seed_geo.py` `GeoSeeder(session)` (methods `load_districts`, `load_geonames`, `load_wards`, `link_parents`, `load_indicators`, `seed_source_domains`); data in `app/data/` |
+| 5 | `load_taxonomy`, `cards`, `hazards_for` | `domain/taxonomy.py` `Taxonomy.load()/validate()/cards()/hazards_for()`; YAML in `app/data/taxonomy.yaml` |
+| 6 | fetchers, `run_actor`, `archive`, `update_weather`, `parse_dt` | `integrations/ports.py`; `integrations/sources/base.py` `BaseSourceFetcher` (template method) → `GdeltFetcher`, `RssFetcher`, `RedditFetcher`, `XFetcher`; `apify.py` `ApifyClient`; `archive.py` `LocalRawArchive`/`S3RawArchive` + `make_archive()`; `weather.py` `OpenMeteoProvider`; `repositories/indicator_repository.py`; `integrations/dates.py` `parse_dt` |
+| 7 | `normalize()`, `source_credibility()` | `services/ingestion_service.py` `IngestionService`; `repositories/signal_repository.py`, `repositories/source_domain_repository.py` (`CredibilityResolver` logic) |
+| 8 | `llm.py`, `classify_signals`, `validate_labels`, prompt builders | `integrations/bedrock.py` `BedrockLLMClient`; `domain/classification.py` (LLM schemas + `PromptBuilder`); `domain/evidence.py` `EvidenceValidator`; `services/classification_service.py` `ClassificationService` |
+| 9 | `resolve`, `geocode_signal`, `AmazonLocator` | `services/geocoding/` `GazetteerResolver` → `LocatorResolver` (chain) + `GeocodingService`; `integrations/location.py` `AmazonLocationClient`; `repositories/admin_area_repository.py`, `geocode_cache_repository.py` |
+| 10 | scoring functions | `domain/scoring.py` `ZoneScorer(ScoringConfig)`; `domain/hazards.py` `DroughtPolicy`/`FloodPolicy`/`HeatPolicy` + `HazardPolicies`; `domain/lifecycle.py` `ZoneStateMachine` |
+| 11 | `detect_zones` | `repositories/zone_repository.py` (clustering/matching SQL); `services/zone_detection_service.py` `ZoneDetectionService` (advisory lock, emits `ZoneEscalated`); `domain/events.py` |
+| 12 | `run_local`, admin routes | `services/pipeline.py` `IntelligencePipeline` + `IngestStage`/`ClassifyStage`/`GeocodeStage`/`ZoneStage`; `services/event_bus.py` `EventBus`; `core/container.py` `Container`; `core/exceptions.py`; `api/error_handlers.py`; `api/v1/endpoints/pipeline.py`; `cli/run_pipeline.py` |
+| 13 | eval metrics | `app/evals/` `EvalScorer` |
 
 Conventions:
 - **Dependencies:** `Annotated[..., Depends()]` type aliases (e.g. `SessionDep`).

@@ -6,6 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is an India water-crisis intelligence platform (drought, flood, heat) for the WeMakeDevs × AWS Environmental Hacks hackathon (Heat and Water track, ends 2026-10-11). **"Jal" is only the folder name.** The product name is undecided, so keep it in a single config string and don't hard-code it.
 
+The backend follows the approved **class-based layered LLD** in [docs/superpowers/specs/2026-10-11-backend-lld.md](docs/superpowers/specs/2026-10-11-backend-lld.md): `domain/` stays pure, services take dependencies through their constructors, repositories never commit, and design patterns are used only where they solve a real need.
+
 The approved design is [docs/superpowers/specs/2026-10-10-mvp-design.md](docs/superpowers/specs/2026-10-10-mvp-design.md). It covers scope, AWS architecture, schema, the intelligence-layer robustness rules and the build order. Read it before building anything. Add **Commands** and **Architecture** sections here once code exists.
 
 Standing decisions:
