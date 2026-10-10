@@ -29,8 +29,12 @@ class BaseSourceFetcher(ABC):
             rows = self._fetch_raw()
         except ExternalServiceError:
             raise
-        except (httpx.HTTPError, ValueError) as exc:
-            raise ExternalServiceError(self.name, f"fetch failed: {exc!r}") from exc
+        except httpx.HTTPStatusError as exc:  # short message: URLs can be long or carry credentials
+            raise ExternalServiceError(self.name, f"HTTP {exc.response.status_code}") from None
+        except httpx.HTTPError as exc:
+            raise ExternalServiceError(self.name, f"request failed ({type(exc).__name__})") from None
+        except ValueError:
+            raise ExternalServiceError(self.name, "response was not valid JSON") from None
         items = [item for item in (self._to_item(r) for r in rows) if item is not None]
         LOG.info("%s: %d rows -> %d items", self.name, len(rows), len(items))
         return items

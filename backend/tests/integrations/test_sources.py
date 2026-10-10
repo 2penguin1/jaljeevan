@@ -45,6 +45,23 @@ def test_gdelt_throttle_text_raises_external_error():
     assert err.value.service == "gdelt" and err.value.retryable
 
 
+def test_gdelt_retries_rate_limit_with_backoff():
+    responses = iter([httpx.Response(429, text="Please limit requests"),
+                      httpx.Response(200, json={"articles": [{"url": "https://x.in/a", "title": "t",
+                                                              "sourcecountry": "India"}]})])
+    waits = []
+    fetcher = GdeltFetcher(client(lambda r: next(responses)), sleep=waits.append)
+    assert len(fetcher.fetch()) == 1 and waits == [6]
+
+
+def test_gdelt_gives_up_after_retries_with_short_message():
+    waits = []
+    fetcher = GdeltFetcher(client(lambda r: httpx.Response(429, text="slow down")), sleep=waits.append)
+    with pytest.raises(ExternalServiceError) as err:
+        fetcher.fetch()
+    assert waits == [6, 12] and "HTTP 429" in str(err.value) and "api.gdeltproject.org" not in str(err.value)
+
+
 def test_rss_parses_google_news_feed():
     xml = """<?xml version="1.0"?><rss><channel><item><title>Water crisis in Chennai - The Hindu</title>
     <link>https://news.google.com/rss/articles/abc</link><pubDate>Fri, 10 Oct 2026 08:30:00 GMT</pubDate>
