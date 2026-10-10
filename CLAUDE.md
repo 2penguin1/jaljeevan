@@ -18,6 +18,38 @@ Standing decisions:
 - **Evidence quotes must be verbatim substrings** of the source post.
 - **AWS:** the services listed in the spec. Redis, SES and a second Step Functions machine were deliberately dropped; the spec says why.
 
+## Commands
+
+Run these from `backend/` unless noted.
+- **Database:** `docker compose up -d db`, from the repo root. PostGIS runs on host port **5433**, because a local PostgreSQL already owns 5432. Tests use the database `jal_test`; development uses `jal`.
+- **Install:** `uv sync`
+- **All tests:** `uv run pytest -q`
+- **One test:** `uv run pytest tests/services/test_zone_detection.py::test_hazards_are_kept_separate -q`. Tests live in `tests/{domain,services,integrations,api}`.
+- **Load geography (one-time, ~6 min):** `uv run python -m app.cli.seed_geo`. Data files go in `app/data/seed/`; that folder's README lists the download URLs.
+- **Pipeline once:** `uv run python -m app.cli.run_pipeline`. Options: `--skip ingest|classify|geocode|zones` and `--no-locator`.
+- **API:** `uv run fastapi dev` (entrypoint `app.main:app`). Admin routes `/admin/pipeline/*` need the header `X-Admin-Token`.
+- **Evals:**
+  - `uv run python -m app.evals.export --n 60`, then hand-label the output into `app/evals/gold.jsonl`;
+  - then `uv run python -m app.evals.run`.
+
+## Architecture (backend)
+
+Layers, per the LLD:
+- `api/` controllers call services, which use `domain/` (pure rules), `repositories/` (SQL) and `integrations/` (vendors, through `integrations/ports.py`).
+- `core/container.py` is the composition root. App-scoped singletons are attributes; anything that needs a Session is built by factories such as `container.pipeline(session)`.
+- `Container.run_pipeline_job()` is the entry point: one `session_scope()` transaction, then `EventBus.dispatch()` after commit.
+
+The pipeline (`services/pipeline.py`) runs these stages in order:
+1. **`IngestStage`:** fetchers, `IngestionService`, weather.
+2. **`ClassifyStage`:** `ClassificationService` sends batches of 10 to Bedrock; `EvidenceValidator` keeps only verbatim quotes.
+3. **`GeocodeStage`:** a `ResolverChain` of `GazetteerResolver` then `LocatorResolver`, run in two passes.
+4. **`ZoneStage`:** `ZoneDetectionService` does PostGIS clustering, stable zone identity, `ZoneScorer`, `HazardPolicies` and `ZoneStateMachine`, and raises `ZoneEscalated` events.
+
+Known limits:
+- Reddit is off (`reddit_enabled=False`); the Apify lite actor is blocked by Reddit.
+- X returns 10 items per run on the Apify free plan.
+- District populations are undercounted until a Census CSV is added.
+
 ## References
 
 [docs/references/](docs/references/) holds resources the user shares: hackathon rules, prior projects to borrow from, and data sources. Read the relevant file before designing or building. When the user shares a new link or repo, condense it into a new file there.
