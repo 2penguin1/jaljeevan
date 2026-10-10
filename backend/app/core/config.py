@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     raw_dir: str = "data/raw"
     apify_token: str | None = None
     apify_reddit_actor: str = "trudax/reddit-scraper-lite"
+    reddit_enabled: bool = False  # lite actor gets HTTP 429 from Reddit; re-enable with a working actor
     apify_x_actor: str = "apidojo/tweet-scraper"
     apify_max_usd_per_run: float = 0.5
     max_post_age_days: int = 30
