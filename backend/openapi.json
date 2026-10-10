@@ -1,0 +1,1529 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Jal (working name)",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "summary": "Health",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/pipeline/run": {
+      "post": {
+        "tags": [
+          "pipeline"
+        ],
+        "summary": "Trigger Run",
+        "description": "Start a full pipeline run in the background; poll GET /runs/{id} for its stats.",
+        "operationId": "trigger_run_admin_pipeline_run_post",
+        "parameters": [
+          {
+            "name": "x-admin-token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Admin-Token"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunStarted"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/pipeline/runs": {
+      "get": {
+        "tags": [
+          "pipeline"
+        ],
+        "summary": "List Runs",
+        "operationId": "list_runs_admin_pipeline_runs_get",
+        "parameters": [
+          {
+            "name": "x-admin-token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Admin-Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PipelineRunOut"
+                  },
+                  "title": "Response List Runs Admin Pipeline Runs Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/pipeline/runs/{run_id}": {
+      "get": {
+        "tags": [
+          "pipeline"
+        ],
+        "summary": "Get Run",
+        "operationId": "get_run_admin_pipeline_runs__run_id__get",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Run Id"
+            }
+          },
+          {
+            "name": "x-admin-token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Admin-Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PipelineRunOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/map/zones": {
+      "get": {
+        "tags": [
+          "map"
+        ],
+        "summary": "Map Zones",
+        "description": "Live and watch zones for one hazard as a GeoJSON FeatureCollection.",
+        "operationId": "map_zones_api_v1_map_zones_get",
+        "parameters": [
+          {
+            "name": "hazard",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "enum": [
+                "drought",
+                "flood",
+                "heat"
+              ],
+              "type": "string",
+              "title": "Hazard"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Map Zones Api V1 Map Zones Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/map/districts": {
+      "get": {
+        "tags": [
+          "map"
+        ],
+        "summary": "Map Districts",
+        "description": "Every district with its latest indicator band for the hazard (cached for 10 minutes).",
+        "operationId": "map_districts_api_v1_map_districts_get",
+        "parameters": [
+          {
+            "name": "hazard",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "enum": [
+                "drought",
+                "flood",
+                "heat"
+              ],
+              "type": "string",
+              "title": "Hazard"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Map Districts Api V1 Map Districts Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/map/signals": {
+      "get": {
+        "tags": [
+          "map"
+        ],
+        "summary": "Map Signals",
+        "description": "Recent located posts (newest first, at most 1,000) as GeoJSON points.",
+        "operationId": "map_signals_api_v1_map_signals_get",
+        "parameters": [
+          {
+            "name": "hazard",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "enum": [
+                "drought",
+                "flood",
+                "heat"
+              ],
+              "type": "string",
+              "title": "Hazard"
+            }
+          },
+          {
+            "name": "hours",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 720,
+              "minimum": 1,
+              "default": 48,
+              "title": "Hours"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Map Signals Api V1 Map Signals Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/feed": {
+      "get": {
+        "tags": [
+          "read"
+        ],
+        "summary": "Feed",
+        "description": "Relevant classified posts, newest first. Pass `next_cursor` back as `cursor` for the next page.",
+        "operationId": "feed_api_v1_feed_get",
+        "parameters": [
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeedPage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/zones": {
+      "get": {
+        "tags": [
+          "read"
+        ],
+        "summary": "Zones",
+        "operationId": "zones_api_v1_zones_get",
+        "parameters": [
+          {
+            "name": "hazard",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "drought",
+                    "flood",
+                    "heat"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Hazard"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "watch",
+                    "active",
+                    "approved",
+                    "resolving"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ZoneSummary"
+                  },
+                  "title": "Response Zones Api V1 Zones Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/zones/{zone_id}": {
+      "get": {
+        "tags": [
+          "read"
+        ],
+        "summary": "Zone Detail",
+        "description": "One zone with the evidence and the arithmetic that put it on the map.",
+        "operationId": "zone_detail_api_v1_zones__zone_id__get",
+        "parameters": [
+          {
+            "name": "zone_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Zone Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ZoneDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/stats/overview": {
+      "get": {
+        "tags": [
+          "read"
+        ],
+        "summary": "Stats Overview",
+        "operationId": "stats_overview_api_v1_stats_overview_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatsOverview"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ops/summary": {
+      "get": {
+        "tags": [
+          "read"
+        ],
+        "summary": "Ops Summary",
+        "operationId": "ops_summary_api_v1_ops_summary_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpsSummary"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/live": {
+      "get": {
+        "tags": [
+          "live"
+        ],
+        "summary": "Live",
+        "description": "Server-Sent Events: `signal` when a post is classified, `zone` when a zone escalates.",
+        "operationId": "live_api_v1_live_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "text/event-stream": {
+                "itemSchema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "string"
+                    },
+                    "event": {
+                      "type": "string"
+                    },
+                    "id": {
+                      "type": "string"
+                    },
+                    "retry": {
+                      "type": "integer",
+                      "minimum": 0
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Contribution": {
+        "properties": {
+          "signal_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Signal Id"
+          },
+          "weight": {
+            "type": "number",
+            "title": "Weight"
+          },
+          "share": {
+            "type": "number",
+            "title": "Share"
+          }
+        },
+        "type": "object",
+        "required": [
+          "signal_id",
+          "weight",
+          "share"
+        ],
+        "title": "Contribution"
+      },
+      "EvidenceItem": {
+        "properties": {
+          "signal_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Signal Id"
+          },
+          "quote": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quote"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "domain": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Domain"
+          },
+          "credibility": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Credibility"
+          },
+          "weight": {
+            "type": "number",
+            "title": "Weight"
+          },
+          "severity": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Severity"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          },
+          "published_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published At"
+          },
+          "place": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Place"
+          }
+        },
+        "type": "object",
+        "required": [
+          "signal_id",
+          "quote",
+          "summary",
+          "title",
+          "source",
+          "domain",
+          "credibility",
+          "weight",
+          "severity",
+          "url",
+          "published_at",
+          "place"
+        ],
+        "title": "EvidenceItem"
+      },
+      "FeedItem": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "english_summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "English Summary"
+          },
+          "quote": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quote"
+          },
+          "place": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Place"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "domain": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Domain"
+          },
+          "credibility": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Credibility"
+          },
+          "severity": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Severity"
+          },
+          "hazards": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Hazards"
+          },
+          "published_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published At"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          },
+          "zone_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Zone Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "english_summary",
+          "quote",
+          "place",
+          "source",
+          "domain",
+          "credibility",
+          "severity",
+          "hazards",
+          "published_at",
+          "url",
+          "zone_id"
+        ],
+        "title": "FeedItem"
+      },
+      "FeedPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/FeedItem"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "next_cursor"
+        ],
+        "title": "FeedPage"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "HealthResponse": {
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "title": "Ok"
+          },
+          "app": {
+            "type": "string",
+            "title": "App"
+          },
+          "postgis": {
+            "type": "string",
+            "title": "Postgis"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ok",
+          "app",
+          "postgis"
+        ],
+        "title": "HealthResponse"
+      },
+      "IndicatorInfo": {
+        "properties": {
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          },
+          "band": {
+            "type": "string",
+            "title": "Band"
+          }
+        },
+        "type": "object",
+        "required": [
+          "label",
+          "value",
+          "band"
+        ],
+        "title": "IndicatorInfo"
+      },
+      "OpsRun": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "started_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Started At"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "stats": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Stats"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "started_at",
+          "finished_at",
+          "stats"
+        ],
+        "title": "OpsRun"
+      },
+      "OpsSummary": {
+        "properties": {
+          "runs": {
+            "items": {
+              "$ref": "#/components/schemas/OpsRun"
+            },
+            "type": "array",
+            "title": "Runs"
+          },
+          "totals": {
+            "$ref": "#/components/schemas/OpsTotals"
+          }
+        },
+        "type": "object",
+        "required": [
+          "runs",
+          "totals"
+        ],
+        "title": "OpsSummary"
+      },
+      "OpsTotals": {
+        "properties": {
+          "signals": {
+            "type": "integer",
+            "title": "Signals"
+          },
+          "classified": {
+            "type": "integer",
+            "title": "Classified"
+          },
+          "rejected_by_reason": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Rejected By Reason"
+          },
+          "tokens": {
+            "$ref": "#/components/schemas/TokenTotals"
+          },
+          "batches_by_provider": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Batches By Provider"
+          }
+        },
+        "type": "object",
+        "required": [
+          "signals",
+          "classified",
+          "rejected_by_reason",
+          "tokens",
+          "batches_by_provider"
+        ],
+        "title": "OpsTotals"
+      },
+      "PipelineRunOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "started_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Started At"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "stats": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Stats"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "started_at",
+          "finished_at",
+          "stats"
+        ],
+        "title": "PipelineRunOut"
+      },
+      "RunStarted": {
+        "properties": {
+          "run_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Run Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "run_id"
+        ],
+        "title": "RunStarted"
+      },
+      "ScoreBreakdown": {
+        "properties": {
+          "contributions": {
+            "items": {
+              "$ref": "#/components/schemas/Contribution"
+            },
+            "type": "array",
+            "title": "Contributions"
+          },
+          "indicator_boost": {
+            "type": "number",
+            "title": "Indicator Boost"
+          },
+          "independent_sources": {
+            "type": "integer",
+            "title": "Independent Sources"
+          },
+          "rule_met": {
+            "type": "boolean",
+            "title": "Rule Met"
+          }
+        },
+        "type": "object",
+        "required": [
+          "contributions",
+          "indicator_boost",
+          "independent_sources",
+          "rule_met"
+        ],
+        "title": "ScoreBreakdown"
+      },
+      "StatsOverview": {
+        "properties": {
+          "active_zones": {
+            "type": "integer",
+            "title": "Active Zones"
+          },
+          "watch_zones": {
+            "type": "integer",
+            "title": "Watch Zones"
+          },
+          "posts_analysed_7d": {
+            "type": "integer",
+            "title": "Posts Analysed 7D"
+          },
+          "people_affected": {
+            "type": "integer",
+            "title": "People Affected"
+          },
+          "sources": {
+            "type": "integer",
+            "title": "Sources"
+          }
+        },
+        "type": "object",
+        "required": [
+          "active_zones",
+          "watch_zones",
+          "posts_analysed_7d",
+          "people_affected",
+          "sources"
+        ],
+        "title": "StatsOverview"
+      },
+      "TokenTotals": {
+        "properties": {
+          "input_tokens": {
+            "type": "integer",
+            "title": "Input Tokens"
+          },
+          "output_tokens": {
+            "type": "integer",
+            "title": "Output Tokens"
+          }
+        },
+        "type": "object",
+        "required": [
+          "input_tokens",
+          "output_tokens"
+        ],
+        "title": "TokenTotals"
+      },
+      "TrendPoint": {
+        "properties": {
+          "at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "At"
+          },
+          "score": {
+            "type": "number",
+            "title": "Score"
+          }
+        },
+        "type": "object",
+        "required": [
+          "at",
+          "score"
+        ],
+        "title": "TrendPoint"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "ZoneDetail": {
+        "properties": {
+          "zone": {
+            "$ref": "#/components/schemas/ZoneInfo"
+          },
+          "evidence": {
+            "items": {
+              "$ref": "#/components/schemas/EvidenceItem"
+            },
+            "type": "array",
+            "title": "Evidence"
+          },
+          "score_breakdown": {
+            "$ref": "#/components/schemas/ScoreBreakdown"
+          },
+          "trend": {
+            "items": {
+              "$ref": "#/components/schemas/TrendPoint"
+            },
+            "type": "array",
+            "title": "Trend"
+          },
+          "indicators": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/IndicatorInfo"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "zone",
+          "evidence",
+          "score_breakdown",
+          "trend",
+          "indicators"
+        ],
+        "title": "ZoneDetail"
+      },
+      "ZoneInfo": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "hazard": {
+            "type": "string",
+            "title": "Hazard"
+          },
+          "zone_type": {
+            "type": "string",
+            "title": "Zone Type"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "score": {
+            "type": "number",
+            "title": "Score"
+          },
+          "trend": {
+            "type": "string",
+            "title": "Trend"
+          },
+          "independent_sources": {
+            "type": "integer",
+            "title": "Independent Sources"
+          },
+          "population_est": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Population Est"
+          },
+          "last_seen": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Last Seen"
+          },
+          "geometry": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Geometry"
+          },
+          "centroid": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Centroid"
+          },
+          "district": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "District"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "hazard",
+          "zone_type",
+          "status",
+          "score",
+          "trend",
+          "independent_sources",
+          "population_est",
+          "last_seen",
+          "geometry",
+          "centroid",
+          "district"
+        ],
+        "title": "ZoneInfo"
+      },
+      "ZoneSummary": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "hazard": {
+            "type": "string",
+            "title": "Hazard"
+          },
+          "zone_type": {
+            "type": "string",
+            "title": "Zone Type"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "score": {
+            "type": "number",
+            "title": "Score"
+          },
+          "trend": {
+            "type": "string",
+            "title": "Trend"
+          },
+          "independent_sources": {
+            "type": "integer",
+            "title": "Independent Sources"
+          },
+          "population_est": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Population Est"
+          },
+          "last_seen": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Last Seen"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "hazard",
+          "zone_type",
+          "status",
+          "score",
+          "trend",
+          "independent_sources",
+          "population_est",
+          "last_seen"
+        ],
+        "title": "ZoneSummary"
+      }
+    }
+  }
+}

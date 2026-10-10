@@ -1,0 +1,101 @@
+@import "tailwindcss";
+@import "@fontsource-variable/geist";
+@import "@fontsource-variable/geist-mono";
+@import "@fontsource/instrument-serif/400.css";
+@import "@fontsource/instrument-serif/400-italic.css";
+
+/* Design tokens: "editorial + control room". Every colour carries meaning; hazards never decorate. */
+:root {
+  --canvas: #0b0a09;
+  --surface: #131210;
+  --raised: #1b1916;
+  --hairline: rgba(255, 245, 230, 0.08);
+  --hairline-strong: rgba(255, 245, 230, 0.16);
+  --text: #ede8e1;
+  --text-2: #a39e96;
+  --text-3: #8a857e; /* 4.6:1 on canvas; the spec's #6E6A64 fails 4.5:1 for small text */
+  --drought: #e8a33d;
+  --flood: #3fb6d8;
+  --heat: #f0533a;
+  --success: #7fb592;
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --dur-1: 120ms;
+  --dur-2: 200ms;
+  --dur-3: 400ms;
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-raised: var(--raised);
+  --color-hairline: var(--hairline);
+  --color-hairline-strong: var(--hairline-strong);
+  --color-text: var(--text);
+  --color-text-2: var(--text-2);
+  --color-text-3: var(--text-3);
+  --color-drought: var(--drought);
+  --color-flood: var(--flood);
+  --color-heat: var(--heat);
+  --color-success: var(--success);
+  --font-sans: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist Mono Variable", ui-monospace, monospace;
+  --font-display: "Instrument Serif", Georgia, serif;
+  --radius-DEFAULT: 6px;
+  --ease-brand: var(--ease);
+}
+
+@layer base {
+  html {
+    background: var(--canvas);
+    color: var(--text);
+    font-family: var(--font-sans);
+    font-size: 14px;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  body {
+    margin: 0;
+    min-height: 100dvh;
+    background: var(--canvas);
+  }
+  ::selection {
+    background: rgba(232, 163, 61, 0.35);
+  }
+  :focus-visible {
+    outline: 2px solid var(--text);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+}
+
+@layer utilities {
+  .font-display {
+    font-family: var(--font-display);
+    font-weight: 400;
+    letter-spacing: -0.01em;
+  }
+  .num {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+  }
+  .hairline {
+    border-color: var(--hairline);
+  }
+  .glass {
+    background: rgba(19, 18, 16, 0.72);
+    backdrop-filter: blur(14px) saturate(1.2);
+    -webkit-backdrop-filter: blur(14px) saturate(1.2);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
