@@ -38,6 +38,7 @@ from app.repositories.geocode_cache_repository import GeocodeCacheRepository
 from app.repositories.indicator_repository import IndicatorRepository
 from app.repositories.map_repository import MapRepository
 from app.repositories.pipeline_run_repository import PipelineRunRepository
+from app.repositories.read_repository import ReadRepository
 from app.repositories.signal_repository import SignalRepository
 from app.repositories.source_domain_repository import SourceDomainRepository
 from app.repositories.zone_repository import ZoneRepository
@@ -48,6 +49,7 @@ from app.services.geocoding.geocoding_service import GeocodingService
 from app.services.geocoding.resolvers import GazetteerResolver, LocatorResolver, ResolverChain
 from app.services.ingestion_service import IngestionService
 from app.services.map_query_service import MapQueryService
+from app.services.read_query_service import ReadQueryService
 from app.services.pipeline import (ClassifyStage, GeocodeStage, IngestStage, IntelligencePipeline,
                                    PipelineOutcome, ZoneStage)
 from app.services.subscribers import AlertLogSubscriber, LiveFeedNotifier
@@ -154,6 +156,10 @@ class Container:
     def map_query_service(self, session: Session) -> MapQueryService:
         return MapQueryService(MapRepository(session), IndicatorRepository(session), self.policies,
                                self.district_cache)
+
+    def read_query_service(self, session: Session) -> ReadQueryService:
+        return ReadQueryService(ReadRepository(session), ZoneRepository(session), IndicatorRepository(session),
+                                PipelineRunRepository(session), self.scorer, self.policies)
 
     def pipeline(self, session: Session) -> IntelligencePipeline:
         signals = SignalRepository(session)
