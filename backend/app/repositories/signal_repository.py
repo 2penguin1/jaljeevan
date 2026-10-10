@@ -1,10 +1,11 @@
 import uuid
 from datetime import datetime
 
+from geoalchemy2.elements import WKTElement
 from sqlalchemy import delete, select
 from sqlalchemy.dialects.postgresql import insert
 
-from app.models import Signal, SignalLabel
+from app.models import Signal, SignalLabel, SignalLocation
 from app.repositories.base import BaseRepository
 
 
@@ -33,6 +34,15 @@ class SignalRepository(BaseRepository[Signal]):
         """Idempotent: re-classification replaces the previous labels instead of adding to them."""
         self.session.execute(delete(SignalLabel).where(SignalLabel.signal_id == signal_id))
         self.session.add_all([SignalLabel(signal_id=signal_id, **label) for label in labels])
+        self.session.flush()
+
+    def replace_locations(self, signal_id: uuid.UUID, rows: list[dict]) -> None:
+        """Idempotent: rows carry lon/lat (None for ambiguous mentions) instead of a geometry."""
+        self.session.execute(delete(SignalLocation).where(SignalLocation.signal_id == signal_id))
+        for r in rows:
+            geom = WKTElement(f"POINT({r['lon']} {r['lat']})", srid=4326) if r["lon"] is not None else None
+            self.session.add(SignalLocation(signal_id=signal_id, geom=geom,
+                                            **{k: v for k, v in r.items() if k not in ("lon", "lat")}))
         self.session.flush()
 
     def pending_ids(self, limit: int) -> list[uuid.UUID]:
