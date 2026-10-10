@@ -99,3 +99,23 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* MapLibre chrome, restyled to the tokens */
+.maplibregl-ctrl-attrib.maplibregl-compact {
+  background: rgba(19, 18, 16, 0.8) !important;
+  color: var(--text-3);
+}
+.maplibregl-ctrl-attrib a {
+  color: var(--text-2) !important;
+}
+.maplibregl-ctrl-group {
+  background: var(--surface) !important;
+  border: 1px solid var(--hairline);
+  box-shadow: none !important;
+}
+.maplibregl-ctrl-group button + button {
+  border-top: 1px solid var(--hairline) !important;
+}
+.maplibregl-ctrl-group button .maplibregl-ctrl-icon {
+  filter: invert(0.85);
+}

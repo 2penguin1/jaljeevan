@@ -27,3 +27,19 @@ def test_zone_payload_is_parsed_json():
     assert parse_notification("zone_escalated", json.dumps({"zone_id": "z", "score": 80})) == \
         {"event": "zone", "data": {"zone_id": "z", "score": 80}}
     assert parse_notification("zone_escalated", "not json") is None
+
+
+
+def test_live_stream_opens_immediately_and_unsubscribes_on_close():
+    from types import SimpleNamespace
+    from app.api.v1.endpoints.live import live
+
+    async def scenario():
+        relay = LiveEventRelay(settings.database_url)
+        request = SimpleNamespace(app=SimpleNamespace(state=SimpleNamespace(relay=relay)))
+        stream = live(request)
+        first = await stream.__anext__()  # sent before any event: the browser sees the stream open at once
+        assert first.retry and relay.subscriber_count == 1
+        await stream.aclose()  # what the server does when the browser disconnects
+        assert relay.subscriber_count == 0
+    asyncio.run(scenario())

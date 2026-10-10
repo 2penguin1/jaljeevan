@@ -7,11 +7,13 @@ export const routes: RouteObject[] = [
   {
     path: "/",
     errorElement: <RouteError />,
+    hydrateFallbackElement: <div className="min-h-dvh bg-canvas" />,
     lazy: () => import("@/features/landing/LandingPage").then((m) => ({ Component: m.LandingPage })),
   },
   {
     element: <AppShell />,
     errorElement: <RouteError />,
+    hydrateFallbackElement: <div className="min-h-dvh bg-canvas" />,
     children: [
       { path: "/map", handle: { title: "Live map" }, lazy: () => import("@/features/map/MapPage").then((m) => ({ Component: m.MapPage })) },
       { path: "/zones", handle: { title: "Zones" }, lazy: () => import("@/features/zones/ZonesPage").then((m) => ({ Component: m.ZonesPage })) },
