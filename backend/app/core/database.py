@@ -1,4 +1,5 @@
 from collections.abc import Iterator
+from contextlib import contextmanager
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
@@ -23,6 +24,21 @@ def init_db(bind=engine) -> None:
     Base.metadata.create_all(bind)
 
 
+@contextmanager
+def session_scope() -> Iterator[Session]:
+    """One transaction per job (CLI run, Lambda invocation): commit on success, roll back on any error."""
+    session = SessionLocal()
+    try:
+        yield session
+        session.commit()
+    except BaseException:
+        session.rollback()
+        raise
+    finally:
+        session.close()
+
+
 def get_db() -> Iterator[Session]:
-    with SessionLocal() as session:
+    """FastAPI dependency: same transaction rule as session_scope, one transaction per request."""
+    with session_scope() as session:
         yield session
