@@ -9,8 +9,9 @@ This is an India water-crisis intelligence platform (drought, flood, heat) for t
 The approved design is [docs/superpowers/specs/2026-10-10-mvp-design.md](docs/superpowers/specs/2026-10-10-mvp-design.md). It covers scope, AWS architecture, schema, the intelligence-layer robustness rules and the build order. Read it before building anything. Add **Commands** and **Architecture** sections here once code exists.
 
 Standing decisions:
-- **LLM:** use the low-cost model, Claude Haiku 5.5 on Bedrock (`anthropic.claude-haiku-5-5`), via the `AnthropicBedrockMantle` client.
-- **AWS account: NOT YET CHOSEN.** **Never use the CLI `default` profile (account ending 9175). It is the user's OFFICE account and is off-limits.** Wait for the user to pick a personal account before running anything against AWS.
+- **AWS account:** the personal free-plan account ending **8840**, reached through the CLI profile **`spice`** (IAM user `sujal-test`, AdministratorAccess), in region **ap-south-1** (Mumbai). It has $128 of free credits until 2027-01-06. **Never use the CLI `default` profile (account ending 9175). It is the user's OFFICE account and is off-limits.** Always pass `--profile spice`, or set `AWS_PROFILE=spice`, already in `backend/.env`.
+- **LLM:** Claude **Haiku 4.5** on Bedrock through the India inference profile `in.anthropic.claude-haiku-4-5-20251001-v1:0`, verified working on 2026-10-10. Haiku 5.5 is blocked on the free plan. Use the legacy `AnthropicBedrock` client, because Mantle IDs don't cover inference profiles. Don't send `output_config.effort`, because Haiku 4.5 rejects it. The model is a config value, so switching back to 5.5 means changing `CLASSIFY_MODEL`/`BRIEF_MODEL`.
+- **Secrets:** they live only in git-ignored `backend/.env` locally, and move to Secrets Manager when deployed (P2). Never commit or echo them. The Apify token was pasted in chat on 2026-10-11; remind the user to rotate it after the hackathon.
 - **The AI writes the words; code does the arithmetic.** Every number in briefs and plans comes from code.
 - **Evidence quotes must be verbatim substrings** of the source post.
 - **AWS:** the services listed in the spec. Redis, SES and a second Step Functions machine were deliberately dropped; the spec says why.

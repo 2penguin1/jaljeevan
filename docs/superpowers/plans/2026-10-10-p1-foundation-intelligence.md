@@ -151,9 +151,10 @@ pythonpath = .
 ```
 APP_NAME=Jal (working name)
 DATABASE_URL=postgresql+psycopg://jal:jal@localhost:5432/jal
+AWS_PROFILE=spice
 AWS_REGION=ap-south-1
-CLASSIFY_MODEL=anthropic.claude-haiku-5-5
-BRIEF_MODEL=anthropic.claude-haiku-5-5
+CLASSIFY_MODEL=in.anthropic.claude-haiku-4-5-20251001-v1:0
+BRIEF_MODEL=in.anthropic.claude-haiku-4-5-20251001-v1:0
 APIFY_TOKEN=
 RAW_BUCKET=
 ```
@@ -171,8 +172,9 @@ class Settings(BaseSettings):
     app_name: str = "Jal (working name)"
     database_url: str = "postgresql+psycopg://jal:jal@localhost:5432/jal"
     aws_region: str = "ap-south-1"  # account/region TBD by user; never the office default profile
-    classify_model: str = "anthropic.claude-haiku-5-5"  # Mantle ID; legacy client uses global.anthropic.claude-haiku-5-5
-    brief_model: str = "anthropic.claude-haiku-5-5"
+    aws_profile: str | None = None  # "spice" (personal acct ...8840); NEVER the office "default" profile
+    classify_model: str = "in.anthropic.claude-haiku-4-5-20251001-v1:0"  # Haiku 5.5 blocked on free plan
+    brief_model: str = "in.anthropic.claude-haiku-4-5-20251001-v1:0"
     raw_bucket: str | None = None
     raw_dir: str = "data/raw"
     apify_token: str | None = None
@@ -2557,17 +2559,24 @@ class LLM(Protocol):
               max_tokens: int) -> LLMResult: ...
 
 
-class BedrockLLM:
-    def __init__(self, region: str):
-        from anthropic import AnthropicBedrockMantle
+# Models that reject output_config.effort (Haiku 4.5 and older).
+_NO_EFFORT = ("haiku-4-5", "sonnet-4-5", "claude-3")
 
-        self.client = AnthropicBedrockMantle(aws_region=region)
+
+class BedrockLLM:
+    def __init__(self, region: str, profile: str | None = None):
+        # Legacy bedrock-runtime client: accepts inference-profile IDs such as
+        # "in.anthropic.claude-haiku-4-5-20251001-v1:0" (the only Claude available on the free plan).
+        from anthropic import AnthropicBedrock
+
+        self.client = AnthropicBedrock(aws_region=region, aws_profile=profile)
 
     def parse(self, *, system, user, schema, model, effort, max_tokens) -> LLMResult:
+        extra = {} if any(m in model for m in _NO_EFFORT) else {"output_config": {"effort": effort}}
         resp = self.client.messages.parse(
             model=model, max_tokens=max_tokens, system=system,
             messages=[{"role": "user", "content": user}],
-            output_format=schema, output_config={"effort": effort},
+            output_format=schema, **extra,
         )
         usage = {"input_tokens": resp.usage.input_tokens, "output_tokens": resp.usage.output_tokens}
         if resp.stop_reason == "refusal":
@@ -2577,7 +2586,7 @@ class BedrockLLM:
 
 @lru_cache
 def get_llm() -> LLM:
-    return BedrockLLM(settings.aws_region)
+    return BedrockLLM(settings.aws_region, settings.aws_profile)
 ```
 
 - [ ] **Step 4: Write the classification stage**
