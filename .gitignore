@@ -12,3 +12,4 @@ cdk.out/
 backend/data/
 backend/app/data/seed/*
 !backend/app/data/seed/README.md
+backend/app/evals/candidates.jsonl
