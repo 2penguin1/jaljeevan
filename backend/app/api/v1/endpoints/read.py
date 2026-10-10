@@ -1,5 +1,4 @@
 import uuid
-from datetime import datetime
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, Query
@@ -11,7 +10,7 @@ router = APIRouter(prefix="/api/v1", tags=["read"])
 
 
 @router.get("/feed")
-def feed(db: SessionDep, container: ContainerDep, cursor: Annotated[datetime | None, Query()] = None,
+def feed(db: SessionDep, container: ContainerDep, cursor: Annotated[str | None, Query(max_length=100)] = None,
          limit: Annotated[int, Query(ge=1, le=100)] = 50) -> FeedPage:
     """Relevant classified posts, newest first. Pass `next_cursor` back as `cursor` for the next page."""
     return container.read_query_service(db).feed(cursor, limit)

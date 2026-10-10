@@ -23,15 +23,18 @@ class ReadRepository:
     def _rows(self, sql: str, params: dict | None = None) -> list[dict]:
         return [dict(r) for r in self.session.execute(text(sql), params or {}).mappings()]
 
-    def feed(self, before: datetime | None, limit: int) -> list[dict]:
+    def feed(self, before: tuple[datetime, uuid.UUID] | None, limit: int) -> list[dict]:
+        """Keyset page: newest published first, id breaks ties so rows sharing a timestamp are never skipped."""
+        at, after_id = before if before else (None, None)
         return self._rows(f"""
             SELECT s.id, s.title, s.english_summary, {_QUOTE} AS quote, {_PLACE} AS place, s.source, s.domain,
                    s.credibility, s.max_severity AS severity, s.hazards, s.published_at, s.url,
                    COALESCE(s.published_at, s.created_at) AS sort_at, {_ZONE} AS zone_id
             FROM signals s
             WHERE s.status = 'classified' AND s.relevant
-              AND (CAST(:before AS timestamptz) IS NULL OR COALESCE(s.published_at, s.created_at) < :before)
-            ORDER BY sort_at DESC, s.id LIMIT :lim""", {"before": before, "lim": limit})
+              AND (CAST(:at AS timestamptz) IS NULL
+                   OR (COALESCE(s.published_at, s.created_at), s.id) < (CAST(:at AS timestamptz), CAST(:id AS uuid)))
+            ORDER BY sort_at DESC, s.id DESC LIMIT :lim""", {"at": at, "id": after_id, "lim": limit})
 
     def zones(self, hazard: str | None, status: str | None) -> list[dict]:
         return self._rows(f"""

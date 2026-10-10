@@ -2,7 +2,7 @@ import json
 import uuid
 from datetime import datetime, timedelta, timezone
 
-from app.core.exceptions import NotFoundError
+from app.core.exceptions import DomainValidationError, NotFoundError
 from app.domain.hazards import HazardPolicies, band
 from app.domain.scoring import ZoneScorer
 from app.repositories.indicator_repository import IndicatorRepository
@@ -12,6 +12,19 @@ from app.repositories.zone_repository import ZoneRepository
 from app.schemas.read import (Contribution, EvidenceItem, FeedItem, FeedPage, IndicatorInfo, OpsRun, OpsSummary,
                               OpsTotals, ScoreBreakdown, StatsOverview, TrendPoint, ZoneDetail, ZoneInfo,
                               ZoneSummary)
+
+
+def encode_cursor(sort_at: datetime, signal_id: uuid.UUID) -> str:
+    return f"{sort_at.isoformat()}|{signal_id}"
+
+
+def decode_cursor(cursor: str) -> tuple[datetime, uuid.UUID]:
+    """Opaque feed cursor "<timestamp>|<id>"; anything else is a 422, not a 500."""
+    try:
+        at, signal_id = cursor.split("|")
+        return datetime.fromisoformat(at), uuid.UUID(signal_id)
+    except ValueError:
+        raise DomainValidationError("cursor is not valid; use next_cursor from the previous page") from None
 
 
 class ReadQueryService:
@@ -26,9 +39,10 @@ class ReadQueryService:
         self.scorer = scorer
         self.policies = policies
 
-    def feed(self, cursor: datetime | None, limit: int) -> FeedPage:
-        rows = self.reads.feed(cursor, limit)
-        next_cursor = rows[-1]["sort_at"] if len(rows) == limit else None  # newest published first
+    def feed(self, cursor: str | None, limit: int) -> FeedPage:
+        rows = self.reads.feed(decode_cursor(cursor) if cursor else None, limit)
+        last = rows[-1] if len(rows) == limit else None
+        next_cursor = encode_cursor(last["sort_at"], last["id"]) if last else None
         return FeedPage(items=[FeedItem.model_validate(r) for r in rows], next_cursor=next_cursor)
 
     def zones_list(self, hazard: str | None, status: str | None) -> list[ZoneSummary]:

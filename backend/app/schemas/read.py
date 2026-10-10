@@ -23,7 +23,7 @@ class FeedItem(BaseModel):
 
 class FeedPage(BaseModel):
     items: list[FeedItem]
-    next_cursor: datetime | None
+    next_cursor: str | None  # opaque: pass it back as ?cursor= for the next page
 
 
 Hazard = Literal["drought", "flood", "heat"]

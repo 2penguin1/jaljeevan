@@ -122,3 +122,20 @@ def test_stats_and_ops(seeded):
         assert len(ops["runs"]) <= 20 and any(r["stats"].get("classify") for r in ops["runs"])
         assert ops["totals"]["rejected_by_reason"][f"{TAG}_reason"] == 1
         assert ops["totals"]["tokens"]["input_tokens"] >= 100
+
+
+def test_feed_cursor_does_not_skip_posts_that_share_a_timestamp():
+    same = NOW + timedelta(days=1)  # newer than anything else, so these three are the first page(s)
+    with SessionLocal() as s:
+        s.add_all([_signal(10 + i, f"tie{i}.example", f"Tie {i}", same) for i in range(3)])
+        s.commit()
+    try:
+        with TestClient(app) as c:
+            first = c.get("/api/v1/feed", params={"limit": 2}).json()
+            second = c.get("/api/v1/feed", params={"limit": 2, "cursor": first["next_cursor"]}).json()
+            ids = [i["title"] for i in first["items"] + second["items"]]
+            assert sorted(t for t in ids if t.startswith("Tie")) == ["Tie 0", "Tie 1", "Tie 2"]
+    finally:
+        with SessionLocal() as s:
+            s.query(Signal).filter(Signal.title.like("Tie %")).delete(synchronize_session=False)
+            s.commit()
