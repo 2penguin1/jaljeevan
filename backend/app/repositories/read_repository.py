@@ -26,11 +26,12 @@ class ReadRepository:
     def feed(self, before: datetime | None, limit: int) -> list[dict]:
         return self._rows(f"""
             SELECT s.id, s.title, s.english_summary, {_QUOTE} AS quote, {_PLACE} AS place, s.source, s.domain,
-                   s.credibility, s.max_severity AS severity, s.hazards, s.published_at, s.url, s.created_at,
-                   {_ZONE} AS zone_id
+                   s.credibility, s.max_severity AS severity, s.hazards, s.published_at, s.url,
+                   COALESCE(s.published_at, s.created_at) AS sort_at, {_ZONE} AS zone_id
             FROM signals s
-            WHERE s.status = 'classified' AND s.relevant AND (CAST(:before AS timestamptz) IS NULL OR s.created_at < :before)
-            ORDER BY s.created_at DESC LIMIT :lim""", {"before": before, "lim": limit})
+            WHERE s.status = 'classified' AND s.relevant
+              AND (CAST(:before AS timestamptz) IS NULL OR COALESCE(s.published_at, s.created_at) < :before)
+            ORDER BY sort_at DESC, s.id LIMIT :lim""", {"before": before, "lim": limit})
 
     def zones(self, hazard: str | None, status: str | None) -> list[dict]:
         return self._rows(f"""

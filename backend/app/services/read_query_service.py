@@ -28,7 +28,7 @@ class ReadQueryService:
 
     def feed(self, cursor: datetime | None, limit: int) -> FeedPage:
         rows = self.reads.feed(cursor, limit)
-        next_cursor = rows[-1]["created_at"] if len(rows) == limit else None
+        next_cursor = rows[-1]["sort_at"] if len(rows) == limit else None  # newest published first
         return FeedPage(items=[FeedItem.model_validate(r) for r in rows], next_cursor=next_cursor)
 
     def zones_list(self, hazard: str | None, status: str | None) -> list[ZoneSummary]:

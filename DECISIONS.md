@@ -15,3 +15,15 @@ Simple notes on decisions Claude made for you, especially overnight. Newest at t
 - **Groq strict mode.** Groq must now use only allowed words (e.g. "town", never "city"). Before this, 150 posts failed because of a single off-list word in their batch.
 - **P3 plan written and started without waiting for you**, because you asked me to finish P3 overnight. Plan: `docs/superpowers/plans/2026-10-11-p3-frontend.md` (14 tasks). I'm building it myself, task by task, then a fresh reviewer checks everything at the end.
 - **The backlog is fully processed:** 257 posts classified and 0 failures (Nova handled all of it while Groq was out of quota). Zones now: 2 active, 24 watch.
+- **P1 bugs fixed:**
+  - neighbourhoods inside big cities (like Adyar, Chennai) now count as urban;
+  - zones in "resolving" no longer flicker back to active;
+  - two pipeline runs can't overlap (the second one skips);
+  - Reddit asks only for last week's posts and drops anything older than 30 days before paying to store it.
+- **New public read APIs** for the website: map layers, feed, zones, zone details, stats, ops. Plus a live stream that pushes new posts and zone alerts to the browser instantly.
+- **Map: flat camera on the globe, no tilt.** The map library that draws our zones (deck.gl) can't follow a tilted globe: zones landed hundreds of km off. So the globe stays face-on. Score is shown by marker size instead of 3D columns. The landing page carries the 3D look.
+- **Map library versions held back on purpose:**
+  - MapLibre 5, not 6 (deck.gl doesn't support 6 yet);
+  - deck.gl 9.3.11, not 9.4 (9.4 was published broken, with a missing file).
+- **Country borders hidden on the map.** The base map's borders are not India's official ones, so the map hides them and our own district outlines draw India.
+- **Tertiary text colour slightly brighter** than the design spec, so small grey text is readable (it now passes the 4.5:1 contrast rule).

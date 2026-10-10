@@ -30,9 +30,11 @@ def seeded():
                  geom=from_shape(SQUARE, srid=4326), centroid=from_shape(Point(75.9, 17.7), srid=4326))
         a = _signal(1, "a.example", "<script>alert(1)</script> Taps dry", NOW - timedelta(minutes=5))
         b = _signal(2, "b.example", "Tankers late", NOW - timedelta(minutes=10))
+        old = _signal(4, "d.example", "Old story ingested late", NOW - timedelta(days=3))
+        old.created_at = NOW  # ingested now, published 3 days ago: must sort after a and b
         r = _signal(3, "c.example", "Cricket score", NOW - timedelta(minutes=15), status="rejected",
                     relevant=None, rejected_reason=f"{TAG}_reason")
-        s.add_all([z, a, b, r])
+        s.add_all([z, a, b, old, r])
         s.flush()
         s.add_all([
             SignalLabel(signal_id=a.id, code="SUPPLY_CUT", l1_code="SUPPLY", severity=4, evidence="Taps dry"),
@@ -71,6 +73,8 @@ def test_feed_is_newest_first_with_strongest_quote_and_cursor(seeded):
         nxt = c.get("/api/v1/feed", params={"limit": 1, "cursor": page["next_cursor"]}).json()
         assert nxt["items"][0]["id"] == seeded["b"]
         full = c.get("/api/v1/feed").json()["items"]
+        times = [i["published_at"] for i in full if i["published_at"]]
+        assert times == sorted(times, reverse=True)  # newest published first, not ingest order
         assert seeded["a"] in [i["id"] for i in full] and all(i["id"] != "rejected" for i in full)
 
 

@@ -38,7 +38,6 @@ export function GlobeMap({ layers, zoneCount }: { layers: Layer[]; zoneCount: nu
         map.touchZoomRotate.disableRotation();
         map.keyboard.disableRotation();
         if (import.meta.env.DEV) (window as unknown as { __map: maplibregl.Map }).__map = map; // debugging aid
-        map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "bottom-right");
         map.once("load", () => {
           // deck reads the projection when added: add it only once the globe style is live, or it draws flat
           overlay.current = new MapboxOverlay({ interleaved: true, layers: latestLayers.current });

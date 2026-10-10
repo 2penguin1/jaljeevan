@@ -119,3 +119,15 @@
 .maplibregl-ctrl-group button .maplibregl-ctrl-icon {
   filter: invert(0.85);
 }
+
+@keyframes feed-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+    background: var(--raised);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
