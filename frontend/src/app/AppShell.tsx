@@ -1,24 +1,69 @@
-import { NavLink, Outlet } from "react-router";
+import { Activity, Globe2, Rows3, type LucideIcon } from "lucide-react";
+import { Link, NavLink, Outlet, useMatches } from "react-router";
+import { LiveDot } from "@/components/patterns/LiveDot";
+import { APP_NAME } from "@/lib/config";
+import { cn } from "@/lib/format";
+import { LiveProvider, useLiveStatus } from "@/lib/live/LiveContext";
 
-const NAV = [
-  { to: "/map", label: "Map" },
-  { to: "/zones", label: "Zones" },
-  { to: "/ops", label: "Ops" },
+const NAV: { to: string; label: string; icon: LucideIcon }[] = [
+  { to: "/map", label: "Map", icon: Globe2 },
+  { to: "/zones", label: "Zones", icon: Rows3 },
+  { to: "/ops", label: "Ops", icon: Activity },
 ];
+
+function NavItems({ compact }: { compact?: boolean }) {
+  return NAV.map(({ to, label, icon: Icon }) => (
+    <NavLink
+      key={to}
+      to={to}
+      className={({ isActive }) =>
+        cn(
+          "flex flex-col items-center justify-center gap-1 rounded-[6px] text-[11px] transition-colors duration-[var(--dur-1)]",
+          compact ? "h-full flex-1" : "h-12 w-12",
+          isActive ? "bg-raised text-text" : "text-text-3 hover:text-text",
+        )
+      }
+    >
+      <Icon size={18} strokeWidth={1.75} aria-hidden />
+      {label}
+    </NavLink>
+  ));
+}
+
+function TopBar() {
+  const title = useMatches().findLast((m) => (m.handle as { title?: string } | undefined)?.title)?.handle as
+    | { title: string }
+    | undefined;
+  const status = useLiveStatus();
+  return (
+    <header className="flex h-12 shrink-0 items-center justify-between border-b hairline px-4 md:px-6">
+      <span className="text-[14px] font-medium text-text">{title?.title ?? APP_NAME}</span>
+      <LiveDot status={status} />
+    </header>
+  );
+}
 
 export function AppShell() {
   return (
-    <div className="flex min-h-dvh">
-      <nav aria-label="Main" className="flex w-16 flex-col items-center gap-2 border-r hairline py-4">
-        {NAV.map((item) => (
-          <NavLink key={item.to} to={item.to}>
-            {item.label}
-          </NavLink>
-        ))}
-      </nav>
-      <main className="flex-1">
-        <Outlet />
-      </main>
-    </div>
+    <LiveProvider>
+      <div className="flex h-dvh overflow-hidden bg-canvas">
+        <nav aria-label="Main" className="hidden w-16 shrink-0 flex-col items-center gap-1 border-r hairline py-3 md:flex">
+          <Link to="/" className="mb-3 grid h-10 w-10 place-items-center font-display text-[22px] text-text" title={APP_NAME}>
+            <span aria-hidden>{APP_NAME.charAt(0)}</span>
+            <span className="sr-only">{APP_NAME} home</span>
+          </Link>
+          <NavItems />
+        </nav>
+        <div className="flex min-w-0 flex-1 flex-col">
+          <TopBar />
+          <main className="relative min-h-0 flex-1 overflow-y-auto pb-14 md:pb-0">
+            <Outlet />
+          </main>
+        </div>
+        <nav aria-label="Main mobile" className="fixed inset-x-0 bottom-0 z-30 flex h-14 border-t hairline bg-surface px-2 md:hidden">
+          <NavItems compact />
+        </nav>
+      </div>
+    </LiveProvider>
   );
 }

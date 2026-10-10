@@ -13,13 +13,14 @@ export const routes: RouteObject[] = [
     element: <AppShell />,
     errorElement: <RouteError />,
     children: [
-      { path: "/map", lazy: () => import("@/features/map/MapPage").then((m) => ({ Component: m.MapPage })) },
-      { path: "/zones", lazy: () => import("@/features/zones/ZonesPage").then((m) => ({ Component: m.ZonesPage })) },
+      { path: "/map", handle: { title: "Live map" }, lazy: () => import("@/features/map/MapPage").then((m) => ({ Component: m.MapPage })) },
+      { path: "/zones", handle: { title: "Zones" }, lazy: () => import("@/features/zones/ZonesPage").then((m) => ({ Component: m.ZonesPage })) },
       {
         path: "/zones/:zoneId",
+        handle: { title: "Zone" },
         lazy: () => import("@/features/zones/ZonePage").then((m) => ({ Component: m.ZonePage })),
       },
-      { path: "/ops", lazy: () => import("@/features/ops/OpsPage").then((m) => ({ Component: m.OpsPage })) },
+      { path: "/ops", handle: { title: "Pipeline health" }, lazy: () => import("@/features/ops/OpsPage").then((m) => ({ Component: m.OpsPage })) },
       { path: "*", lazy: () => import("./NotFound").then((m) => ({ Component: m.NotFound })) },
     ],
   },
