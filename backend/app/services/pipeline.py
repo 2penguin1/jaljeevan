@@ -1,0 +1,138 @@
+"""The intelligence pipeline: Ingest -> Classify -> Geocode -> Zones, each stage with the same `run(ctx)` shape.
+
+The same stage classes run in one process (CLI / API job) or one-per-Lambda on AWS (P2).
+"""
+import logging
+import uuid
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
+from typing import Protocol
+
+from app.core.exceptions import ExternalServiceError
+from app.domain.events import SignalClassified
+from app.integrations.article import ArticleExtractor
+from app.integrations.sources.registry import FetcherRegistry
+from app.models import PipelineRun
+from app.repositories.pipeline_run_repository import PipelineRunRepository
+from app.repositories.signal_repository import SignalRepository
+from app.services.classification_service import ClassificationService
+from app.services.geocoding.geocoding_service import GeocodingService
+from app.services.ingestion_service import IngestionService
+from app.services.weather_service import WeatherService
+from app.services.zone_detection_service import ZoneDetectionService
+
+LOG = logging.getLogger(__name__)
+
+
+@dataclass
+class PipelineContext:
+    now: datetime
+    run_id: str
+    stats: dict = field(default_factory=dict)
+    pending_ids: list[uuid.UUID] = field(default_factory=list)
+    classified_ids: list[uuid.UUID] = field(default_factory=list)
+    events: list = field(default_factory=list)
+
+
+@dataclass
+class PipelineOutcome:
+    run: PipelineRun
+    events: list  # dispatch these through the EventBus AFTER the transaction commits
+
+
+class PipelineStage(Protocol):
+    name: str
+
+    def run(self, ctx: PipelineContext) -> None: ...
+
+
+class IngestStage:
+    name = "ingest"
+
+    def __init__(self, registry: FetcherRegistry, ingestion: IngestionService, articles: ArticleExtractor,
+                 weather: WeatherService):
+        self.registry = registry
+        self.ingestion = ingestion
+        self.articles = articles
+        self.weather = weather
+
+    def run(self, ctx: PipelineContext) -> None:
+        stats: dict = {}
+        for fetcher in self.registry.enabled():
+            try:
+                items = fetcher.fetch()
+                if fetcher.name == "gdelt":
+                    items = self.articles.enrich(items)  # GDELT gives headlines only
+            except ExternalServiceError as exc:
+                LOG.warning("source %s failed: %s", fetcher.name, exc)
+                stats[fetcher.name] = {"error": str(exc)}
+                continue
+            result = self.ingestion.ingest(fetcher.name, items, ctx.now, ctx.run_id)
+            ctx.pending_ids += result.pending_ids
+            stats[fetcher.name] = {"fetched": len(items), "inserted": result.inserted,
+                                   "duplicate": result.duplicate, "near_duplicate": result.near_duplicate,
+                                   "rejected": result.rejected}
+        stats["weather"] = {"districts": self.weather.refresh(ctx.now.date())}
+        ctx.stats[self.name] = stats
+
+
+class ClassifyStage:
+    name = "classify"
+
+    def __init__(self, classifier: ClassificationService, signals: SignalRepository, max_backlog: int = 500):
+        self.classifier = classifier
+        self.signals = signals
+        self.max_backlog = max_backlog
+
+    def run(self, ctx: PipelineContext) -> None:
+        ids = list(dict.fromkeys([*ctx.pending_ids, *self.signals.pending_ids(self.max_backlog)]))
+        stats = self.classifier.classify(ids, contrasts=self.signals.recent_contrasts())
+        relevant = self.signals.relevant_classified(ids)
+        ctx.classified_ids = [s.id for s in relevant]
+        ctx.events += [SignalClassified(s.id) for s in relevant]
+        ctx.stats[self.name] = stats.as_dict()
+
+
+class GeocodeStage:
+    name = "geocode"
+
+    def __init__(self, geocoder: GeocodingService, signals: SignalRepository):
+        self.geocoder = geocoder
+        self.signals = signals
+
+    def run(self, ctx: PipelineContext) -> None:
+        located = 0
+        for signal in self.signals.get_many(ctx.classified_ids):
+            located += self.geocoder.geocode(signal) > 0
+        ctx.stats[self.name] = {"signals": len(ctx.classified_ids), "located": located}
+
+
+class ZoneStage:
+    name = "zones"
+
+    def __init__(self, detector: ZoneDetectionService):
+        self.detector = detector
+
+    def run(self, ctx: PipelineContext) -> None:
+        result = self.detector.detect(ctx.now)
+        ctx.events += result.events
+        ctx.stats[self.name] = result.as_dict()
+
+
+class IntelligencePipeline:
+    """Runs the stages in order inside the caller's transaction and records the run in pipeline_runs."""
+
+    def __init__(self, stages: list[PipelineStage], runs: PipelineRunRepository):
+        self.stages = stages
+        self.runs = runs
+
+    def run(self, now: datetime, run_id: uuid.UUID | None = None, skip: set[str] = frozenset(),
+            kind: str = "local") -> PipelineOutcome:
+        run = (self.runs.find(run_id) if run_id else None) or self.runs.start(kind, now)
+        ctx = PipelineContext(now=now, run_id=str(run.id))
+        for stage in self.stages:
+            if stage.name in skip:
+                continue
+            stage.run(ctx)
+        self.runs.finish(run, ctx.stats, datetime.now(timezone.utc))
+        return PipelineOutcome(run=run, events=ctx.events)

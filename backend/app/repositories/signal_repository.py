@@ -2,10 +2,10 @@ import uuid
 from datetime import datetime
 
 from geoalchemy2.elements import WKTElement
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.dialects.postgresql import insert
 
-from app.models import Signal, SignalLabel, SignalLocation
+from app.models import Signal, SignalFeedback, SignalLabel, SignalLocation
 from app.repositories.base import BaseRepository
 
 
@@ -44,6 +44,22 @@ class SignalRepository(BaseRepository[Signal]):
             self.session.add(SignalLocation(signal_id=signal_id, geom=geom,
                                             **{k: v for k, v in r.items() if k not in ("lon", "lat")}))
         self.session.flush()
+
+    def relevant_classified(self, ids) -> list[Signal]:
+        ids = list(ids)
+        if not ids:
+            return []
+        return list(self.session.scalars(select(Signal).where(
+            Signal.id.in_(ids), Signal.status == "classified", Signal.relevant.is_(True))))
+
+    def recent_contrasts(self, limit: int = 10) -> list[str]:
+        """Summaries of posts reviewers marked false/irrelevant: fed back to the classifier as counter-examples."""
+        rows = self.session.scalars(
+            select(func.coalesce(Signal.english_summary, Signal.title))
+            .join(SignalFeedback, SignalFeedback.signal_id == Signal.id)
+            .where(SignalFeedback.verdict.in_(("false", "irrelevant")))
+            .order_by(SignalFeedback.created_at.desc()).limit(limit))
+        return [r[:160] for r in rows if r]
 
     def pending_ids(self, limit: int) -> list[uuid.UUID]:
         return list(self.session.scalars(select(Signal.id).where(Signal.status == "pending").limit(limit)))
