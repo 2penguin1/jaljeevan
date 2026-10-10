@@ -24,6 +24,21 @@ def _seconds(value: str | None) -> float | None:
     return total if matched else None
 
 
+def strict_schema(schema: type[BaseModel]) -> dict:
+    """Strict mode (constrained decoding: only allowed values) needs every object closed to extra keys."""
+    def close(node):
+        if isinstance(node, dict):
+            if node.get("type") == "object":
+                node["additionalProperties"] = False
+            for value in node.values():
+                close(value)
+        elif isinstance(node, list):
+            for value in node:
+                close(value)
+        return node
+    return close(schema.model_json_schema())
+
+
 class GroqLLMClient:
     """Adapter over Groq's OpenAI-compatible Chat Completions API (outside AWS).
 
@@ -51,7 +66,8 @@ class GroqLLMClient:
         body = {"model": self.model, "max_completion_tokens": max_tokens, "temperature": 0,
                 "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}],
                 "response_format": {"type": "json_schema",
-                                    "json_schema": {"name": schema.__name__, "schema": schema.model_json_schema()}}}
+                                    "json_schema": {"name": schema.__name__, "strict": True,
+                                                    "schema": strict_schema(schema)}}}
         if "gpt-oss" in self.model:
             body["reasoning_effort"] = "low"  # short hidden reasoning: fewer tokens against the per-minute limit
         res = self._post_with_backoff(body)

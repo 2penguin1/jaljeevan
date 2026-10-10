@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 from app.domain.taxonomy import Taxonomy
 from app.domain.text import TextFingerprinter
@@ -20,11 +20,31 @@ class Label(BaseModel):
     evidence: str
 
 
+PRECISIONS = ("ward", "village", "town", "district", "state", "country", "unknown")
+PRECISION_SYNONYMS = {"city": "town", "town/city": "town", "municipality": "town", "neighbourhood": "ward",
+                      "neighborhood": "ward", "locality": "ward", "area": "ward", "colony": "ward", "suburb": "ward",
+                      "region": "district", "taluk": "district", "tehsil": "district", "nation": "country"}
+PERIODS = ("current", "past", "forecast", "unknown")
+PERIOD_SYNONYMS = {"ongoing": "current", "present": "current", "recent": "current", "historical": "past",
+                   "future": "forecast", "predicted": "forecast"}
+
+
+def _coerce(value, allowed: tuple[str, ...], synonyms: dict[str, str]) -> str:
+    """Map a model's near-miss vocabulary onto the allowed values; anything unrecognised becomes 'unknown'."""
+    word = str(value or "").strip().lower()
+    return word if word in allowed else synonyms.get(word, "unknown")
+
+
 class LocationMention(BaseModel):
     mention: str
     state_hint: str | None
     district_hint: str | None
     precision: Literal["ward", "village", "town", "district", "state", "country", "unknown"]
+
+    @field_validator("precision", mode="before")
+    @classmethod
+    def _precision(cls, v):
+        return _coerce(v, PRECISIONS, PRECISION_SYNONYMS)
 
 
 class PostResult(BaseModel):
@@ -37,6 +57,11 @@ class PostResult(BaseModel):
     locations: list[LocationMention]
     people_affected_hint: int | None
     english_summary: str
+
+    @field_validator("event_period", mode="before")
+    @classmethod
+    def _period(cls, v):
+        return _coerce(v, PERIODS, PERIOD_SYNONYMS)
 
 
 class BatchResult(BaseModel):

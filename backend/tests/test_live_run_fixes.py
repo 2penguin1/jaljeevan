@@ -62,3 +62,43 @@ def test_transient_llm_failures_are_requeued_but_refusals_are_not(db):
     db.flush()
     queued = set(SignalRepository(db).pending_ids(limit=10))
     assert queued == {rows[0].id, rows[1].id, rows[3].id}
+
+
+# Bug C: one off-list word from the model must not invalidate a whole batch
+def test_model_synonyms_are_coerced_not_rejected():
+    from app.domain.classification import LocationMention, PostResult
+    assert LocationMention(mention="Hyderabad", state_hint=None, district_hint=None, precision="city").precision == "town"
+    assert LocationMention(mention="Adyar", state_hint=None, district_hint=None, precision="Neighbourhood").precision == "ward"
+    assert LocationMention(mention="X", state_hint=None, district_hint=None, precision="galaxy").precision == "unknown"
+    post = PostResult(id="0", relevant=True, event_period="ongoing", event_date=None, first_hand=False, labels=[],
+                      locations=[], people_affected_hint=None, english_summary="x")
+    assert post.event_period == "current"
+
+
+def test_groq_requests_strict_schema_without_extra_fields():
+    import json as _json
+    from app.domain.classification import BatchResult
+    seen = {}
+
+    def handler(req):
+        seen["body"] = _json.loads(req.content)
+        return ok_response()
+
+    client = GroqLLMClient("k", "openai/gpt-oss-120b", http=httpx.Client(transport=httpx.MockTransport(handler)),
+                           sleep=lambda s: None)
+    client.parse(system="s", user="u", schema=BatchResult, max_tokens=100)
+    spec = seen["body"]["response_format"]["json_schema"]
+    assert spec["strict"] is True
+
+    def objects(node):
+        if isinstance(node, dict):
+            if node.get("type") == "object":
+                yield node
+            for v in node.values():
+                yield from objects(v)
+        elif isinstance(node, list):
+            for v in node:
+                yield from objects(v)
+
+    found = list(objects(spec["schema"]))
+    assert found and all(o.get("additionalProperties") is False for o in found)
