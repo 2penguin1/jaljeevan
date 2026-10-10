@@ -1,0 +1,130 @@
+# Hazard-tagged two-level taxonomy (Taneira card format). hazards: drought|flood|heat|all
+l1:
+  SUPPLY:
+    name: Drinking and household water supply failure
+    hazards: [drought]
+    description: Taps, municipal supply, borewells or wells failing to deliver water for drinking and household use because of scarcity.
+    includes: [dry taps, supply cuts, borewells drying, walking long distances for water]
+    excludes: ["Floodwater entering homes belongs to FLOOD", "Tanker deliveries arranged by authorities belong to RELIEF"]
+    l2:
+      SUPPLY.DRY_TAPS:
+        name: Taps and municipal supply dry
+        description: Piped or municipal water not arriving, or arriving rarely, in a named area.
+        examples: ["No water in our taps for 11 days in Mahadevapura", "Supply once a week now"]
+      SUPPLY.TANKER_DEPENDENCE:
+        name: Dependence on private tankers
+        description: Households or societies forced to buy private tanker water, including price complaints.
+        examples: ["Our society now spends 2 lakh a month on tankers"]
+      SUPPLY.GROUNDWATER:
+        name: Borewells and wells failing
+        description: Borewells, handpumps or wells drying up or the water table falling.
+        examples: ["All three borewells in the village have dried up"]
+  AGRI:
+    name: Agricultural and livestock distress from drought
+    hazards: [drought]
+    description: Crop failure, sowing delays, fodder and drinking water shortage for animals, and farmer distress caused by deficient rain.
+    includes: [crop loss, fodder shortage, cattle deaths, farmer distress]
+    excludes: ["Crops destroyed by floodwater belong to FLOOD"]
+    l2:
+      AGRI.CROP_LOSS:
+        name: Crop failure or sowing failure
+        description: Crops wilting, failing, or not sown because of lack of rain or irrigation water.
+      AGRI.LIVESTOCK:
+        name: Livestock water and fodder shortage
+        description: Animals without drinking water or fodder, cattle camps, livestock deaths.
+      AGRI.FARMER_DISTRESS:
+        name: Farmer financial distress
+        description: Debt, losses or distress of farmers attributed to drought.
+  FLOOD:
+    name: Flooding and waterlogging
+    hazards: [flood]
+    description: Water accumulating where it should not - waterlogged streets, inundated homes and fields, river floods, flash floods.
+    includes: [waterlogging, inundation, embankment breach, evacuation]
+    excludes: ["Heavy rain forecasts with no reported impact belong to OTHER"]
+    l2:
+      FLOOD.WATERLOGGING:
+        name: Urban waterlogging
+        description: Streets, underpasses or colonies waterlogged after rain.
+      FLOOD.INUNDATION:
+        name: Homes and fields inundated
+        description: Water entering homes, villages or farmland; river overflow; embankment breach.
+      FLOOD.DISPLACEMENT:
+        name: Evacuation and displacement
+        description: People evacuated, in relief camps, or cut off by floodwater.
+  HEAT:
+    name: Extreme heat
+    hazards: [heat]
+    description: Heatwave conditions and their direct effects on people.
+    includes: [heatwave, heatstroke, work stoppage due to heat]
+    excludes: ["Water scarcity during summer belongs to SUPPLY"]
+    l2:
+      HEAT.HEATWAVE:
+        name: Heatwave conditions
+        description: Reported extreme temperatures or heatwave declared in a named area.
+      HEAT.HEAT_ILLNESS:
+        name: Heatstroke and heat illness
+        description: People hospitalised or dying from heatstroke or heat exhaustion.
+      HEAT.WORK_DISRUPTION:
+        name: Work and school disruption from heat
+        description: Outdoor work, schools or markets disrupted because of heat.
+  RELIEF:
+    name: Relief delivery and government response
+    hazards: [all]
+    description: Whether relief such as tankers, pumps, shelters or cooling centres reaches people, and how authorities respond.
+    includes: [tanker deliveries, relief gaps, price gouging, official response]
+    excludes: ["Private tanker purchases by households belong to SUPPLY.TANKER_DEPENDENCE"]
+    l2:
+      RELIEF.DELIVERED:
+        name: Relief arrived
+        description: Tankers, pumps, food, shelters or cooling centres reported as arriving or working.
+      RELIEF.GAPS:
+        name: Relief missing or inadequate
+        description: Promised relief not arriving, too little, irregular, or unequal.
+      RELIEF.PRICE_GOUGING:
+        name: Price gouging
+        description: Sellers charging abnormal prices for water, tankers, pumps or essentials during the crisis.
+      RELIEF.GOV_RESPONSE:
+        name: Official action or declaration
+        description: Government declarations, allocations, orders or meetings about the crisis.
+  HEALTH:
+    name: Health impact
+    hazards: [all]
+    description: Illness linked to the water or heat situation.
+    includes: [diarrhoea, cholera, dengue after floods, dehydration]
+    excludes: ["Heatstroke belongs to HEAT.HEAT_ILLNESS"]
+    l2:
+      HEALTH.WATERBORNE:
+        name: Waterborne disease
+        description: Diarrhoea, cholera, typhoid, jaundice from contaminated or scarce water.
+      HEALTH.DEHYDRATION:
+        name: Dehydration
+        description: Dehydration from lack of drinking water.
+  INFRA:
+    name: Water infrastructure condition
+    hazards: [all]
+    description: State of reservoirs, lakes, pipelines, pumps and drains.
+    includes: [reservoir levels, pipeline bursts, drain failures]
+    excludes: ["Homes flooded because drains failed belong to FLOOD"]
+    l2:
+      INFRA.RESERVOIR_LOW:
+        name: Reservoir or lake levels low
+        description: Dams, reservoirs or lakes at low storage.
+      INFRA.PIPELINE_FAILURE:
+        name: Pipeline burst or pump failure
+        description: Supply disrupted by burst pipes, leaks or pump breakdowns.
+      INFRA.DRAINAGE_FAILURE:
+        name: Drainage failure
+        description: Blocked or inadequate storm drains.
+  LIVELIHOOD:
+    name: Livelihood impact
+    hazards: [all]
+    description: Lost income, work, or forced migration caused by the crisis.
+    includes: [migration, wage loss, business closures]
+    excludes: ["Farmer losses from drought belong to AGRI.FARMER_DISTRESS"]
+    l2:
+      LIVELIHOOD.MIGRATION:
+        name: Distress migration
+        description: Families leaving villages or towns because of water or heat conditions.
+      LIVELIHOOD.WAGE_LOSS:
+        name: Lost work and income
+        description: Workers or small businesses losing income because of the crisis.
