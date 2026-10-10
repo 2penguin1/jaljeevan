@@ -151,7 +151,7 @@ pythonpath = .
 ```
 APP_NAME=Jal (working name)
 DATABASE_URL=postgresql+psycopg://jal:jal@localhost:5432/jal
-AWS_REGION=us-east-1
+AWS_REGION=ap-south-1
 CLASSIFY_MODEL=anthropic.claude-haiku-5-5
 BRIEF_MODEL=anthropic.claude-haiku-5-5
 APIFY_TOKEN=
@@ -170,8 +170,8 @@ class Settings(BaseSettings):
 
     app_name: str = "Jal (working name)"
     database_url: str = "postgresql+psycopg://jal:jal@localhost:5432/jal"
-    aws_region: str = "us-east-1"
-    classify_model: str = "anthropic.claude-haiku-5-5"
+    aws_region: str = "ap-south-1"  # Mumbai; verified: Haiku 5.5 reachable via global inference profile
+    classify_model: str = "anthropic.claude-haiku-5-5"  # Mantle ID; legacy client uses global.anthropic.claude-haiku-5-5
     brief_model: str = "anthropic.claude-haiku-5-5"
     raw_bucket: str | None = None
     raw_dir: str = "data/raw"

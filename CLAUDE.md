@@ -10,6 +10,7 @@ The approved design is [docs/superpowers/specs/2026-10-10-mvp-design.md](docs/su
 
 Standing decisions:
 - **LLM:** use the low-cost model, Claude Haiku 5.5 on Bedrock (`anthropic.claude-haiku-5-5`), via the `AnthropicBedrockMantle` client.
+- **AWS:** the CLI `default` profile (account ending 9175), region **ap-south-1** (Mumbai). Bedrock access was verified on 2026-10-10: Haiku 5.5 answers through the inference profile `global.anthropic.claude-haiku-5-5` (Converse API). If the Mantle client is refused in ap-south-1, fall back to the legacy `AnthropicBedrock` client with that profile ID. The Sydney account (ending 6709) is **not** used.
 - **The AI writes the words; code does the arithmetic.** Every number in briefs and plans comes from code.
 - **Evidence quotes must be verbatim substrings** of the source post.
 - **AWS:** the services listed in the spec. Redis, SES and a second Step Functions machine were deliberately dropped; the spec says why.
