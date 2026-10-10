@@ -50,6 +50,7 @@ test("zones list filters by hazard through the URL", async () => {
   }));
   const router = renderAt("/zones");
   expect(await screen.findByText("flood zone 65")).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "flood zone 65" })).toHaveAttribute("href", "/zones/2"); // keyboard path
   await userEvent.click(screen.getByRole("button", { name: /Drought/ }));
   expect(router.state.location.search).toBe("?hazard=drought");
   expect(await screen.findByText("drought zone 80")).toBeInTheDocument();

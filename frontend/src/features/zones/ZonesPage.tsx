@@ -1,4 +1,4 @@
-import { useNavigate, useSearchParams } from "react-router";
+import { Link, useNavigate, useSearchParams } from "react-router";
 import { DataTable, type Column } from "@/components/patterns/DataTable";
 import { EmptyState } from "@/components/patterns/EmptyState";
 import { ErrorState } from "@/components/patterns/ErrorState";
@@ -27,7 +27,7 @@ const COLUMNS: Column<ZoneSummary>[] = [
     key: "name", header: "Zone", sortValue: (z) => z.name,
     cell: (z) => (
       <span className="flex flex-col">
-        <span className="text-text">{z.name}</span>
+        <Link to={`/zones/${z.id}`} className="text-text hover:underline" onClick={(e) => e.stopPropagation()}>{z.name}</Link>
         <span className="text-[12px] text-text-3">{ZONE_TYPE[z.zone_type] ?? z.zone_type}</span>
       </span>
     ),
