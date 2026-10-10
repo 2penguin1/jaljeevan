@@ -1,0 +1,1 @@
+CREATE DATABASE jal_test;
