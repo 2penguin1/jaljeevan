@@ -13,8 +13,8 @@ class FakeLLM:
     def __init__(self, make):
         self.make, self.calls = make, []
 
-    def parse(self, *, system, user, schema, model, max_tokens):
-        self.calls.append({"system": system, "user": user, "model": model})
+    def parse(self, *, system, user, schema, max_tokens):
+        self.calls.append({"system": system, "user": user})
         out = self.make(user)
         if isinstance(out, Exception):
             raise out
@@ -23,8 +23,7 @@ class FakeLLM:
 
 def service(db, llm) -> ClassificationService:
     tax = Taxonomy.load()
-    return ClassificationService(SignalRepository(db), llm, PromptBuilder(tax), EvidenceValidator(tax), tax,
-                                 model="test-model")
+    return ClassificationService(SignalRepository(db), llm, PromptBuilder(tax), EvidenceValidator(tax), tax)
 
 
 def add_signal(db, text, title="") -> Signal:
@@ -51,8 +50,8 @@ def ok(*results, usage=None) -> LLMResult:
 
 def test_persists_labels_hazards_and_locations(db):
     s = add_signal(db, "Residents say there has been no water for 11 days in Mahadevapura ward.")
-    llm = FakeLLM(lambda u: ok(result(), usage={"input_tokens": 100, "output_tokens": 50,
-                                                "cache_read_input_tokens": 80}))
+    llm = FakeLLM(lambda u: LLMResult(parsed=BatchResult(results=[result()]), provider="groq:m",
+                                      usage={"input_tokens": 100, "output_tokens": 50, "cache_read_input_tokens": 80}))
     stats = service(db, llm).classify([s.id])
     db.refresh(s)
     assert stats.classified == 1 and stats.input_tokens == 100 and stats.cache_read_tokens == 80
@@ -60,7 +59,7 @@ def test_persists_labels_hazards_and_locations(db):
     assert s.l1_codes == ["SUPPLY"] and s.hazards == ["drought"] and s.max_severity == 4
     assert s.meta["locations"][0]["mention"] == "Mahadevapura"
     assert db.get(SignalLabel, (s.id, "SUPPLY.DRY_TAPS")).evidence == "no water for 11 days"
-    assert llm.calls[0]["model"] == "test-model"
+    assert stats.providers == {"groq:m": 1} and s.meta["llm_provider"] == "groq:m"
 
 
 def test_reclassifying_replaces_labels(db):

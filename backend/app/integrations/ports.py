@@ -12,11 +12,17 @@ class LLMResult:
     parsed: BaseModel | None
     usage: dict = field(default_factory=dict)
     refused: bool = False
+    provider: str = ""  # "<provider>:<model>" that produced the answer (traceability across fallbacks)
 
 
 class LLMClient(Protocol):
-    def parse(self, *, system: str, user: str, schema: type[BaseModel], model: str,
-              max_tokens: int) -> LLMResult: ...
+    """Structured-output LLM. Each adapter owns its provider AND model; callers never pass model names.
+
+    Adapters raise ExternalServiceError for availability problems (outage, 429, access denied) so that a
+    FallbackLLMClient can move to the next provider. Refusals are returned (refused=True), never raised.
+    """
+
+    def parse(self, *, system: str, user: str, schema: type[BaseModel], max_tokens: int) -> LLMResult: ...
 
 
 class SourceFetcher(Protocol):

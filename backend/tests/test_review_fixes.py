@@ -40,7 +40,7 @@ tax = Taxonomy.load()
 
 
 def classifier(db, llm) -> ClassificationService:
-    return ClassificationService(SignalRepository(db), llm, PromptBuilder(tax), EvidenceValidator(tax), tax, "m")
+    return ClassificationService(SignalRepository(db), llm, PromptBuilder(tax), EvidenceValidator(tax), tax)
 
 
 def ingestion(db, tmp_path) -> IngestionService:

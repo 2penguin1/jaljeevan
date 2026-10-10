@@ -80,10 +80,20 @@ class Container:
     # -- app-scoped adapters (lazy, so tests and offline runs never touch AWS) -------------------
     @cached_property
     def llm(self) -> LLMClient:
+        """Providers in the configured order, wrapped in a fallback chain (Bedrock first: 'Built on AWS')."""
         if self._llm is not None:
             return self._llm
         from app.integrations.bedrock import BedrockLLMClient
-        return BedrockLLMClient(self.settings.aws_region, self.settings.aws_profile)
+        from app.integrations.fallback import FallbackLLMClient
+        from app.integrations.groq import GroqLLMClient
+
+        s = self.settings
+        builders = {
+            "bedrock": lambda: BedrockLLMClient(s.aws_region, s.classify_model, s.aws_profile),
+            "groq": lambda: GroqLLMClient(s.groq_api_key, s.groq_model) if s.groq_api_key else None,
+        }
+        clients = [c for name in s.llm_providers.split(",") if (c := builders[name.strip()]()) is not None]
+        return clients[0] if len(clients) == 1 else FallbackLLMClient(clients)
 
     @cached_property
     def locator(self):
@@ -121,7 +131,7 @@ class Container:
     # -- job-scoped factories (one Session per job) ---------------------------------------------
     def classification_service(self, session: Session) -> ClassificationService:
         return ClassificationService(SignalRepository(session), self.llm, self.prompts, self.validator,
-                                     self.taxonomy, self.settings.classify_model)
+                                     self.taxonomy)
 
     def geocoding_service(self, session: Session) -> GeocodingService:
         areas = AdminAreaRepository(session)

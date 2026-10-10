@@ -1,7 +1,7 @@
 import dataclasses
 import logging
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date
 
 from app.domain.classification import BatchResult, PostInput, PostResult, PromptBuilder
@@ -23,6 +23,7 @@ class ClassificationStats:
     input_tokens: int = 0
     output_tokens: int = 0
     cache_read_tokens: int = 0
+    providers: dict = field(default_factory=dict)  # which LLM answered how many batches
 
     def as_dict(self) -> dict:
         return dataclasses.asdict(self)
@@ -40,13 +41,12 @@ class ClassificationService:
     MAX_TOKENS = 8000
 
     def __init__(self, signals: SignalRepository, llm: LLMClient, prompts: PromptBuilder,
-                 validator: EvidenceValidator, taxonomy: Taxonomy, model: str):
+                 validator: EvidenceValidator, taxonomy: Taxonomy):
         self.signals = signals
         self.llm = llm
         self.prompts = prompts
         self.validator = validator
         self.taxonomy = taxonomy
-        self.model = model
 
     @property
     def classifier_version(self) -> str:
@@ -79,8 +79,7 @@ class ClassificationService:
         posts = [PostInput(str(s.id), s.source, s.published_at, s.title, s.text) for s in batch]
         user, id_map = self.prompts.user(posts, contrasts)
         try:
-            res = self.llm.parse(system=system, user=user, schema=BatchResult, model=self.model,
-                                 max_tokens=self.MAX_TOKENS)
+            res = self.llm.parse(system=system, user=user, schema=BatchResult, max_tokens=self.MAX_TOKENS)
         except Exception as exc:  # noqa: BLE001 - any provider failure isolates this batch only
             if raise_errors:
                 raise
@@ -90,6 +89,8 @@ class ClassificationService:
         stats.input_tokens += res.usage.get("input_tokens", 0)
         stats.output_tokens += res.usage.get("output_tokens", 0)
         stats.cache_read_tokens += res.usage.get("cache_read_input_tokens", 0)
+        if res.provider:
+            stats.providers[res.provider] = stats.providers.get(res.provider, 0) + 1
         if res.refused or res.parsed is None:
             self._fail_all(batch, "llm_refused" if res.refused else "llm_invalid", stats)
             return
@@ -97,11 +98,11 @@ class ClassificationService:
         by_key = {str(s.id): s for s in batch}
         for pid, key in id_map.items():
             if pid in answers:
-                self._apply(by_key[key], answers[pid], stats)
+                self._apply(by_key[key], answers[pid], stats, res.provider)
             else:
                 self._fail(by_key[key], "llm_missing", stats)
 
-    def _apply(self, signal: Signal, result: PostResult, stats: ClassificationStats) -> None:
+    def _apply(self, signal: Signal, result: PostResult, stats: ClassificationStats, provider: str = "") -> None:
         labels = self.validator.validate(f"{signal.title}\n{signal.text}", result.labels)
         self.signals.replace_labels(signal.id, [dataclasses.asdict(l) for l in labels])
         l1_codes = sorted({l.l1_code for l in labels})
@@ -112,7 +113,8 @@ class ClassificationService:
         signal.l1_codes, signal.hazards = l1_codes, self.taxonomy.hazards_for(l1_codes)
         signal.max_severity = max((l.severity for l in labels), default=None)
         signal.classifier_version = self.classifier_version
-        signal.meta = {**(signal.meta or {}), "locations": [m.model_dump() for m in result.locations]}
+        signal.meta = {**(signal.meta or {}), "locations": [m.model_dump() for m in result.locations],
+                       "llm_provider": provider}
         signal.rejected_reason = None
         if not result.relevant:
             signal.status = "classified"

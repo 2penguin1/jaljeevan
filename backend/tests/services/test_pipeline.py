@@ -23,7 +23,7 @@ TEXT = "Residents of Mahadevapura say there has been no water for 11 days and ta
 class EchoLLM:
     """Labels every post in a batch as a severe Mahadevapura drought report."""
 
-    def parse(self, *, system, user, schema, model, max_tokens):
+    def parse(self, *, system, user, schema, max_tokens):
         n = user.count("<post id=")
         results = [PostResult(id=str(i), relevant=True, event_period="current", event_date=None, first_hand=False,
                               labels=[Label(code="SUPPLY.DRY_TAPS", severity=4, evidence="no water for 11 days")],
