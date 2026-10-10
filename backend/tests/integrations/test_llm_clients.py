@@ -18,7 +18,7 @@ class Answer(BaseModel):
 
 def groq(handler) -> GroqLLMClient:
     return GroqLLMClient("gsk-test", model="openai/gpt-oss-120b",
-                         http=httpx.Client(transport=httpx.MockTransport(handler)))
+                         http=httpx.Client(transport=httpx.MockTransport(handler)), sleep=lambda s: None)
 
 
 def chat_response(content: str, **message) -> httpx.Response:

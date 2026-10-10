@@ -61,5 +61,11 @@ class SignalRepository(BaseRepository[Signal]):
             .order_by(SignalFeedback.created_at.desc()).limit(limit))
         return [r[:160] for r in rows if r]
 
+    RETRYABLE_FAILURES = ("llm_missing", "llm_invalid")
+
     def pending_ids(self, limit: int) -> list[uuid.UUID]:
-        return list(self.session.scalars(select(Signal.id).where(Signal.status == "pending").limit(limit)))
+        """New signals plus ones that failed on a temporary LLM problem (refusals are never retried)."""
+        retryable = (Signal.status == "failed") & (Signal.rejected_reason.like("llm_error%")
+                                                    | Signal.rejected_reason.in_(self.RETRYABLE_FAILURES))
+        return list(self.session.scalars(select(Signal.id).where((Signal.status == "pending") | retryable)
+                                         .order_by(Signal.status.desc()).limit(limit)))

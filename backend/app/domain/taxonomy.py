@@ -55,7 +55,10 @@ class Taxonomy:
         return node["parent"] if node else None
 
     def hazards_for(self, l1_codes) -> list[str]:
-        return sorted({h for c in l1_codes if c in self.l1 for h in self.l1[c]["hazards"]})
+        """Hazards come only from hazard-specific categories (SUPPLY/AGRI, FLOOD, HEAT). Generic ones such as
+        RELIEF or HEALTH apply to every hazard, so on their own they cannot tell which hazard a post is about."""
+        return sorted({h for c in l1_codes if c in self.l1 and not self.l1[c]["generic"]
+                       for h in self.l1[c]["hazards"]})
 
     def cards(self) -> str:
         """Category descriptions rendered for the LLM system prompt."""
@@ -88,7 +91,8 @@ def _load_cached(path_str: str) -> Taxonomy:
     l1, l2 = {}, {}
     for code, node in raw["l1"].items():
         hazards = list(HAZARDS) if "all" in node["hazards"] else list(node["hazards"])
-        l1[code] = {**{k: v for k, v in node.items() if k != "l2"}, "hazards": hazards}
+        l1[code] = {**{k: v for k, v in node.items() if k != "l2"}, "hazards": hazards,
+                    "generic": "all" in node["hazards"]}
         for l2code, child in node["l2"].items():
             l2[l2code] = {**child, "parent": code}
     return Taxonomy(l1=l1, l2=l2, version=hashlib.sha256(data).hexdigest()[:12])
