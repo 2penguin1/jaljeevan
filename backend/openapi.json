@@ -1363,6 +1363,11 @@
           },
           "hazard": {
             "type": "string",
+            "enum": [
+              "drought",
+              "flood",
+              "heat"
+            ],
             "title": "Hazard"
           },
           "zone_type": {
@@ -1470,6 +1475,11 @@
           },
           "hazard": {
             "type": "string",
+            "enum": [
+              "drought",
+              "flood",
+              "heat"
+            ],
             "title": "Hazard"
           },
           "zone_type": {

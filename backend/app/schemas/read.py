@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel
 
@@ -25,10 +26,13 @@ class FeedPage(BaseModel):
     next_cursor: datetime | None
 
 
+Hazard = Literal["drought", "flood", "heat"]
+
+
 class ZoneSummary(BaseModel):
     id: uuid.UUID
     name: str
-    hazard: str
+    hazard: Hazard
     zone_type: str
     status: str
     score: float

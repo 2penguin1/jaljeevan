@@ -499,8 +499,11 @@ export interface components {
             id: string;
             /** Name */
             name: string;
-            /** Hazard */
-            hazard: string;
+            /**
+             * Hazard
+             * @enum {string}
+             */
+            hazard: "drought" | "flood" | "heat";
             /** Zone Type */
             zone_type: string;
             /** Status */
@@ -536,8 +539,11 @@ export interface components {
             id: string;
             /** Name */
             name: string;
-            /** Hazard */
-            hazard: string;
+            /**
+             * Hazard
+             * @enum {string}
+             */
+            hazard: "drought" | "flood" | "heat";
             /** Zone Type */
             zone_type: string;
             /** Status */
