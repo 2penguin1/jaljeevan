@@ -53,7 +53,30 @@
 4. **The LLM returns malformed JSON, refuses, or omits a post ID.** Affected signals become `failed` with a reason, and the rest of the batch is saved. Tested in Task 8.
 5. **A place name that exists in several states** ("Aurangabad" in both Maharashtra and Bihar) resolves using `state_hint`. Without a hint, it is marked `ambiguous` and kept out of fine-grained clustering. Tested in Task 9.
 
-## File Structure
+## Layered architecture (overrides the paths in the tasks below)
+The user asked for an industry-standard layered layout, following the `fastapi-templates` skill and the official `fastapi` skill. Each task's code stays the same, but the files live here:
+
+| Task path (old) | Layered path (use this) | Layer |
+|---|---|---|
+| `app/config.py`, `app/db.py` | `app/core/config.py`, `app/core/database.py` | core |
+| `app/models.py` | `app/models/` package (`geo.py`, `intel.py`, `crm.py`, `community.py`, all re-exported in `__init__.py`) | models |
+| `app/main.py` routes | `app/api/v1/endpoints/{health,pipeline}.py` + `app/api/v1/router.py` + `app/api/dependencies.py`; `app/main.py` only builds the app | controllers |
+| `app/pipeline/*.py` (prefilter, normalize, classify, geocode, scoring, zones) | `app/services/intelligence/*.py` | business logic |
+| `app/pipeline/run_local.py` orchestration | `app/services/pipeline_service.py`, with CLI entry `app/cli/run_pipeline.py` | service + CLI |
+| raw SQL inside services | `app/repositories/*_repository.py` (signals, zones, admin areas, pipeline runs) | data access |
+| `app/ingest/*`, `app/llm.py`, `app/storage.py` | `app/integrations/{gdelt,rss,apify,social,weather,bedrock,storage}.py` | external systems |
+| Pydantic request/response models | `app/schemas/*.py` | schemas |
+| `app/taxonomy.py` + YAML | `app/services/intelligence/taxonomy.py` + `app/data/taxonomy.yaml` | business logic |
+| `app/seed/` | `app/cli/seed_geo.py` + `app/data/seed/` | CLI |
+
+Conventions:
+- **Dependencies:** `Annotated[..., Depends()]` type aliases (e.g. `SessionDep`).
+- **Routes:** return types on every route; router-level `prefix`/`tags`; one HTTP operation per function.
+- **Sync vs async:** plain `def` routes, because the DB driver is blocking.
+- **Tooling:** `uv` + `pyproject.toml` (`[tool.fastapi] entrypoint = "app.main:app"`, run with `uv run fastapi dev`).
+- **Boundaries:** services never import FastAPI, which keeps them callable from Lambda in P2.
+
+## File Structure (original task paths; map them with the table above)
 ```
 docker-compose.yml                    PostGIS for dev and tests
 backend/requirements.txt
