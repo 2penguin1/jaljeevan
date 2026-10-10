@@ -86,11 +86,13 @@ class Container:
         from app.integrations.bedrock import BedrockLLMClient
         from app.integrations.fallback import FallbackLLMClient
         from app.integrations.groq import GroqLLMClient
+        from app.integrations.nova import BedrockNovaClient
 
         s = self.settings
         builders = {
             "bedrock": lambda: BedrockLLMClient(s.aws_region, s.classify_model, s.aws_profile),
             "groq": lambda: GroqLLMClient(s.groq_api_key, s.groq_model) if s.groq_api_key else None,
+            "nova": lambda: BedrockNovaClient(s.aws_region, s.nova_model, s.aws_profile),
         }
         clients = [c for name in s.llm_providers.split(",") if (c := builders[name.strip()]()) is not None]
         return clients[0] if len(clients) == 1 else FallbackLLMClient(clients)

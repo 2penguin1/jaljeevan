@@ -50,6 +50,7 @@ class GroqLLMClient:
     URL = "https://api.groq.com/openai/v1/chat/completions"
     MAX_RETRIES = 3
     DEFAULT_WAIT_S = 10.0
+    MAX_WAIT_S = 60.0  # longer = a daily/long quota: hand over to the next provider instead of stalling
 
     def __init__(self, api_key: str, model: str, http: httpx.Client | None = None, timeout: float = 60,
                  sleep: Callable[[float], None] = time.sleep):
@@ -84,6 +85,14 @@ class GroqLLMClient:
             parsed = None
         return LLMResult(parsed=parsed, usage=usage, provider=self.provider)
 
+    @staticmethod
+    def _error_code(res: httpx.Response) -> str:
+        try:
+            error = res.json().get("error")
+        except (ValueError, AttributeError):
+            return ""
+        return str(error.get("code") or "")[:40] if isinstance(error, dict) else ""
+
     def _post_with_backoff(self, body: dict) -> httpx.Response:
         for attempt in range(self.MAX_RETRIES + 1):
             try:
@@ -93,10 +102,12 @@ class GroqLLMClient:
             if res.status_code == 429 and attempt < self.MAX_RETRIES:
                 wait = (_seconds(res.headers.get("retry-after"))
                         or _seconds(res.headers.get("x-ratelimit-reset-tokens")) or self.DEFAULT_WAIT_S)
+                if wait > self.MAX_WAIT_S:
+                    raise ExternalServiceError("groq", f"HTTP 429 rate limited for {wait:.0f}s (quota)")
                 self.sleep(wait)
                 continue
-            if res.status_code >= 400:  # never echo the response or headers: keep the key out of messages
-                raise ExternalServiceError("groq", f"HTTP {res.status_code}",
+            if res.status_code >= 400:  # error code only: never echo headers or the request (keeps the key out)
+                raise ExternalServiceError("groq", f"HTTP {res.status_code} {self._error_code(res)}".strip(),
                                            retryable=res.status_code == 429 or res.status_code >= 500)
             return res
         raise ExternalServiceError("groq", "HTTP 429 after retries")  # unreachable; keeps type checkers calm

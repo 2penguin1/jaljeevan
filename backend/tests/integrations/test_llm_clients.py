@@ -165,3 +165,68 @@ def test_fallback_raises_when_every_provider_is_down():
 def test_fallback_needs_at_least_one_client():
     with pytest.raises(ValueError):
         FallbackLLMClient([])
+
+
+# -- Amazon Nova via Bedrock Converse (no Marketplace card needed) ------------------------------
+class FakeBoto:
+    def __init__(self, response=None, error=None):
+        self.response, self.error, self.kwargs = response, error, None
+
+    def converse(self, **kw):
+        self.kwargs = kw
+        if self.error:
+            raise self.error
+        return self.response
+
+
+def nova_response(tool_input):
+    return {"output": {"message": {"content": [{"toolUse": {"name": "submit_result", "input": tool_input}}]}},
+            "usage": {"inputTokens": 40, "outputTokens": 9}, "stopReason": "tool_use"}
+
+
+def test_nova_forces_tool_call_and_parses_result():
+    from app.integrations.nova import BedrockNovaClient
+    boto = FakeBoto(nova_response({"label": "FLOOD", "score": 4}))
+    result = BedrockNovaClient("ap-south-1", "apac.amazon.nova-lite-v1:0", client=boto).parse(
+        system="sys", user="usr", schema=Answer, max_tokens=300)
+    assert boto.kwargs["toolConfig"]["toolChoice"] == {"tool": {"name": "submit_result"}}
+    assert boto.kwargs["toolConfig"]["tools"][0]["toolSpec"]["inputSchema"]["json"]["properties"].keys() == {"label", "score"}
+    assert boto.kwargs["system"] == [{"text": "sys"}] and boto.kwargs["inferenceConfig"]["maxTokens"] == 300
+    assert result.parsed == Answer(label="FLOOD", score=4) and result.provider == "bedrock:apac.amazon.nova-lite-v1:0"
+    assert result.usage == {"input_tokens": 40, "output_tokens": 9, "cache_read_input_tokens": 0}
+
+
+def test_nova_invalid_tool_input_is_invalid_not_outage():
+    from app.integrations.nova import BedrockNovaClient
+    result = BedrockNovaClient("r", "m", client=FakeBoto(nova_response({"label": 3}))).parse(
+        system="s", user="u", schema=Answer, max_tokens=10)
+    assert result.parsed is None and not result.refused
+
+
+def test_nova_aws_errors_become_external_errors():
+    from botocore.exceptions import ClientError
+    from app.integrations.nova import BedrockNovaClient
+    err = ClientError({"Error": {"Code": "ThrottlingException", "Message": "slow"}}, "Converse")
+    with pytest.raises(ExternalServiceError) as e:
+        BedrockNovaClient("r", "m", client=FakeBoto(error=err)).parse(system="s", user="u", schema=Answer, max_tokens=10)
+    assert e.value.service == "bedrock-nova" and "ThrottlingException" in str(e.value) and e.value.retryable
+
+
+# -- Groq: long waits (daily quota) skip to the next provider instead of stalling ------------------
+def test_groq_daily_quota_fails_fast_instead_of_sleeping():
+    waits = []
+    daily = httpx.Response(429, headers={"retry-after": "734"}, json={"error": {"code": "rate_limit_exceeded"}})
+    client = GroqLLMClient("k", "openai/gpt-oss-120b", http=httpx.Client(transport=httpx.MockTransport(lambda r: daily)),
+                           sleep=waits.append)
+    with pytest.raises(ExternalServiceError) as e:
+        client.parse(system="s", user="u", schema=Answer, max_tokens=10)
+    assert waits == [] and "rate" in str(e.value).lower()
+
+
+def test_groq_error_code_is_reported_without_secrets():
+    bad = httpx.Response(400, json={"error": {"code": "json_validate_failed", "message": "schema mismatch"}})
+    client = GroqLLMClient("gsk-secret", "m", http=httpx.Client(transport=httpx.MockTransport(lambda r: bad)),
+                           sleep=lambda s: None)
+    with pytest.raises(ExternalServiceError) as e:
+        client.parse(system="s", user="u", schema=Answer, max_tokens=10)
+    assert "json_validate_failed" in str(e.value) and "gsk-secret" not in str(e.value)

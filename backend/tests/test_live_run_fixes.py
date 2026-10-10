@@ -44,12 +44,12 @@ def test_groq_waits_out_rate_limit_then_succeeds():
 
 def test_groq_uses_token_reset_header_and_gives_up_after_retries():
     waits = []
-    limited = httpx.Response(429, headers={"x-ratelimit-reset-tokens": "1m2.5s"}, json={})
+    limited = httpx.Response(429, headers={"x-ratelimit-reset-tokens": "45.5s"}, json={})  # under the 60 s cap
     client = GroqLLMClient("k", "openai/gpt-oss-120b",
                            http=httpx.Client(transport=httpx.MockTransport(lambda r: limited)), sleep=waits.append)
     with pytest.raises(ExternalServiceError):
         client.parse(system="s", user="u", schema=Answer, max_tokens=100)
-    assert waits == [62.5, 62.5, 62.5]
+    assert waits == [45.5, 45.5, 45.5]
 
 
 # Retry: posts that failed on a temporary LLM error are queued again; refusals are not
