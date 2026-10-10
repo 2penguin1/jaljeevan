@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     aws_profile: str | None = None  # "spice" (personal account); NEVER the office "default" profile
     classify_model: str = "in.anthropic.claude-haiku-4-5-20251001-v1:0"  # Haiku 5.5 blocked on free plan
     brief_model: str = "in.anthropic.claude-haiku-4-5-20251001-v1:0"
-    llm_providers: str = "bedrock,groq"  # fallback order; comma-separated
+    llm_providers: str = "groq,bedrock"  # fallback order; put bedrock first once a card is on the AWS account
     groq_api_key: str | None = None
     groq_model: str = "openai/gpt-oss-120b"
     raw_bucket: str | None = None
