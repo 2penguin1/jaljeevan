@@ -9,6 +9,7 @@ from functools import cached_property
 from pathlib import Path
 
 import httpx
+from cachetools import TTLCache
 from sqlalchemy.orm import Session
 
 from app.core.config import Settings
@@ -35,6 +36,7 @@ from app.integrations.weather import OpenMeteoProvider
 from app.repositories.admin_area_repository import AdminAreaRepository
 from app.repositories.geocode_cache_repository import GeocodeCacheRepository
 from app.repositories.indicator_repository import IndicatorRepository
+from app.repositories.map_repository import MapRepository
 from app.repositories.pipeline_run_repository import PipelineRunRepository
 from app.repositories.signal_repository import SignalRepository
 from app.repositories.source_domain_repository import SourceDomainRepository
@@ -45,6 +47,7 @@ from app.services.event_bus import EventBus
 from app.services.geocoding.geocoding_service import GeocodingService
 from app.services.geocoding.resolvers import GazetteerResolver, LocatorResolver, ResolverChain
 from app.services.ingestion_service import IngestionService
+from app.services.map_query_service import MapQueryService
 from app.services.pipeline import (ClassifyStage, GeocodeStage, IngestStage, IntelligencePipeline,
                                    PipelineOutcome, ZoneStage)
 from app.services.subscribers import AlertLogSubscriber, LiveFeedNotifier
@@ -76,6 +79,7 @@ class Container:
         self.policies = HazardPolicies.default()
         self.zone_types = ZoneTypeClassifier()
         self.events = self._build_event_bus()
+        self.district_cache: TTLCache = TTLCache(maxsize=8, ttl=600)  # map districts, per hazard
 
     # -- app-scoped adapters (lazy, so tests and offline runs never touch AWS) -------------------
     @cached_property
@@ -146,6 +150,10 @@ class Container:
         return ZoneDetectionService(ZoneRepository(session), AdminAreaRepository(session),
                                     IndicatorRepository(session), self.scorer, self.policies, self.machine,
                                     self.zone_types)
+
+    def map_query_service(self, session: Session) -> MapQueryService:
+        return MapQueryService(MapRepository(session), IndicatorRepository(session), self.policies,
+                               self.district_cache)
 
     def pipeline(self, session: Session) -> IntelligencePipeline:
         signals = SignalRepository(session)

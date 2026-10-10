@@ -5,6 +5,8 @@ from typing import Protocol
 class HazardPolicy(Protocol):
     hazard: str
     indicator_source: str
+    indicator_field: str   # the headline indicator shown on the map
+    indicator_label: str
 
     def boost(self, indicator: dict | None) -> float: ...
 
@@ -12,6 +14,7 @@ class HazardPolicy(Protocol):
 class DroughtPolicy:
     hazard = "drought"
     indicator_source = "imd"
+    indicator_field, indicator_label = "rainfall_departure_pct", "Rainfall vs normal (%)"
     SEVERE_DEPARTURE = -40.0   # % below normal monsoon rainfall
     MODERATE_DEPARTURE = -20.0
 
@@ -25,6 +28,7 @@ class DroughtPolicy:
 class FloodPolicy:
     hazard = "flood"
     indicator_source = "open-meteo"
+    indicator_field, indicator_label = "precip_mm_24h", "Rain in 24 h (mm)"
     VERY_HEAVY_MM = 115.6      # IMD "very heavy rain"
     HEAVY_MM = 64.5            # IMD "heavy rain"
 
@@ -38,6 +42,7 @@ class FloodPolicy:
 class HeatPolicy:
     hazard = "heat"
     indicator_source = "open-meteo"
+    indicator_field, indicator_label = "apparent_tmax_c", "Feels-like max (°C)"
     SEVERE_FEELS_LIKE_C = 45.0
     HOT_MAX_C = 40.0
 
@@ -46,6 +51,11 @@ class HeatPolicy:
         if ind.get("apparent_tmax_c") is not None and ind["apparent_tmax_c"] >= self.SEVERE_FEELS_LIKE_C:
             return 0.4
         return 0.2 if ind.get("tmax_c") is not None and ind["tmax_c"] >= self.HOT_MAX_C else 0.0
+
+
+def band(boost: float) -> str:
+    """Map an indicator boost to a display band for the district choropleth."""
+    return "severe" if boost >= 0.4 else "moderate" if boost > 0 else "none"
 
 
 class HazardPolicies:
