@@ -27,3 +27,43 @@ Simple notes on decisions Claude made for you, especially overnight. Newest at t
   - deck.gl 9.3.11, not 9.4 (9.4 was published broken, with a missing file).
 - **Country borders hidden on the map.** The base map's borders are not India's official ones, so the map hides them and our own district outlines draw India.
 - **Tertiary text colour slightly brighter** than the design spec, so small grey text is readable (it now passes the 4.5:1 contrast rule).
+- **The website (P3) is built:**
+  - a 3D landing page;
+  - a live map;
+  - a zones list;
+  - a zone page that explains "why this zone";
+  - a pipeline health page.
+
+  Open it with `cd frontend && npm run dev` while the API runs.
+- **Landing page 3D:**
+  - real terrain of India from AWS Open Data Terrain Tiles, cut to India's official outline from our own district data;
+  - rivers from Natural Earth;
+  - live zones glow as embers;
+  - scrolling moves the camera: whole country, then the worst hotspot, then the horizon.
+
+  A still image shows first, and is all that shows on devices without 3D support.
+- **Only one button on the landing page** ("Open the live map"). It sits in the top bar, so it's reachable while you scroll.
+- **Big numbers on the landing page use the serif font**, as the design spec asked. Smaller numbers in the app use the mono font.
+- **The feed shows the newest *published* posts first.** Before this it used the order we collected them, so 9-day-old posts appeared above 12-hour-old ones.
+- **Zones on the map show their score by marker size** (bigger = higher score), because the map can't tilt.
+- **No shadcn UI kit yet.** Nothing in P3 needed it, and plain buttons plus our own small components cover it. It can be added when forms and dialogs arrive (tenders, CRM).
+- **Speed:** each page loads at most about 125 KB of JavaScript first (the zone page about 224 KB because of the chart). The heavy 3D and map code loads after the page appears.
+- **Tests:**
+  - backend: 163 tests;
+  - frontend: 33 unit tests;
+  - 11 browser tests, which check every page plus an accessibility scan, on a separate test database (`jal_e2e`) so your real data is never touched.
+- **Accessibility:**
+  - every page passes an automatic accessibility scan;
+  - zone names in the list are links, so a keyboard works too;
+  - hazards always show an icon and a word, never colour alone.
+- **Final check by a fresh reviewer (strongest model).** Verdict: good to merge after fixes. I fixed these, each with a test:
+  - the live stream now reconnects by itself after the backend restarts (before, it could stay on "Reconnecting" forever), and it catches up on anything missed;
+  - the feed no longer skips posts that share the same timestamp when you load older posts;
+  - query strings now work on older Safari (before, the map would have shown errors there);
+  - TypeScript strict checking is on;
+  - the product name in the browser tab now comes from config, not hard-coded;
+  - the map legend and landing text no longer state rules the code doesn't follow (zones can also be confirmed by an official source or a weather signal).
+- **Small things left for later (not bugs a user will hit):**
+  - the district tint can be up to 10 minutes stale after a run;
+  - a few tiny cleanups (timers, caching, a line-ending settings file).
+- **Branch not merged yet.** All P3 work is on `feat/p3-frontend` (nothing pushed, nothing deployed). Tell me "merge" and I'll merge it into `main` locally.
