@@ -17,4 +17,4 @@ Claude keeps this list up to date. Tick items off as you finish them.
 - [ ] **Label about 60 posts** for the accuracy check. Claude exports them with `uv run python -m app.evals.export --n 60`; you fill in the `expected` fields.
 
 ## Code
-- [ ] **Decide what to do with branch `feat/p1-backend`:** merge into `main`, open a PR (needs a GitHub repo), or keep it as is.
+- [x] ~~Decide what to do with branch `feat/p1-backend`~~: merged into `main` on 2026-10-11.
