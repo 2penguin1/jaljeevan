@@ -32,13 +32,43 @@ Run these from `backend/` unless noted.
 - **Evals:**
   - `uv run python -m app.evals.export --n 60`, then hand-label the output into `app/evals/gold.jsonl`;
   - then `uv run python -m app.evals.run`.
+- **OpenAPI for the frontend:** `uv run python -m scripts.export_openapi` writes `backend/openapi.json`. Then, in `frontend/`, run `npm run gen:api` to regenerate the TypeScript types.
+
+Frontend (run from `frontend/`; the backend API must be on :8000 for dev):
+- **Install / dev:** `npm install`, then `npm run dev` (http://localhost:5173; `/api` is proxied to :8000, so there's no CORS).
+- **Unit tests:** `npx vitest run` (Vitest + Testing Library + MSW). **Types:** `npx tsc -b --noEmit`.
+- **Build + budgets:** `npm run build && npm run budgets` (each route's first-load JS must stay ≤ 250 KB gzip).
+- **End-to-end + accessibility:** `npx playwright test smoke a11y`. It seeds the separate `jal_e2e` database (`backend/scripts/seed_e2e.py`), starts the API on :8100 and `vite preview` on :4173.
+- **Screenshots for visual review:** `SCREENS=1 npx playwright test screens` writes to `e2e/screens/` at 1440 and 390 px.
+- **Landing 3D assets:** `npm run bake` rebuilds `public/landing/*` from AWS Terrain Tiles, our district outline and Natural Earth rivers. The output is committed, so only re-run it if the inputs change.
+
+## Architecture (frontend)
+
+- One Vite + React 19 + TypeScript app. Routes are lazy (`src/app/router.tsx`):
+  - `/` landing;
+  - `/map`, `/zones`, `/zones/:zoneId`, `/ops`, inside `AppShell` (icon sidebar, top bar with the live dot).
+- **Data flow:** pages → feature components → TanStack Query hooks (`src/lib/hooks/queries.ts`) → `apiGet` (`src/lib/api/client.ts`, the only `fetch`). Types are generated from OpenAPI (`src/lib/api/schema.d.ts`). The map's GeoJSON types are hand-written in `types.ts`.
+- **Live updates:** `AppShell` holds ONE `EventSource` (`LiveProvider`). Pages subscribe with `useLiveSubscription`. Events invalidate the matching query keys.
+- **Design tokens** live in `src/design/tokens.css` (CSS variables plus Tailwind v4 `@theme`). Shared UI is in `src/components/patterns/`. There's no shadcn yet: nothing in P3 needed Radix.
+- **Heavy WebGL stays out of first load:**
+  - `features/map/GlobeMap.tsx` (MapLibre 5 globe + deck.gl 9.3) and `features/landing/Scene.tsx` (three.js) are lazy chunks;
+  - `layers.ts` is a pure function, unit-tested without WebGL;
+  - the globe camera stays flat (deck.gl's GlobeView can't follow pitch or bearing).
+- **Pinned on purpose:**
+  - `maplibre-gl@5` (deck.gl 9.3 reads `map.transform`, which v6 removed);
+  - `@deck.gl/*@9.3.11` plus `overrides` for `@loaders.gl/*@4.5.3` (9.4.0 was published with a missing dependency);
+  - TypeScript 5.9 (openapi-typescript needs it).
 
 ## Architecture (backend)
 
 Layers, per the LLD:
 - `api/` controllers call services, which use `domain/` (pure rules), `repositories/` (SQL) and `integrations/` (vendors, through `integrations/ports.py`).
 - `core/container.py` is the composition root. App-scoped singletons are attributes; anything that needs a Session is built by factories such as `container.pipeline(session)`.
-- `Container.run_pipeline_job()` is the entry point: one `session_scope()` transaction, then `EventBus.dispatch()` after commit.
+- `Container.run_pipeline_job()` is the entry point: one `session_scope()` transaction, then `EventBus.dispatch()` after commit. Only one run at a time: a second one records `{"skipped": ...}`.
+- **Public read API** (`/api/v1`, no auth):
+  - map GeoJSON comes from `MapRepository`/`MapQueryService`, with the district layer cached for 10 minutes;
+  - the feed, zones, zone detail (evidence plus score arithmetic), stats and ops come from `ReadRepository`/`ReadQueryService`;
+  - `/api/v1/live` is SSE, fed by `LiveEventRelay`: one Postgres `LISTEN` per process fans out to per-client queues.
 
 The pipeline (`services/pipeline.py`) runs these stages in order:
 1. **`IngestStage`:** fetchers, `IngestionService`, weather.
