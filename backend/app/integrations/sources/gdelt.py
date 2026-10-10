@@ -32,7 +32,7 @@ class GdeltFetcher(BaseSourceFetcher):
     def _fetch_raw(self) -> list[dict]:
         params = {"query": self.QUERY, "mode": "artlist", "format": "json", "maxrecords": self.max_records,
                   "timespan": self.timespan, "sort": "datedesc"}
-        for attempt, wait in enumerate((*self.BACKOFF_SECONDS, None)):
+        for wait in (*self.BACKOFF_SECONDS, None):
             res = self.client.get(self.URL, params=params, timeout=30)
             if res.status_code != 429:
                 break
@@ -41,7 +41,10 @@ class GdeltFetcher(BaseSourceFetcher):
             self.sleep(wait)
         if res.status_code >= 400:
             raise ExternalServiceError(self.name, f"HTTP {res.status_code}", retryable=res.status_code >= 500)
-        return res.json().get("articles", [])  # GDELT answers plain text when unhappy -> ValueError
+        data = res.json()  # GDELT answers plain text when unhappy -> ValueError
+        if not isinstance(data, dict):
+            raise ExternalServiceError(self.name, "unexpected JSON shape")
+        return data.get("articles", [])
 
     def _to_item(self, row: dict) -> RawItem | None:
         if not row.get("url"):

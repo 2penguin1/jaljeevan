@@ -19,6 +19,7 @@ def main() -> None:
     parser.add_argument("--no-locator", action="store_true", help="disable the Amazon Location fallback")
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
+    logging.getLogger("httpx").setLevel(logging.WARNING)  # request URLs can carry secrets
     init_db()
     container = Container(settings, locator=None) if args.no_locator else Container(settings)
     outcome = container.run_pipeline_job(skip=set(args.skip))

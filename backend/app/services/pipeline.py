@@ -133,6 +133,20 @@ class IntelligencePipeline:
         for stage in self.stages:
             if stage.name in skip:
                 continue
-            stage.run(ctx)
+            self._run_stage(stage, ctx)
         self.runs.finish(run, ctx.stats, datetime.now(timezone.utc))
         return PipelineOutcome(run=run, events=ctx.events)
+
+    def _run_stage(self, stage: PipelineStage, ctx: PipelineContext) -> None:
+        """Each stage runs inside a savepoint: a failure undoes only that stage, keeps earlier (paid) work,
+        and is recorded in the run's stats instead of discarding the whole run."""
+        events_before = len(ctx.events)
+        savepoint = self.runs.savepoint()
+        try:
+            stage.run(ctx)
+            savepoint.commit()
+        except Exception as exc:  # noqa: BLE001 - isolate stages; the error is recorded, not swallowed
+            savepoint.rollback()
+            del ctx.events[events_before:]
+            LOG.exception("pipeline stage %s failed", stage.name)
+            ctx.stats[stage.name] = {"error": f"{type(exc).__name__}: {exc}"[:300]}

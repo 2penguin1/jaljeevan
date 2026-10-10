@@ -19,6 +19,10 @@ class PipelineRunRepository(BaseRepository[PipelineRun]):
         run.finished_at = at
         self.flush()
 
+    def savepoint(self):
+        """Nested transaction (SAVEPOINT) the caller can commit or roll back without ending the job."""
+        return self.session.begin_nested()
+
     def latest(self, limit: int = 20) -> list[PipelineRun]:
         return list(self.session.scalars(select(PipelineRun).order_by(PipelineRun.started_at.desc()).limit(limit)))
 

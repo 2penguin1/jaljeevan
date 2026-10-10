@@ -21,11 +21,11 @@ class ApifyClient:
         if not self.configured:
             return []
         url = f"{self.BASE}/{actor_id.replace('/', '~')}/run-sync-get-dataset-items"
-        params = {"token": self.token, "maxItems": max_items, "timeout": 240,
-                  "maxTotalChargeUsd": self.max_usd_per_run}
-        # Never put `exc` or the request URL in the message: the URL carries the API token.
+        params = {"maxItems": max_items, "timeout": 240, "maxTotalChargeUsd": self.max_usd_per_run}
+        # Token goes in a header: httpx logs full request URLs at INFO, which would leak a query-string token.
+        headers = {"Authorization": f"Bearer {self.token}"}
         try:
-            res = self.client.post(url, params=params, json=run_input, timeout=300)
+            res = self.client.post(url, params=params, json=run_input, headers=headers, timeout=300)
         except httpx.HTTPError as exc:
             raise ExternalServiceError("apify", f"{actor_id} request failed ({type(exc).__name__})") from None
         if res.status_code >= 400:

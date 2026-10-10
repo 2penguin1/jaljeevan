@@ -58,10 +58,10 @@ class ClassificationService:
         order = {sid: i for i, sid in enumerate(ids)}
         signals = sorted(self.signals.get_many(ids), key=lambda s: order[s.id])
         todo = [s for s in signals if not self._too_short(s, stats)]
-        system = self.prompts.system(contrasts)
+        system = self.prompts.system()
         try:
             for i in range(0, len(todo), self.BATCH_SIZE):
-                self._classify_batch(todo[i:i + self.BATCH_SIZE], system, stats, raise_errors)
+                self._classify_batch(todo[i:i + self.BATCH_SIZE], system, tuple(contrasts), stats, raise_errors)
         finally:
             self.signals.flush()
         return stats
@@ -74,10 +74,10 @@ class ClassificationService:
         stats.unclear += 1
         return True
 
-    def _classify_batch(self, batch: list[Signal], system: str, stats: ClassificationStats,
+    def _classify_batch(self, batch: list[Signal], system: str, contrasts: tuple, stats: ClassificationStats,
                         raise_errors: bool) -> None:
         posts = [PostInput(str(s.id), s.source, s.published_at, s.title, s.text) for s in batch]
-        user, id_map = self.prompts.user(posts)
+        user, id_map = self.prompts.user(posts, contrasts)
         try:
             res = self.llm.parse(system=system, user=user, schema=BatchResult, model=self.model,
                                  max_tokens=self.MAX_TOKENS)
@@ -130,7 +130,7 @@ class ClassificationService:
 
     @staticmethod
     def _fail(signal: Signal, reason: str, stats: ClassificationStats) -> None:
-        signal.status, signal.rejected_reason = "failed", reason
+        signal.status, signal.rejected_reason = "failed", reason[:40]  # column is String(40)
         stats.failed += 1
 
     @staticmethod

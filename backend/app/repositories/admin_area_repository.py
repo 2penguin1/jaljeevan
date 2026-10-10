@@ -30,7 +30,9 @@ class AdminAreaRepository(BaseRepository[AdminArea]):
         """Places with this exact normalised name, optionally within one state, with a representative point."""
         sql = """SELECT id, level, district_name, population,
                         ST_X(ST_PointOnSurface(geom)) AS lon, ST_Y(ST_PointOnSurface(geom)) AS lat
-                 FROM admin_areas WHERE name_norm = :name AND level = ANY(:levels)"""
+                 FROM admin_areas
+                 WHERE (name_norm = :name OR aliases_norm @> ARRAY[CAST(:name AS varchar)])
+                   AND level = ANY(:levels)"""
         params = {"name": name_norm, "levels": list(levels)}
         if state_code:
             sql += " AND state_code = :sc"

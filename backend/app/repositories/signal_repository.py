@@ -20,11 +20,11 @@ class SignalRepository(BaseRepository[Signal]):
         self.session.flush()
         return new_id
 
-    def recent_fingerprints(self, since: datetime) -> list[tuple[uuid.UUID, int]]:
-        """(id, simhash) of recent originals that can be near-duplicated."""
-        rows = self.session.execute(select(Signal.id, Signal.simhash).where(
+    def recent_fingerprints(self, since: datetime) -> list[tuple[uuid.UUID, int, str]]:
+        """(id, simhash, title) of recent originals that can be near-duplicated."""
+        rows = self.session.execute(select(Signal.id, Signal.simhash, Signal.title).where(
             Signal.created_at >= since, Signal.dup_of.is_(None), Signal.status != "rejected")).all()
-        return [(r.id, r.simhash) for r in rows]
+        return [(r.id, r.simhash, r.title or "") for r in rows]
 
     def get_many(self, ids) -> list[Signal]:
         ids = list(ids)
@@ -55,7 +55,7 @@ class SignalRepository(BaseRepository[Signal]):
     def recent_contrasts(self, limit: int = 10) -> list[str]:
         """Summaries of posts reviewers marked false/irrelevant: fed back to the classifier as counter-examples."""
         rows = self.session.scalars(
-            select(func.coalesce(Signal.english_summary, Signal.title))
+            select(Signal.english_summary)  # model-written summary only, never the raw post title
             .join(SignalFeedback, SignalFeedback.signal_id == Signal.id)
             .where(SignalFeedback.verdict.in_(("false", "irrelevant")))
             .order_by(SignalFeedback.created_at.desc()).limit(limit))

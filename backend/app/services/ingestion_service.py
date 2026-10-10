@@ -26,6 +26,7 @@ class IngestionService:
 
     NEAR_DUP_WINDOW = timedelta(days=7)
     MIN_BODY_WORDS = 20
+    HEADLINE_OVERLAP = 0.7  # 0.6 merged different wards' stories in testing
 
     def __init__(self, signals: SignalRepository, credibility: CredibilityResolver, prefilter: Prefilter,
                  fingerprinter: TextFingerprinter, archive: RawArchive):
@@ -47,19 +48,27 @@ class IngestionService:
         result.rejected = dict(rejected)
         return result
 
-    def _near_dup_basis(self, item: RawItem, full: str) -> str:
-        """Wire copies rewrite the headline but keep the body, so fingerprint the body when it is substantial."""
-        body = self.fp.clean(item.text)
-        return body if len(body.split()) >= self.MIN_BODY_WORDS else full
+    def _has_body(self, item: RawItem) -> bool:
+        return len(self.fp.clean(item.text).split()) >= self.MIN_BODY_WORDS
+
+    def _find_original(self, item: RawItem, simhash: int, recent: list):
+        """Wire copies keep the body (simhash match) or, when only a headline exists, re-word it (overlap)."""
+        headline_only = not self._has_body(item)
+        for sid, sh, title in recent:
+            if self.fp.is_near_duplicate(sh, simhash):
+                return sid
+            if headline_only and self.fp.headline_similarity(item.title, title) >= self.HEADLINE_OVERLAP:
+                return sid
+        return None
 
     def _ingest_one(self, item: RawItem, now: datetime, recent: list, result: IngestResult,
                     rejected: Counter) -> None:
         full = self.fp.clean(f"{item.title}\n{item.text}")
-        simhash = self.fp.simhash(self._near_dup_basis(item, full))
+        simhash = self.fp.simhash(self.fp.clean(item.text) if self._has_body(item) else full)
         reason = self.prefilter.check(item, now)
         dup_of = None
         if reason is None:
-            dup_of = next((sid for sid, sh in recent if self.fp.is_near_duplicate(sh, simhash)), None)
+            dup_of = self._find_original(item, simhash, recent)
             reason = "near_duplicate" if dup_of else None
         new_id = self.signals.insert_if_new(
             source=item.source, url=item.url, domain=item.domain, author=item.author,
@@ -78,4 +87,4 @@ class IngestionService:
             rejected[reason] += 1
         else:
             result.pending_ids.append(new_id)
-            recent.append((new_id, simhash))
+            recent.append((new_id, simhash, self.fp.clean(item.title)))

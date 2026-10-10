@@ -19,5 +19,6 @@ ContainerDep = Annotated[Container, Depends(get_container)]
 
 
 def require_admin(x_admin_token: Annotated[str | None, Header()] = None) -> None:
-    if x_admin_token is None or not secrets.compare_digest(x_admin_token, settings.admin_token):
+    configured = settings.admin_token
+    if not configured or not x_admin_token or not secrets.compare_digest(x_admin_token, configured):
         raise HTTPException(status_code=401, detail="admin token required")

@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     apify_x_actor: str = "apidojo/tweet-scraper"
     apify_max_usd_per_run: float = 0.5
     max_post_age_days: int = 30
-    admin_token: str = "dev-admin-token"
+    admin_token: str | None = None  # admin API stays locked until ADMIN_TOKEN is configured
 
 
 settings = Settings()

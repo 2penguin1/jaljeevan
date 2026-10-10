@@ -32,7 +32,7 @@ class EvidenceValidator:
 
     def validate(self, post_text: str, labels: list[Label]) -> list[ValidLabel]:
         haystack = self._norm(post_text)
-        kept: list[ValidLabel] = []
+        kept: dict[str, ValidLabel] = {}  # one label per code (the table's primary key), most severe wins
         quote_owner: dict[str, str] = {}
         for label in labels:
             l1 = self.taxonomy.parent_of(label.code)
@@ -41,5 +41,7 @@ class EvidenceValidator:
                 continue
             if quote_owner.setdefault(quote, l1) != l1:
                 continue
-            kept.append(ValidLabel(label.code, l1, min(5, max(1, label.severity)), label.evidence.strip()))
-        return kept
+            candidate = ValidLabel(label.code, l1, min(5, max(1, label.severity)), label.evidence.strip())
+            if label.code not in kept or candidate.severity > kept[label.code].severity:
+                kept[label.code] = candidate
+        return list(kept.values())

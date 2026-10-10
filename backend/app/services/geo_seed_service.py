@@ -110,11 +110,24 @@ class GeoSeedService:
             return {(StateCodes.code(r["state"]), self.fp.norm_name(r["district"])): int(r["population"])
                     for r in csv.DictReader(fh)}
 
+    MAX_ALIASES = 30
+
+    def _aliases(self, alternate_names: str, name_norm: str) -> list[str]:
+        """GeoNames alternate names (Gurugram, Bengaluru, Hindi script...), normalised, without the main name."""
+        out: list[str] = []
+        for raw in (alternate_names or "").split(","):
+            alias = self.fp.norm_name(raw)
+            if alias and alias != name_norm and alias not in out:
+                out.append(alias)
+        return out[:self.MAX_ALIASES]
+
     def _place_row(self, cols: list[str], state_code: str) -> dict:
         pop, feature_code = int(cols[14] or 0), cols[7]
+        name_norm = self.fp.norm_name(cols[2] or cols[1])
         neighbourhood = feature_code == self.NEIGHBOURHOOD_CODE
         is_town = pop >= self.TOWN_POP or feature_code in self.TOWN_CODES
         return {"level": "ward" if neighbourhood else ("town" if is_town else "village"),
-                "name": cols[1], "name_norm": self.fp.norm_name(cols[2] or cols[1]), "state_code": state_code,
+                "name": cols[1], "name_norm": name_norm, "aliases_norm": self._aliases(cols[3], name_norm),
+                "state_code": state_code,
                 "is_urban": neighbourhood or pop >= self.URBAN_POP or feature_code in self.TOWN_CODES,
                 "population": pop or None, "wkt": f"POINT({float(cols[5])} {float(cols[4])})"}

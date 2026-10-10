@@ -5,6 +5,8 @@ os.environ["DATABASE_URL"] = os.environ.get(
     "TEST_DATABASE_URL", "postgresql+psycopg://jal:jal@localhost:5433/jal_test"
 )
 
+os.environ.setdefault("ADMIN_TOKEN", "dev-admin-token")  # tests authenticate with this
+
 import pytest  # noqa: E402
 from sqlalchemy.orm import Session  # noqa: E402
 

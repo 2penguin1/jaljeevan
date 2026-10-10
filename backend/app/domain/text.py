@@ -50,3 +50,18 @@ class TextFingerprinter:
 
     def is_near_duplicate(self, a: int, b: int) -> bool:
         return self.hamming(a, b) <= self.near_dup_max_hamming
+
+    _STOPWORDS = frozenset({"a", "an", "the", "of", "in", "on", "at", "for", "to", "and", "as", "is", "are",
+                            "amid", "with", "by", "from", "over", "after", "says", "say"})
+
+    def headline_tokens(self, title: str) -> frozenset[str]:
+        """Content words of a headline, without the trailing ' - Publisher' that news aggregators append."""
+        head, sep, tail = (title or "").rpartition(" - ")
+        if sep and len(tail.split()) <= 5:
+            title = head
+        return frozenset(t for t in self._TOKEN.findall(self.fold(title)) if t not in self._STOPWORDS)
+
+    def headline_similarity(self, a: str, b: str) -> float:
+        """Jaccard overlap of headline content words: catches reordered/re-worded wire headlines."""
+        ta, tb = self.headline_tokens(a), self.headline_tokens(b)
+        return len(ta & tb) / len(ta | tb) if ta and tb else 0.0

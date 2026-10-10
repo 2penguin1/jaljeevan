@@ -44,7 +44,8 @@ def test_prompt_wraps_untrusted_posts_and_maps_ids():
 
 
 def test_prompt_includes_reviewer_contrasts():
-    assert "water polo" in PromptBuilder(tax).system(contrasts=["A water polo match result."])
+    user, _ = PromptBuilder(tax).user([], contrasts=["A water polo match result."])
+    assert "water polo" in user
 
 
 def test_long_posts_are_focused_not_truncated_blindly():

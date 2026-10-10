@@ -94,12 +94,21 @@ class LocatorResolver:
         return Resolution(None, lon, lat, precision, 0.6)
 
 
+COUNTRY_NAMES = frozenset({"india", "bharat", "भारत", "hindustan"})
+
+
 class ResolverChain:
-    def __init__(self, resolvers: list[LocationResolver]):
+    def __init__(self, resolvers: list[LocationResolver], fingerprinter: TextFingerprinter | None = None):
         self.resolvers = resolvers
+        self.fp = fingerprinter or TextFingerprinter()
+
+    def _is_broad(self, query: LocationQuery) -> bool:
+        """Never trust the model's precision for country/state names: they must not become fine points."""
+        return (query.precision in SKIP_PRECISION or self.fp.norm_name(query.mention) in COUNTRY_NAMES
+                or StateCodes.code(query.mention) is not None)
 
     def resolve(self, query: LocationQuery) -> Resolution | None:
-        if query.precision in SKIP_PRECISION:
+        if self._is_broad(query):
             return None
         for resolver in self.resolvers:
             result = resolver.resolve(query)

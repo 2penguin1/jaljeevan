@@ -13,6 +13,7 @@ from app.core.database import init_db
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logging.basicConfig(level=logging.INFO)
+    logging.getLogger("httpx").setLevel(logging.WARNING)  # request URLs can carry secrets
     init_db()
     app.state.container = Container(settings)
     yield

@@ -132,6 +132,7 @@ class ZoneDetectionService:
 
     def _finalize(self, zone: Zone, evidence: Evidence, boost: float, now: datetime,
                   created: bool) -> ZoneEscalated | None:
+        previous_status = zone.status
         weights = {sid: self.scorer.weight(ev, now) for sid, ev, _ in evidence}
         signals = [ev for _, ev, _ in evidence]
         score = self.scorer.score(weights.values(), boost)
@@ -147,8 +148,10 @@ class ZoneDetectionService:
         current = self.zones.average_score(zone.id, now - timedelta(days=7), now)
         previous = self.zones.average_score(zone.id, now - timedelta(days=14), now - timedelta(days=7))
         zone.trend = self.scorer.trend(current if current is not None else score, previous, created)
-        escalating = zone.trend in ("new", "escalating") and score >= self.scorer.config.alert_score
-        if escalating and status in (ACTIVE, APPROVED):
+        live = (ACTIVE, APPROVED)
+        newly_live = status in live and previous_status not in live  # e.g. watch -> active on a later run
+        escalating = zone.trend in ("new", "escalating") or newly_live
+        if escalating and status in live and score >= self.scorer.config.alert_score:
             return ZoneEscalated(zone.id, zone.hazard, zone.name, score, zone.trend, status)
         return None
 

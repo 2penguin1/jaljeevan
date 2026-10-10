@@ -1,7 +1,7 @@
 from datetime import date
 
-from sqlalchemy import BigInteger, Boolean, Date, Float, ForeignKey, Integer, String, UniqueConstraint
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import BigInteger, Boolean, Date, Float, ForeignKey, Index, Integer, String, UniqueConstraint
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
@@ -16,12 +16,14 @@ class AdminArea(Base):
     level: Mapped[str] = mapped_column(String(16), index=True)  # state|district|town|ward|village
     name: Mapped[str] = mapped_column(String(200))
     name_norm: Mapped[str] = mapped_column(String(200), index=True)
+    aliases_norm: Mapped[list[str]] = mapped_column(ARRAY(String), nullable=False, server_default="{}", default=list)
     parent_id: Mapped[int | None] = mapped_column(ForeignKey("admin_areas.id"))
     state_code: Mapped[str] = mapped_column(String(4), index=True)
     district_name: Mapped[str | None] = mapped_column(String(200))
     is_urban: Mapped[bool] = mapped_column(Boolean, default=False)
     population: Mapped[int | None] = mapped_column(BigInteger)
     geom = geometry()
+    __table_args__ = (Index("ix_admin_areas_aliases_norm", "aliases_norm", postgresql_using="gin"),)
 
 
 class DistrictIndicator(Base):

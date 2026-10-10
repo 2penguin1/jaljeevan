@@ -80,7 +80,7 @@ def test_reddit_and_x_map_tolerantly_through_apify():
                "createdAt": "Fri Oct 10 08:30:00 +0000 2026", "author": {"userName": "a"}}]
 
     def handler(req):
-        assert "maxTotalChargeUsd=0.5" in str(req.url) and "token=tok" in str(req.url)
+        assert "maxTotalChargeUsd=0.5" in str(req.url) and req.headers["authorization"] == "Bearer tok"
         return httpx.Response(201, json=reddit if "reddit" in str(req.url) else tweets)
 
     apify = ApifyClient(client(handler), token="tok", max_usd_per_run=0.5)

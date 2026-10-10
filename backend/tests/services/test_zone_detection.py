@@ -152,3 +152,15 @@ def test_zone_without_new_evidence_decays(db):
     service(db).detect(later, hazards=("drought",))
     [z] = zones(db)
     assert z.score == 0.0
+
+
+def test_zone_that_becomes_active_on_a_later_run_raises_an_alert(db):
+    g = seed_geo(db)
+    sig(db, url="https://a/1", point=(77.690, 12.990), area=g["ward"])          # one source -> watch
+    first = service(db).detect(NOW, hazards=("drought",))
+    assert first.events == [] and zones(db)[0].status == "watch"
+    sig(db, url="https://b/1", point=(77.695, 12.993), area=g["ward"], domain="ndtv.com")  # second source
+    second = service(db).detect(NOW, hazards=("drought",))
+    [z] = zones(db)
+    assert z.status == "active" and z.score >= 70
+    assert [e.zone_id for e in second.events] == [z.id]
