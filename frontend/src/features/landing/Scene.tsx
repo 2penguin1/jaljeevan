@@ -115,10 +115,11 @@ function CameraRig({ hotspot, motion }: { hotspot: SceneProps["hotspot"]; motion
   const look = useRef(new THREE.Vector3());
   const beats = useMemo(() => {
     const portrait = size.width < size.height;
-    const far = portrait ? 1.75 : 1;
+    const far = portrait ? 1.9 : 1;
     const [hx, hz] = hotspot ? project(hotspot.lon, hotspot.lat) : [0, 0.2];
     // landscape: India sits right of the headline, so the camera looks a little left of centre
-    const overviewTarget = new THREE.Vector3(portrait ? 0 : -0.42, 0, portrait ? 0.32 : 0.04);
+    // portrait: look north of centre so India sits in the lower half, under the headline
+    const overviewTarget = new THREE.Vector3(portrait ? 0.05 : -0.42, 0, portrait ? -0.62 : 0.04);
     return [
       { pos: new THREE.Vector3(overviewTarget.x + 0.05, 2.15 * far, overviewTarget.z + 1.25 * far), target: overviewTarget },
       { pos: new THREE.Vector3(hx + 0.18, 0.5 * far, hz + 0.62 * far), target: new THREE.Vector3(hx, 0, hz) },
@@ -153,7 +154,7 @@ export default function Scene({ embers, hotspot, motion, lite, onReady }: SceneP
       onCreated={({ gl, scene }) => {
         gl.toneMapping = THREE.ACESFilmicToneMapping;
         scene.background = new THREE.Color("#0b0a09");
-        scene.fog = new THREE.Fog("#0b0a09", 2.6, 5.2);
+        scene.fog = new THREE.Fog("#0b0a09", 4.2, 9); // only the far horizon fades, at any camera distance
       }}
     >
       <ambientLight intensity={0.22} />

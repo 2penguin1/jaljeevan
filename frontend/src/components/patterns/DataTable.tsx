@@ -49,7 +49,7 @@ export function DataTable<T>({ caption, columns, rows, rowKey, onRowClick, initi
                 key={col.key}
                 scope="col"
                 aria-sort={active ? (sort!.dir === "asc" ? "ascending" : "descending") : undefined}
-                className={cn("h-9 px-3 font-normal text-text-2", col.numeric && "text-right", col.className)}
+                className={cn("h-9 whitespace-nowrap px-3 font-normal text-text-2", col.numeric && "text-right", col.className)}
               >
                 {col.sortValue ? (
                   <button
@@ -76,7 +76,7 @@ export function DataTable<T>({ caption, columns, rows, rowKey, onRowClick, initi
             className={cn("border-b hairline transition-colors duration-[var(--dur-1)]", onRowClick && "cursor-pointer hover:bg-surface")}
           >
             {columns.map((col) => (
-              <td key={col.key} className={cn("h-11 px-3", col.numeric && "num text-right", col.className)}>
+              <td key={col.key} className={cn("h-11 whitespace-nowrap px-3", col.numeric && "num text-right", col.className)}>
                 {col.cell(row)}
               </td>
             ))}

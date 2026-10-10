@@ -1,5 +1,5 @@
 import { PanelRightClose, PanelRightOpen } from "lucide-react";
-import { useCallback, useMemo, useState } from "react";
+import { Suspense, lazy, useCallback, useMemo, useState } from "react";
 import { useSearchParams } from "react-router";
 import { EmptyState } from "@/components/patterns/EmptyState";
 import { ErrorState } from "@/components/patterns/ErrorState";
@@ -8,14 +8,13 @@ import { cn } from "@/lib/format";
 import { HAZARDS, isHazard } from "@/lib/hazards";
 import { useMapDistricts, useMapSignals, useMapZones } from "@/lib/hooks/queries";
 import { useLiveSubscription } from "@/lib/live/LiveContext";
-import { useAnimationTime, usePrefersReducedMotion } from "@/lib/motion";
-import { GlobeMap } from "./GlobeMap";
 import { HazardSwitch } from "./HazardSwitch";
 import { Legend } from "./Legend";
 import { LiveFeed } from "./LiveFeed";
 import { ZonePreview } from "./ZonePreview";
-import { buildLayers } from "./layers";
+import type { LayerInput } from "./layers";
 
+const GlobeMap = lazy(() => import("./GlobeMap").then((m) => ({ default: m.GlobeMap }))); // WebGL code in its own chunk
 const EMPTY = { type: "FeatureCollection", features: [] } as const;
 const PULSE_MS = 6000;
 
@@ -42,8 +41,6 @@ export function MapPage() {
   const zones = useMapZones(hazard);
   const districts = useMapDistricts(hazard);
   const signals = useMapSignals(hazard);
-  const reduced = usePrefersReducedMotion();
-  const time = useAnimationTime(!reduced);
   const fresh = useFreshSignals();
   const [selected, setSelected] = useState<Feature<ZoneProps> | null>(null);
   const [panelOpen, setPanelOpen] = useState(() => window.matchMedia("(min-width: 768px)").matches);
@@ -53,18 +50,16 @@ export function MapPage() {
   }, []);
 
   const zoneData = (zones.data ?? EMPTY) as FeatureCollection<ZoneProps>;
-  const layers = useMemo(
-    () =>
-      buildLayers({
-        districts: (districts.data ?? EMPTY) as FeatureCollection<DistrictProps>,
-        zones: zoneData,
-        signals: (signals.data ?? EMPTY) as FeatureCollection<SignalProps>,
-        hazard,
-        time,
-        pulseIds: fresh,
-        onZoneClick: selectZone,
-      }),
-    [districts.data, zoneData, signals.data, hazard, time, fresh, selectZone],
+  const input = useMemo<Omit<LayerInput, "time">>(
+    () => ({
+      districts: (districts.data ?? EMPTY) as FeatureCollection<DistrictProps>,
+      zones: zoneData,
+      signals: (signals.data ?? EMPTY) as FeatureCollection<SignalProps>,
+      hazard,
+      pulseIds: fresh,
+      onZoneClick: selectZone,
+    }),
+    [districts.data, zoneData, signals.data, hazard, fresh, selectZone],
   );
 
   const active = zoneData.features.filter((f) => f.properties.status !== "watch").length;
@@ -72,8 +67,10 @@ export function MapPage() {
   const label = HAZARDS[hazard].label.toLowerCase();
 
   return (
-    <div className="absolute inset-0 overflow-hidden">
-      <GlobeMap layers={layers} zoneCount={zoneData.features.length} />
+    <div className="absolute inset-0 overflow-hidden" data-zone-count={zones.isSuccess ? zoneData.features.length : undefined}>
+      <Suspense fallback={null}>
+        <GlobeMap input={input} />
+      </Suspense>
       <div className="pointer-events-none absolute left-4 top-4 flex max-w-[calc(100%-2rem)] flex-col items-start gap-3 md:left-6 md:top-5">
         <div className="pointer-events-auto">
           <HazardSwitch value={hazard} onChange={setHazard} />
@@ -100,7 +97,7 @@ export function MapPage() {
       <aside
         aria-label="Live feed"
         className={cn(
-          "glass absolute inset-x-3 bottom-3 top-auto flex max-h-[55%] flex-col overflow-hidden rounded-[8px] border hairline md:inset-x-auto md:right-5 md:top-5 md:w-[340px]",
+          "glass absolute inset-x-3 bottom-[4.25rem] top-auto flex max-h-[55%] flex-col overflow-hidden rounded-[8px] border hairline md:inset-x-auto md:right-5 md:top-5 md:w-[340px]",
           selected ? "md:bottom-auto md:max-h-[calc(100%-4rem)]" : "md:bottom-11 md:max-h-none", // preview hugs its content
         )}
         hidden={!panelOpen}
@@ -122,7 +119,7 @@ export function MapPage() {
       </aside>
       {!panelOpen && (
         <button type="button" onClick={() => setPanelOpen(true)} aria-expanded={false}
-          className="glass absolute bottom-4 right-4 inline-flex h-9 items-center gap-2 rounded-[8px] border hairline px-3 text-[13px] text-text md:bottom-auto md:right-5 md:top-5">
+          className="glass absolute bottom-[4.5rem] right-4 inline-flex h-9 items-center gap-2 rounded-[8px] border hairline px-3 text-[13px] text-text md:bottom-auto md:right-5 md:top-5">
           <PanelRightOpen size={15} aria-hidden /> Latest posts
         </button>
       )}

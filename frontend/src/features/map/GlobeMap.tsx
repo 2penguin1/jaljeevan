@@ -1,19 +1,21 @@
 import { MapboxOverlay } from "@deck.gl/mapbox";
-import type { Layer } from "@deck.gl/core";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router";
 import { EmptyState } from "@/components/patterns/EmptyState";
-import { usePrefersReducedMotion } from "@/lib/motion";
+import { useAnimationTime, usePrefersReducedMotion } from "@/lib/motion";
+import { buildLayers, type LayerInput } from "./layers";
 import { INDIA_BOUNDS, INDIA_CENTER, loadMapStyle } from "./mapStyle";
 
-/** MapLibre globe with deck.gl layers interleaved into its WebGL context. */
-export function GlobeMap({ layers, zoneCount }: { layers: Layer[]; zoneCount: number }) {
+/** MapLibre globe + deck.gl layers. Lazy-loaded: everything WebGL lives in this chunk. */
+export function GlobeMap({ input }: { input: Omit<LayerInput, "time"> }) {
   const container = useRef<HTMLDivElement>(null);
   const overlay = useRef<MapboxOverlay | null>(null);
   const [failed, setFailed] = useState(false);
   const reduced = usePrefersReducedMotion();
+  const time = useAnimationTime(!reduced);
+  const layers = useMemo(() => buildLayers({ ...input, time }), [input, time]);
   const latestLayers = useRef(layers);
   latestLayers.current = layers;
 
@@ -73,7 +75,7 @@ export function GlobeMap({ layers, zoneCount }: { layers: Layer[]; zoneCount: nu
   }
   // maplibre's CSS forces position: relative on the map element, so the sizing lives on a wrapper.
   return (
-    <div className="absolute inset-0" data-zone-count={zoneCount}>
+    <div className="absolute inset-0">
       <div ref={container} className="h-full w-full" aria-label="Map of India" role="region" />
     </div>
   );

@@ -71,7 +71,7 @@ export function LandingPage() {
   return (
     <div className="relative bg-canvas text-[16px] text-text">
       <div aria-hidden className="fixed inset-0">
-        <img src="/landing/poster.webp" alt="" className="h-full w-full object-cover object-[62%_50%] max-md:object-[62%_70%]" />
+        <img src="/landing/poster.webp" alt="" className="h-full w-full object-cover object-[62%_50%] max-md:object-[60%_85%]" />
         {webgl && (
           <SceneBoundary>
             <Suspense fallback={null}>
@@ -82,7 +82,7 @@ export function LandingPage() {
           </SceneBoundary>
         )}
         {/* keep text legible over the relief */}
-        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(11,10,9,0.9)_0%,rgba(11,10,9,0.55)_38%,rgba(11,10,9,0)_62%)] max-md:bg-[linear-gradient(180deg,rgba(11,10,9,0.92)_0%,rgba(11,10,9,0.5)_45%,rgba(11,10,9,0)_70%)]" />
+        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(11,10,9,0.9)_0%,rgba(11,10,9,0.55)_38%,rgba(11,10,9,0)_62%)] max-md:bg-[linear-gradient(180deg,rgba(11,10,9,0.9)_0%,rgba(11,10,9,0.6)_30%,rgba(11,10,9,0)_50%,rgba(11,10,9,0)_68%,rgba(11,10,9,0.85)_100%)]" />
       </div>
 
       <header className="fixed inset-x-0 top-0 z-20 flex h-16 items-center justify-between px-5 md:px-10">
@@ -93,14 +93,14 @@ export function LandingPage() {
       </header>
 
       <main className="relative z-10">
-        <section className="flex min-h-dvh flex-col justify-center px-5 pb-16 pt-28 md:px-10">
+        <section className="flex min-h-dvh flex-col justify-start px-5 pb-16 pt-24 md:justify-center md:px-10 md:pt-28">
           <h1 className="max-w-[13ch] font-display text-[52px] leading-[0.98] tracking-[-0.02em] md:text-[96px]">
             See every water crisis in India, as it happens.
           </h1>
           <p className="mt-6 max-w-[44ch] text-[17px] leading-relaxed text-text-2 md:text-[19px]">
             Live signals from news, social media and citizens, turned into verified relief zones.
           </p>
-          <Figure className="mt-14" value={s ? formatInt(s.active_zones) : "—"} label="zones confirmed by independent sources right now" />
+          <Figure className="mt-auto md:mt-14" value={s ? formatInt(s.active_zones) : "—"} label="zones confirmed by independent sources right now" />
         </section>
         <section className="flex min-h-dvh flex-col justify-end px-5 pb-24 md:justify-center md:px-10">
           <Figure value={s ? formatPeople(s.people_affected) : "—"}
