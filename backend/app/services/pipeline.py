@@ -129,6 +129,9 @@ class IntelligencePipeline:
     def run(self, now: datetime, run_id: uuid.UUID | None = None, skip: set[str] = frozenset(),
             kind: str = "local") -> PipelineOutcome:
         run = (self.runs.find(run_id) if run_id else None) or self.runs.start(kind, now)
+        if not self.runs.try_lock():
+            self.runs.finish(run, {"skipped": "another run in progress"}, datetime.now(timezone.utc))
+            return PipelineOutcome(run=run, events=[])
         ctx = PipelineContext(now=now, run_id=str(run.id))
         for stage in self.stages:
             if stage.name in skip:

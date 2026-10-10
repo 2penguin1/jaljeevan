@@ -1,3 +1,5 @@
+from datetime import datetime, timedelta, timezone
+
 from app.domain.entities import RawItem
 from app.integrations.apify import ApifyClient
 from app.integrations.dates import parse_dt
@@ -42,19 +44,22 @@ class RedditFetcher(_ApifySourceFetcher):
     name = "reddit"
     max_items = 80
     POSTS_PER_SEARCH = 3
+    MAX_AGE_DAYS = 30
 
     def run_input(self) -> dict:
         return {"searchTerms": [f"{t} subreddit:{s}" for s in SUBREDDITS for t in REDDIT_TERMS],
                 "searchPosts": True, "searchSort": "new", "searchTime": "week",
+                "postDateLimit": (datetime.now(timezone.utc) - timedelta(days=7)).date().isoformat(),
                 "maxPostsCount": self.POSTS_PER_SEARCH, "maxCommentsCount": 0}
 
     def _to_item(self, row: dict) -> RawItem | None:
         url = self._first(row, "postUrl", "url", "link", "permalink")
-        if not url:
-            return None
+        published = parse_dt(self._first(row, "createdAt", "created_utc", "created"))
+        if not url or (published and published < datetime.now(timezone.utc) - timedelta(days=self.MAX_AGE_DAYS)):
+            return None  # the actor still returns some old posts; never archive or classify them
         return RawItem(source=self.name, url=url, title=self._first(row, "title", default=""),
                        text=self._first(row, "body", "text", "selftext", default=""),
-                       published_at=parse_dt(self._first(row, "createdAt", "created_utc", "created")),
+                       published_at=published,
                        author=self._first(row, "authorName", "username", "author"), domain="reddit.com",
                        country="IN",
                        meta={"community": self._first(row, "communityName", "subreddit")})

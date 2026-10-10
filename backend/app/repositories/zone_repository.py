@@ -30,9 +30,11 @@ class ZoneRepository(BaseRepository[Zone]):
     def clusters(self, hazard: str, since: datetime, buffer_m: dict[str, int]) -> list[Cluster]:
         """Fine-grained clusters: points buffered by precision; intersecting buffers form one cluster."""
         # DDL cannot take bind parameters: create the temp table first, then fill it with INSERT ... SELECT.
-        self.session.execute(text("DROP TABLE IF EXISTS zone_pts"))
+        # pg_temp-qualified drop can never hit a real table; called once per hazard in the same transaction.
+        self.session.execute(text("DROP TABLE IF EXISTS pg_temp.zone_pts"))
         self.session.execute(text("""CREATE TEMP TABLE zone_pts (cid int, signal_id uuid, precision varchar,
-                                     geo_confidence float, admin_area_id int, mention_text varchar, buf geometry)"""))
+                                     geo_confidence float, admin_area_id int, mention_text varchar, buf geometry)
+                                     ON COMMIT DROP"""))
         self.session.execute(text(f"""
             INSERT INTO zone_pts
             SELECT ST_ClusterDBSCAN(buf, eps := 0, minpoints := 1) OVER () AS cid,
@@ -49,12 +51,16 @@ class ZoneRepository(BaseRepository[Zone]):
             FROM zone_pts GROUP BY cid ORDER BY cid""")).all()
         points = self.session.execute(text("""
             SELECT p.cid, p.signal_id, p.precision, p.geo_confidence, p.admin_area_id, p.mention_text,
-                   COALESCE(a.level, p.precision) AS level, COALESCE(a.is_urban, false) AS is_urban
+                   COALESCE(a.level, p.precision) AS level, COALESCE(a.is_urban, false) AS is_urban,
+                   EXISTS (SELECT 1 FROM admin_areas t WHERE t.level = 'town' AND t.is_urban
+                           AND t.population >= 1000000 AND t.state_code = a.state_code
+                           AND t.district_name = a.district_name) AS district_urban
             FROM zone_pts p LEFT JOIN admin_areas a ON a.id = p.admin_area_id""")).all()
         by_cid: dict[int, list[ClusterPoint]] = {}
         for p in points:
             by_cid.setdefault(p.cid, []).append(ClusterPoint(p.signal_id, p.precision, p.geo_confidence,
-                                                             p.admin_area_id, p.mention_text, p.level, p.is_urban))
+                                                             p.admin_area_id, p.mention_text, p.level, p.is_urban,
+                                                             p.district_urban))
         return [Cluster(s.hull, s.centroid, by_cid.get(s.cid, [])) for s in shapes]
 
     def district_evidence(self, hazard: str, since: datetime) -> dict[int, dict[uuid.UUID, float]]:

@@ -25,13 +25,12 @@ class ZoneStateMachine:
         if current in (RESOLVED, RESOLVING):
             if score >= c.activate and evidence_ok:
                 return ACTIVE, None             # re-emerged
-            if current == RESOLVED:
-                return current, below_since
-        if score < c.resolve_below and current in (ACTIVE, APPROVED, RESOLVING):
+            return current, below_since         # sticky until it truly re-emerges (no flicker)
+        if score < c.resolve_below and current in (ACTIVE, APPROVED):
             since = below_since or now
             if now - since >= timedelta(hours=c.resolve_hours) and water_arrived:
                 return RESOLVING, since
-            return (ACTIVE if current == RESOLVING else current), since
+            return current, since
         if current == APPROVED:
             return current, None
         if not evidence_ok:

@@ -2,7 +2,7 @@ import json
 import uuid
 from datetime import datetime
 
-from sqlalchemy import select
+from sqlalchemy import select, text
 
 from app.models import PipelineRun
 from app.repositories.base import BaseRepository
@@ -18,6 +18,10 @@ class PipelineRunRepository(BaseRepository[PipelineRun]):
         run.stats = json.loads(json.dumps(stats, default=str))  # JSON-safe (UUIDs, datetimes)
         run.finished_at = at
         self.flush()
+
+    def try_lock(self) -> bool:
+        """Transaction-scoped advisory lock: only one pipeline run at a time across processes."""
+        return bool(self.session.scalar(text("SELECT pg_try_advisory_xact_lock(hashtext('pipeline'))")))
 
     def savepoint(self):
         """Nested transaction (SAVEPOINT) the caller can commit or roll back without ending the job."""

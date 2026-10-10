@@ -4,10 +4,12 @@ from dataclasses import dataclass, field
 
 
 class ZoneTypeClassifier:
-    """urban_pocket (ward or urban locality) / town (whole-town mention) / rural. District zones are set elsewhere."""
+    """urban_pocket (ward, urban locality, or a neighbourhood inside a million-plus city's district) /
+    town (whole-town mention) / rural. District zones are set elsewhere."""
 
     def classify(self, locations: list[dict]) -> str:
-        if any(loc["level"] == "ward" or (loc["is_urban"] and loc["precision"] != "town") for loc in locations):
+        if any(loc["level"] == "ward" or (loc["is_urban"] and loc["precision"] != "town")
+               or (loc.get("district_urban") and loc["precision"] in ("ward", "village")) for loc in locations):
             return "urban_pocket"
         if any(loc["precision"] == "town" for loc in locations):
             return "town"
@@ -23,6 +25,7 @@ class ClusterPoint:
     mention_text: str
     level: str
     is_urban: bool
+    district_urban: bool = False  # the point's district holds a 1M+ city
 
 
 @dataclass(frozen=True)

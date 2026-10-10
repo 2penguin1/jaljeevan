@@ -89,7 +89,8 @@ class ZoneDetectionService:
             top_mention = Counter(p.mention_text for p in cluster.points).most_common(1)[0][0]
             zone.name = f"{top_mention}, {district[1]}" if district else top_mention
             zone.zone_type = self.types.classify([{"level": p.level, "is_urban": p.is_urban,
-                                                   "precision": p.precision} for p in cluster.points])
+                                                   "precision": p.precision,
+                                                   "district_urban": p.district_urban} for p in cluster.points])
             zone.district_id = district[0] if district else None
             self.zones.set_shape(zone, cluster.hull_ewkt, cluster.centroid_ewkt)
             zone.population_est, zone.population_source = self._population(
