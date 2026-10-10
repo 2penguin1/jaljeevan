@@ -15,9 +15,9 @@ class Settings(BaseSettings):
     raw_bucket: str | None = None
     raw_dir: str = "data/raw"
     apify_token: str | None = None
-    apify_reddit_actor: str = "trudax/reddit-scraper-lite"
-    reddit_enabled: bool = False  # lite actor gets HTTP 429 from Reddit; re-enable with a working actor
-    apify_x_actor: str = "apidojo/tweet-scraper"
+    apify_reddit_actor: str = "harshmaur/reddit-scraper"  # paid per result; the free 'lite' actor was blocked
+    reddit_enabled: bool = True
+    apify_x_actor: str = "kaitoeasyapi/twitter-x-data-tweet-scraper-pay-per-result-cheapest"  # no 10-item cap
     apify_max_usd_per_run: float = 0.5
     max_post_age_days: int = 30
     admin_token: str | None = None  # admin API stays locked until ADMIN_TOKEN is configured

@@ -34,31 +34,40 @@ class _ApifySourceFetcher(BaseSourceFetcher):
 
 
 class RedditFetcher(_ApifySourceFetcher):
-    """Off by default (settings.reddit_enabled): the 'lite' actor is rate-limited by Reddit (HTTP 429)."""
+    """Paid pay-per-result actor (harshmaur/reddit-scraper, ~$2.2 per 1,000 posts).
+
+    Every search is restricted to an Indian subreddit, and capped so one run stays around $0.16.
+    """
 
     name = "reddit"
-    max_items = 150  # actor refuses runs below 10 items
+    max_items = 80
+    POSTS_PER_SEARCH = 3
 
     def run_input(self) -> dict:
-        return {"searches": [f"{t} subreddit:{s}" for s in SUBREDDITS for t in REDDIT_TERMS],
-                "sort": "new", "time": "week", "maxItems": self.max_items, "skipComments": True}
+        return {"searchTerms": [f"{t} subreddit:{s}" for s in SUBREDDITS for t in REDDIT_TERMS],
+                "searchPosts": True, "searchSort": "new", "searchTime": "week",
+                "maxPostsCount": self.POSTS_PER_SEARCH, "maxCommentsCount": 0}
 
     def _to_item(self, row: dict) -> RawItem | None:
-        url = self._first(row, "url", "link", "permalink")
+        url = self._first(row, "postUrl", "url", "link", "permalink")
         if not url:
             return None
         return RawItem(source=self.name, url=url, title=self._first(row, "title", default=""),
                        text=self._first(row, "body", "text", "selftext", default=""),
                        published_at=parse_dt(self._first(row, "createdAt", "created_utc", "created")),
-                       author=self._first(row, "username", "author"), domain="reddit.com", country="IN",
+                       author=self._first(row, "authorName", "username", "author"), domain="reddit.com",
+                       country="IN",
                        meta={"community": self._first(row, "communityName", "subreddit")})
 
 
 class XFetcher(_ApifySourceFetcher):
+    """Paid pay-per-result actor (~$0.25 per 1,000 posts); no free-plan item cap."""
+
     name = "x"
+    max_items = 100
 
     def run_input(self) -> dict:
-        return {"searchTerms": list(X_QUERIES), "maxItems": self.max_items, "sort": "Latest"}
+        return {"searchTerms": list(X_QUERIES), "maxItems": self.max_items, "queryType": "Latest"}
 
     def _to_item(self, row: dict) -> RawItem | None:
         url = self._first(row, "url", "twitterUrl")

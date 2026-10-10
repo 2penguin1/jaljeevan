@@ -46,8 +46,7 @@ The pipeline (`services/pipeline.py`) runs these stages in order:
 4. **`ZoneStage`:** `ZoneDetectionService` does PostGIS clustering, stable zone identity, `ZoneScorer`, `HazardPolicies` and `ZoneStateMachine`, and raises `ZoneEscalated` events.
 
 Known limits:
-- Reddit is off (`reddit_enabled=False`); the Apify lite actor is blocked by Reddit.
-- X returns 10 items per run on the Apify free plan.
+- Social sources use paid pay-per-result Apify actors (Reddit is `harshmaur/reddit-scraper`, about $2.2 per 1,000 posts; X is `kaitoeasyapi/...`, about $0.25 per 1,000 posts). Per-run caps keep a run at roughly $0.2; the user's Apify balance is about $8.
 - District populations are undercounted until a Census CSV is added.
 
 ## References

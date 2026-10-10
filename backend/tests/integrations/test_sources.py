@@ -91,6 +91,29 @@ def test_reddit_and_x_map_tolerantly_through_apify():
     assert x[0].source == "x" and x[0].author == "a"
 
 
+def test_paid_reddit_actor_input_is_india_restricted_and_budgeted():
+    apify = ApifyClient(client(lambda r: httpx.Response(200, json=[])), token="t", max_usd_per_run=0.5)
+    run_input = RedditFetcher(apify, actor_id="harshmaur/reddit-scraper").run_input()
+    assert all("subreddit:" in term for term in run_input["searchTerms"])        # never all of Reddit
+    assert run_input["maxPostsCount"] == 3 and run_input["maxCommentsCount"] == 0
+    assert len(run_input["searchTerms"]) * run_input["maxPostsCount"] <= 80          # ~$0.16 per run
+
+
+def test_paid_reddit_actor_output_maps():
+    row = {"postUrl": "https://www.reddit.com/r/bangalore/comments/1/x/", "title": "Insane Drainage in East BLR",
+           "body": "Water logged for 3 days", "createdAt": "2026-10-01T07:02:54.000Z", "authorName": "u1",
+           "communityName": "r/bangalore"}
+    apify = ApifyClient(client(lambda r: httpx.Response(201, json=[row])), token="t", max_usd_per_run=0.5)
+    [item] = RedditFetcher(apify, actor_id="harshmaur/reddit-scraper").fetch()
+    assert item.url == row["postUrl"] and item.author == "u1" and item.meta["community"] == "r/bangalore"
+
+
+def test_paid_x_actor_input():
+    apify = ApifyClient(client(lambda r: httpx.Response(200, json=[])), token="t", max_usd_per_run=0.5)
+    run_input = XFetcher(apify, actor_id="kaitoeasyapi/x").run_input()
+    assert run_input["queryType"] == "Latest" and run_input["maxItems"] == 100 and run_input["searchTerms"]
+
+
 def test_apify_without_token_disables_social_sources():
     apify = ApifyClient(client(lambda r: pytest.fail("must not call Apify")), token=None, max_usd_per_run=0.5)
     fetcher = RedditFetcher(apify, actor_id="trudax/reddit-scraper-lite")
