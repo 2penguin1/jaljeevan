@@ -12,6 +12,7 @@ import type { Geometry } from "@/lib/api/types";
 import { formatInt, formatPeople, timeAgo } from "@/lib/format";
 import { HAZARDS } from "@/lib/hazards";
 import { useZone } from "@/lib/hooks/queries";
+import { BriefCard } from "@/features/briefs/BriefCard";
 import { ReliefNeedCard } from "@/features/tenders/ReliefNeedCard";
 import { DroughtPanel } from "./DroughtPanel";
 import { ScoreBreakdown } from "./ScoreBreakdown";
@@ -126,6 +127,7 @@ export function ZonePage() {
             )}
           </div>
           <aside className="flex flex-col gap-8">
+            <BriefCard zoneId={zone.id} />
             {(zone.hazard === "drought" || zone.hazard === "water") && <ReliefNeedCard zoneId={zone.id} />}
             {query.data.drought && <DroughtPanel panel={query.data.drought} />}
             <ScoreBreakdown breakdown={score_breakdown} evidence={evidence} indicators={indicators} hazard={zone.hazard} />

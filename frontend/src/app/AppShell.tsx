@@ -1,4 +1,4 @@
-import { Activity, Globe2, Inbox, Rows3, Truck, type LucideIcon } from "lucide-react";
+import { Activity, ClipboardCheck, Globe2, Inbox, Rows3, Truck, type LucideIcon } from "lucide-react";
 import { Link, NavLink, Outlet, useMatches, useNavigate } from "react-router";
 import { LiveDot } from "@/components/patterns/LiveDot";
 import { NotificationBell } from "@/features/account/NotificationBell";
@@ -15,10 +15,12 @@ const NAV: { to: string; label: string; icon: LucideIcon }[] = [
 ];
 
 const INBOX = { to: "/inbox", label: "Inbox", icon: Inbox };
+const BRIEFS = { to: "/briefs", label: "Briefs", icon: ClipboardCheck };
 
 function NavItems({ compact }: { compact?: boolean }) {
   const me = useMe();
-  const items = me.data?.role === "vendor" ? [...NAV.slice(0, 3), INBOX, ...NAV.slice(3)] : NAV;
+  const extra = me.data?.role === "vendor" ? [INBOX] : me.data?.role === "gov_admin" ? [BRIEFS] : [];
+  const items = [...NAV.slice(0, 3), ...extra, ...NAV.slice(3)];
   return items.map(({ to, label, icon: Icon }) => (
     <NavLink
       key={to}

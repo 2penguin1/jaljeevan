@@ -69,3 +69,4 @@ export type Me = S["MeOut"];
 export type Inbox = S["InboxOut"];
 export type InboxBid = S["InboxBid"];
 export type Notifications = S["NotificationsOut"];
+export type Brief = S["BriefOut"];
