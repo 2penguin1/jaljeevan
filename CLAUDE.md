@@ -39,6 +39,12 @@ Run these from `backend/` unless noted.
   - then `uv run python -m app.evals.run`.
 - **OpenAPI for the frontend:** `uv run python -m scripts.export_openapi` writes `backend/openapi.json`. Then, in `frontend/`, run `npm run gen:api` to regenerate the TypeScript types.
 
+AWS deploy (from `infra/`, CDK Python; always `--profile spice`):
+- **App secret (once, or after rotating keys):** `cd backend && uv run python ../infra/scripts/put_app_secret.py` (reads `backend/.env`, never prints values).
+- **Deploy / update:** build the website first (`cd frontend && npm run build`), then `cd infra && npx cdk deploy --profile spice`. Outputs: `WebsiteUrl`, `RawBucket`, `ClusterName`, `TaskDefinition`, `PublicSubnets`, `TaskSecurityGroup`.
+- **Copy local data up:** dump inside the db container (`pg_dump -Fc -f /tmp/jal.dump`, then `docker cp`), `aws s3 cp` it to `s3://<RawBucket>/dumps/jal.dump`, scale the API to 0, run the task with command `python -m scripts.restore_db s3://<RawBucket>/dumps/jal.dump`, scale back to 1.
+- **Remove everything:** `cd infra && npx cdk destroy --profile spice` (the database leaves a final snapshot).
+
 Frontend (run from `frontend/`; the backend API must be on :8000 for dev):
 - **Install / dev:** `npm install`, then `npm run dev` (http://localhost:5173; `/api` is proxied to :8000, so there's no CORS).
 - **Unit tests:** `npx vitest run` (Vitest + Testing Library + MSW). **Types:** `npx tsc -b --noEmit`.

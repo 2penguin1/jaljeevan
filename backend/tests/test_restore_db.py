@@ -32,5 +32,6 @@ def test_restore_downloads_then_runs_pg_restore_without_the_password_on_the_comm
     assert s3.calls[0][:2] == ("jal-data", "dumps/jal.dump")
     cmd = seen["cmd"]
     assert cmd[0] == "pg_restore" and "--no-owner" in cmd and "--no-acl" in cmd and cmd[-1] == s3.calls[0][2]
+    assert "--clean" in cmd and "--if-exists" in cmd  # replaces the empty tables the API made at first start
     assert ["-h", "db.internal"] == cmd[cmd.index("-h"):cmd.index("-h") + 2] and "s3cret" not in " ".join(cmd)
     assert seen["env"]["PGPASSWORD"] == "s3cret"

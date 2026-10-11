@@ -28,7 +28,7 @@ def restore(uri: str, s3=None, run=subprocess.run) -> int:
         s3 = boto3.client("s3", region_name=settings.aws_region)
     path = os.path.join(tempfile.gettempdir(), "restore.dump")
     s3.download_file(bucket, key, path)
-    cmd = ["pg_restore", "--no-owner", "--no-acl", "--verbose", "-h", settings.db_host or "localhost",
+    cmd = ["pg_restore", "--no-owner", "--no-acl", "--clean", "--if-exists", "--verbose", "-h", settings.db_host or "localhost",
            "-p", str(settings.db_port), "-U", settings.db_user or "postgres", "-d", settings.db_name, path]
     result = run(cmd, env={**os.environ, "PGPASSWORD": settings.db_password or ""}, capture_output=True, text=True)
     # pg_restore exits 1 on harmless warnings too (e.g. COMMENT ON EXTENSION needs the extension owner): show them
