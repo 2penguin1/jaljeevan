@@ -27,6 +27,7 @@ from app.domain.zones import ZoneTypeClassifier
 from app.integrations.apify import ApifyClient
 from app.integrations.archive import make_archive
 from app.integrations.chirps import ChirpsSpiSource
+from app.integrations.imd import ImdDistrictRainfall
 from app.integrations.population import WorldPopGrid
 from app.integrations.soil import GdoSoilMoistureAnomaly
 from app.integrations.article import ArticleExtractor
@@ -175,7 +176,8 @@ class Container:
         s = self.settings
         return IndicatorRefreshService(AreaIndicatorRepository(session), AdminAreaRepository(session),
                                        ChirpsSpiSource(self.http, s.chirps_base_url),
-                                       GdoSoilMoistureAnomaly(self.http, s.gdo_soil_base_url), self.population)
+                                       GdoSoilMoistureAnomaly(self.http, s.gdo_soil_base_url), self.population,
+                                       imd=ImdDistrictRainfall(self.http), indicators=IndicatorRepository(session))
 
     def pipeline(self, session: Session) -> IntelligencePipeline:
         signals = SignalRepository(session)

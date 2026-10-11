@@ -82,7 +82,7 @@ def test_pipeline_end_to_end_with_events(db, tmp_path):
     assert stats["ingest"]["x"] == {"error": "x: down"}          # one broken source is isolated
     assert stats["classify"]["classified"] == 2 and stats["geocode"]["located"] == 2
     assert stats["zones"]["created"] == 1
-    assert stats["indicators"] == {"skipped": "no talukas loaded"}
+    assert stats["indicators"] == {"imd": {"skipped": "no readings"}, "skipped": "no talukas loaded"}
     zone = db.scalar(select(Zone))
     assert zone.status == "active" and zone.zone_type == "urban_pocket"
     assert sum(isinstance(e, SignalClassified) for e in outcome.events) == 2

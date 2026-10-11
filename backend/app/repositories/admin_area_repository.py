@@ -22,6 +22,10 @@ class AdminAreaRepository(BaseRepository[AdminArea]):
     def has_any(self) -> bool:
         return self.session.scalar(select(AdminArea.id).limit(1)) is not None
 
+    def district_ids_by_name(self, name_norm: str) -> list[int]:
+        return list(self.session.scalars(select(AdminArea.id).where(AdminArea.level == "district",
+                                                                    AdminArea.name_norm == name_norm)))
+
     def has_level(self, level: str) -> bool:
         return self.session.scalar(select(AdminArea.id).where(AdminArea.level == level).limit(1)) is not None
 

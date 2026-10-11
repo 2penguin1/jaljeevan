@@ -10,18 +10,23 @@ import numpy as np
 
 from app.core.exceptions import ExternalServiceError
 from app.domain.drought import DroughtRules, dekad_end, pentad_end
+from app.domain.text import TextFingerprinter
 from app.integrations.population import WorldPopGrid
 from app.integrations.raster import Grid, resample_nearest, shapes_from_wkb, zonal_mean, zonal_sums
 from app.repositories.admin_area_repository import AdminAreaRepository
 from app.repositories.area_indicator_repository import AreaIndicatorRepository
+from app.repositories.indicator_repository import IndicatorRepository
 
 LOG = logging.getLogger(__name__)
 SPI_SOURCE, SOIL_SOURCE = "chirps-spi", "gdo-soil"
+_NAMES = TextFingerprinter()
 
 
 class IndicatorRefreshService:
     def __init__(self, area_indicators: AreaIndicatorRepository, areas: AdminAreaRepository, chirps, soil,
-                 population: WorldPopGrid | None):
+                 population: WorldPopGrid | None, imd=None, indicators: IndicatorRepository | None = None):
+        self.imd = imd                # optional cross-check: official IMD district departure
+        self.indicators = indicators  # district_indicators, where the IMD value is stored
         self.area_indicators = area_indicators
         self.areas = areas
         self.chirps = chirps
@@ -29,10 +34,12 @@ class IndicatorRefreshService:
         self.population = population
 
     def refresh(self, now: datetime) -> dict:
+        stats: dict = {}
+        if self.imd is not None and self.indicators is not None:
+            stats["imd"] = self._imd()  # district level: does not need talukas
         shapes = shapes_from_wkb(self.areas.geometries("subdistrict"))
         if not shapes:
-            return {"skipped": "no talukas loaded"}
-        stats: dict = {}
+            return {**stats, "skipped": "no talukas loaded"}
         for name, step in ((SPI_SOURCE, self._spi), (SOIL_SOURCE, self._soil)):
             try:
                 stats[name] = step(shapes)
@@ -40,6 +47,21 @@ class IndicatorRefreshService:
                 LOG.warning("indicator source %s failed: %s", name, exc)
                 stats[name] = {"error": str(exc)}
         return stats
+
+    def _imd(self) -> dict:
+        readings = self.imd.fetch()  # fails soft: [] when the page is down or changed
+        if not readings:
+            return {"skipped": "no readings"}
+        day = max(r.day for r in readings)
+        if self.indicators.has_period("imd", day):
+            return {"skipped": "fresh", "day": day.isoformat()}
+        matched = 0
+        for r in readings:
+            ids = self.areas.district_ids_by_name(_NAMES.norm_name(r.district))
+            if len(ids) == 1:  # the page has no state names: a name found in two states is skipped, not guessed
+                self.indicators.upsert(ids[0], r.day, "imd", rainfall_departure_pct=r.departure_pct)
+                matched += 1
+        return {"day": day.isoformat(), "matched": matched, "unmatched": len(readings) - matched}
 
     def _spi(self, shapes) -> dict:
         latest = self.chirps.latest("18")

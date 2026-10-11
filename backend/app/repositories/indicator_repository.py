@@ -29,6 +29,10 @@ class IndicatorRepository(BaseRepository[DistrictIndicator]):
             "FROM admin_areas WHERE level = 'district'")).all()
         return [(r.id, r.lat, r.lon) for r in rows]
 
+    def has_period(self, source: str, period: date) -> bool:
+        return self.session.scalar(text(
+            "SELECT 1 FROM district_indicators WHERE source = :s AND period = :p LIMIT 1"), {"s": source, "p": period}) is not None
+
     def latest_by_district(self, source: str | None) -> dict[int, dict]:
         if source is None:  # hazards without a district indicator (e.g. water supply)
             return {}

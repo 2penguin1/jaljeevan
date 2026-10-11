@@ -102,3 +102,33 @@ def test_one_failing_source_does_not_stop_the_other(db, talukas, population):
 def test_nothing_to_do_without_talukas(db, population):
     stats = service(db, FakeChirps(), FakeSoil(), population).refresh(NOW)
     assert stats == {"skipped": "no talukas loaded"}
+
+
+class FakeImd:
+    def __init__(self, readings):
+        self.readings = readings
+
+    def fetch(self):
+        return self.readings
+
+
+def test_imd_district_departures_are_matched_by_name_and_ambiguous_names_are_skipped(db, population):
+    from app.integrations.imd import ImdReading
+    from app.models import DistrictIndicator
+    from app.repositories.indicator_repository import IndicatorRepository
+    for name, sc in (("Solapur", "MH"), ("Aurangabad", "MH"), ("Aurangabad", "BR")):
+        db.add(AdminArea(level="district", name=name, name_norm=name.lower(), state_code=sc,
+                         geom=from_shape(box(70, 10, 71, 11), srid=4326)))
+    db.add(AdminArea(level="subdistrict", name="T", name_norm="t", state_code="MH",
+                     geom=from_shape(box(71, 14, 73, 16), srid=4326)))
+    db.flush()
+    day = date(2026, 10, 10)
+    imd = FakeImd([ImdReading("SOLAPUR", -45.0, day), ImdReading("AURANGABAD", 12.0, day),
+                   ImdReading("NOWHERE", 3.0, day)])
+    svc = IndicatorRefreshService(AreaIndicatorRepository(db), AdminAreaRepository(db), FakeChirps(), FakeSoil(),
+                                  population, imd=imd, indicators=IndicatorRepository(db))
+    stats = svc.refresh(NOW)
+    assert stats["imd"] == {"day": "2026-10-10", "matched": 1, "unmatched": 2}
+    row = db.query(DistrictIndicator).filter_by(source="imd").one()
+    assert row.rainfall_departure_pct == -45.0 and row.period == day
+    assert svc.refresh(NOW)["imd"] == {"skipped": "fresh", "day": "2026-10-10"}
