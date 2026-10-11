@@ -34,6 +34,10 @@ Claude keeps this list up to date. Tick items off as you finish them.
   - website files (served through CloudFront);
   - citizen photo uploads;
   - downloaded rainfall/soil files, if we want to keep them.
+- [ ] **Speed up the drought evidence query** before posts reach tens of thousands (it can't use the map index today; split it into three simpler queries).
+- [ ] **Flood and heat reports at taluka level:** posts like "flood in Mohol taluka" only count for drought today.
+- [ ] **Instant map shading after new data:** today the dry-taluka shading can lag up to 10 minutes after a refresh (clear the map cache at the end of each pipeline run).
+- [ ] **Small edge cases** from the final review (listed in `DECISIONS.md`): very small city talukas with no 1 km grid square, list lines like "X district: A, B" in English orders, orders that mention both "moderate" and "severe", and a few safety caps (download size limit, checking the model's remote code).
 - [ ] **RAG** (search our own documents and give the AI the right pieces before it writes):
   - relief briefs grounded in the Drought Manual and past similar zones;
   - an "ask the data" chat for officials;
