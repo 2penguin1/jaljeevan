@@ -34,7 +34,10 @@ indic = [
 ]
 
 [dependency-groups]
-dev = ["pytest>=8.3"]
+dev = [
+    "playwright>=1.63.0",
+    "pytest>=8.3",
+]
 
 [tool.fastapi]
 entrypoint = "app.main:app"

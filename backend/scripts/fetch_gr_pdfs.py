@@ -4,8 +4,8 @@ The GR search is protected by a captcha, and this script does NOT get around it:
 fills in the search (Relief & Rehabilitation department + keyword), and **you** type the captcha and press Search.
 It then reads every result and downloads each official PDF.
 
-First time only:  cd backend && uv run --with playwright playwright install chromium
-Run:              cd backend && uv run --with playwright python -m scripts.fetch_gr_pdfs [--keyword दुष्काळ]
+First time only:  cd backend && uv run playwright install chromium
+Run:              cd backend && uv run python -m scripts.fetch_gr_pdfs [--keyword दुष्काळ]
 Then:             uv run python -m app.cli.process_declaration_inbox
 Delete this file once past orders are in; new orders are picked up from the open "latest orders" page.
 """
