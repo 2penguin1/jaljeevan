@@ -23,8 +23,15 @@ from app.repositories.admin_area_repository import AdminAreaRepository
 from app.repositories.declaration_source_repository import DeclarationSourceRepository
 
 LOG = logging.getLogger(__name__)
-# links to official orders inside an article: government (.gov.in / .nic.in) PDFs only
-_OFFICIAL_PDF = re.compile(r"""href=["'](https?://[^"'\s]+\.(?:gov|nic)\.in/[^"'\s]*?\.pdf)["']""", re.I)
+_PDF_LINK = re.compile(r"""href=["'](https?://[^"'\s]+?\.pdf)["']""", re.I)
+_GOVERNMENT_HOST = re.compile(r"(?:^|\.)(?:gov|nic)\.in$", re.I)
+
+
+def official_links(page: str) -> list[str]:
+    """PDF links in an article that are hosted on a government site (.gov.in / .nic.in); a government address
+    inside another site's link (web.archive.org/..., evil.test/x.gov.in/...) does not count."""
+    return list(dict.fromkeys(u for u in _PDF_LINK.findall(page)
+                              if _GOVERNMENT_HOST.search(urlsplit(u).hostname or "")))
 
 
 def html_text(body: bytes) -> str:
@@ -91,7 +98,7 @@ class DeclarationWatchService:
                 text = "\n".join(self.pdf_text(fetched.body))
             else:
                 text = self.html_text(fetched.body)
-                links = _OFFICIAL_PDF.findall(fetched.body.decode("utf-8", "replace"))
+                links = official_links(fetched.body.decode("utf-8", "replace"))
             source.status, source.state_code, source.list_fingerprint, rows = self._mentions(f"{title or ''}\n{text}")
         self.sources.save(source)
         self.sources.add_mentions(source.id, rows)

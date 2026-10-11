@@ -258,3 +258,12 @@ def test_the_review_list_has_what_is_named_but_not_declared(db, areas):
     assert mundargi["state_code"] == "KA" and mundargi["district"] == "Gadag" and mundargi["area_id"] == areas["Mundargi"]
     assert mundargi["severity"] == "unknown" and mundargi["declared_on"] == "2026-10-02"
     assert mundargi["order_ref"] == "news: 1 source (check before loading)"
+
+
+def test_only_links_hosted_on_government_sites_count_as_official(db, areas):
+    links = ('<a href="https://web.archive.org/web/2026/https://upag.gov.in/report.pdf">archived</a>'
+             '<a href="https://evil.test/revenue.karnataka.gov.in/order.pdf">fake</a>')
+    url = "https://www.siasat.com/a"
+    service, fetcher = watch(db, [hit(url)], {url: html("Karnataka drought news.", links)})
+    service.run(NOW)
+    assert fetcher.calls == [url]

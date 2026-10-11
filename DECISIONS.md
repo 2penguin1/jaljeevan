@@ -133,3 +133,19 @@ Simple notes on decisions Claude made for you, especially overnight. Newest at t
   - two different talukas that read equally well are never guessed; they go to the check list.
 - **Only real declarations load talukas.** An order now has to *declare* drought ("दुष्काळ जाहीर" / "declared drought"). The 22 Sep order that only set up a ministers' committee had loaded 3 wrong talukas; I removed them and that order is now skipped.
 - **Live result now:** all 230 declared talukas are active drought zones (245 active in total), plus 22 water supply zones.
+
+## Declaration watch: drought declarations of other states from the news (2026-10-11)
+You asked me to decide the rest myself and build it. My decisions, in simple points:
+- **How it finds them:** once a day, GDELT (a free world news index) is searched for "declared drought-hit … taluks / mandals / tehsils" in Indian news. Each new article is read once. If it links to an official government PDF (.gov.in / .nic.in), that is read too.
+- **Only real declarations count.** I checked real articles first. Lokmat's headline said "19 talukas declared" but the list was only *demanded*; The Hindu wrote "may be declared". So names are taken only from a sentence that itself declares, and words like demand, may, likely, seek, excluded or मागणी cancel it.
+- **Safety rule (as you approved):** a taluka is declared only when **one official order**, or **two independent news sites**, name it within 120 days. Independent means a different website **and** different wording: the same news-agency (ANI) story copied onto five websites counts once. www. and m. versions of a site count once.
+- **Which state:** the names must mostly match one state's talukas, and the article must name that state. Otherwise the article is skipped; names are never guessed.
+- **States watched:** Karnataka, Telangana, Andhra Pradesh, Tamil Nadu, Gujarat, Rajasthan, Madhya Pradesh, Chhattisgarh, Uttar Pradesh, Kerala, Haryana, Punjab.
+  - **Maharashtra is left out** on purpose: its official order site is better, and we already read it.
+  - **Bihar, Jharkhand, Odisha and West Bengal are left out:** they declare by block, a smaller unit than our talukas.
+- **Never overwrites:** if a taluka already has a declaration this season (for example from the Maharashtra order), the news never changes it.
+- **Being polite to websites:** we obey each site's robots.txt, make at most 1 request per second per site, refuse very large files, and use no logins, captchas or paywalls. GDELT is asked once per run and the watch runs at most once every 20 hours.
+- **When things fail:** a failed article is tried once more the next day, then left. If GDELT is down, the run notes it and the rest of the pipeline carries on.
+- **What you see:** the ops page has a new "Declaration watch" box (articles read, talukas declared per state, talukas waiting). `uv run python -m app.cli.declaration_review` writes the waiting talukas to a CSV for you to check and load.
+- **English only for now.** Hindi, Kannada and Telugu news are noted in reminders.
+- **Small fix on the way:** Kannada, Telugu, Tamil, Gujarati, Punjabi and Malayalam letters can now be read in official orders (same method as Marathi).

@@ -47,3 +47,11 @@ Claude keeps this list up to date. Tick items off as you finish them.
   - summaries and insights generated from collected posts.
 
   Use pgvector inside our Postgres, so no new server. Not part of the current drought work.
+
+## Declaration watch (news, other states) — left for later
+- [ ] **Check the news review list** now and then: `uv run python -m app.cli.declaration_review`, then load what is right with `load_declarations`. Talukas named by only one news site wait there.
+- [ ] **New taluks missing from our map data** (e.g. Karnataka's Harohalli, Kalasa, Kushalnagar, Ullal, Byndoor): they cannot be matched until newer taluk boundaries are loaded.
+- [ ] **Hindi, Kannada and Telugu news** are not searched yet (English only).
+- [ ] **Bihar, Jharkhand, Odisha, West Bengal** declare drought by block; they need block boundaries first.
+- [ ] **State revenue websites** could be read directly for one or two states (stronger than news), if those states matter.
+- [ ] **Review buttons in the app** (accept / reject on the ops page) instead of the CSV.
