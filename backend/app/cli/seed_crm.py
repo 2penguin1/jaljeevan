@@ -10,7 +10,7 @@ from sqlalchemy import select
 
 from app.core.config import settings
 from app.core.database import init_db, session_scope
-from app.core.security import hash_password
+from app.core.security import hash_password, verify_password
 from app.models import Organization, User
 
 GOVERNMENT = "Relief & Rehabilitation Department, Maharashtra"
@@ -67,8 +67,8 @@ def main() -> None:
             user = s.scalar(select(User).where(User.email == email))
             if user is None:
                 s.add(User(email=email, name=name, role=role, org_id=orgs[org_name].id, password_hash=password))
-            elif user.password_hash == "!" and password != "!":
-                user.password_hash = password  # accounts made before a demo password existed can now log in
+            elif settings.demo_password and not verify_password(settings.demo_password, user.password_hash):
+                user.password_hash = password  # a new (rotated) demo password replaces the old one
     print(f"government office ready; {added} demo vendors added; {len(ACCOUNTS)} login accounts ready"
           + ("" if settings.demo_password else " (no DEMO_PASSWORD: they cannot log in yet)"))
 

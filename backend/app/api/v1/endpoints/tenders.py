@@ -4,7 +4,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
-from app.api.dependencies import ContainerDep, SessionDep, require_role
+from app.api.dependencies import ContainerDep, MaybeUser, SessionDep, require_role
 from app.models import User
 from app.schemas.tenders import (BidActionIn, InboxOut, RaisePriceIn, ReliefNeedOut, TenderCreated, TenderDetail,
                                  TenderIn, TenderSummary, VendorOut)
@@ -30,8 +30,8 @@ def list_tenders(db: SessionDep, container: ContainerDep) -> list[TenderSummary]
 
 
 @router.get("/tenders/{tender_id}")
-def tender_detail(tender_id: uuid.UUID, db: SessionDep, container: ContainerDep) -> TenderDetail:
-    return TenderDetail(**container.tender_service(db).detail(tender_id))
+def tender_detail(tender_id: uuid.UUID, user: MaybeUser, db: SessionDep, container: ContainerDep) -> TenderDetail:
+    return TenderDetail(**container.tender_service(db).detail(tender_id, viewer=user))
 
 
 @router.post("/tenders", status_code=201)
@@ -48,7 +48,7 @@ def raise_price(tender_id: uuid.UUID, body: RaisePriceIn, user: Officer, db: Ses
     service = container.tender_service(db)
     service.raise_price(tender_id, user, body.price_per_unit)
     db.commit()
-    return TenderDetail(**service.detail(tender_id))
+    return TenderDetail(**service.detail(tender_id, viewer=user))
 
 
 @router.post("/tenders/{tender_id}/bids/{bid_id}/actions")
@@ -63,7 +63,7 @@ def bid_action(tender_id: uuid.UUID, bid_id: uuid.UUID, body: BidActionIn, user:
         service.act(tender_id, bid_id, user, body.action, body.expected_version, body.price_per_unit,
                     body.qty_per_day, body.note)
     db.commit()
-    return TenderDetail(**service.detail(tender_id))
+    return TenderDetail(**service.detail(tender_id, viewer=user))
 
 
 @router.get("/inbox")

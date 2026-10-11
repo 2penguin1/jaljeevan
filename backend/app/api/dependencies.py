@@ -50,3 +50,16 @@ def require_role(*roles: str):
             raise HTTPException(status_code=403, detail="Your account cannot do this")
         return user
     return check
+
+
+def optional_user(db: SessionDep, session: Annotated[str | None, Cookie()] = None) -> User | None:
+    """The logged-in user if there is a valid session, else None (for pages anyone may read)."""
+    if not session:
+        return None
+    try:
+        return db.get(User, read_token(session).user_id)
+    except InvalidToken:
+        return None
+
+
+MaybeUser = Annotated[User | None, Depends(optional_user)]

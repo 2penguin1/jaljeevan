@@ -17,7 +17,7 @@ export function LoginPage() {
       const me = await login.mutateAsync({ email, password });
       const next = params.get("next");
       // only same-site paths: "//evil.com" would leave the site
-      navigate(next && next.startsWith("/") && !next.startsWith("//") ? next : me.role === "vendor" ? "/inbox" : "/tenders");
+      navigate(next && next.startsWith("/") && !next.startsWith("//") && !next.includes("\\") ? next : me.role === "vendor" ? "/inbox" : "/tenders");
     } catch {
       // shown below
     }

@@ -52,7 +52,7 @@ def test_only_a_relief_officer_publishes_and_vendors_in_reach_get_an_opening_off
     service, zone, users = setup
     with pytest.raises(ForbiddenError):
         service.create(zone.id, 600, 30, 60, 100, actor=users["cheap"])
-    detail = service.detail(publish(service, zone, users))
+    detail = service.detail(publish(service, zone, users), viewer=users["officer"])
     assert detail["status"] == "published" and detail["zone_name"] == "Akkalkot taluka, Solapur"
     assert [b["vendor_name"] for b in detail["bids"]] == ["Near Cheap Tankers", "Near Pricey Tankers"]
     first = detail["bids"][0]
@@ -64,24 +64,24 @@ def test_only_a_relief_officer_publishes_and_vendors_in_reach_get_an_opening_off
 def test_the_side_comes_from_the_account_and_a_vendor_only_touches_its_own_bid(setup):
     service, zone, users = setup
     tender_id = publish(service, zone, users)
-    cheap = service.detail(tender_id)["bids"][0]
+    cheap = service.detail(tender_id, viewer=users["officer"])["bids"][0]
     with pytest.raises(ForbiddenError):
         service.act(tender_id, cheap["id"], users["pricey"], "accept", expected_version=1)   # someone else's bid
     with pytest.raises(ForbiddenError):
         service.act(tender_id, cheap["id"], users["citizen"], "accept", expected_version=1)
     service.act(tender_id, cheap["id"], users["cheap"], "counter", expected_version=1, price_per_unit=64,
                 qty_per_day=100, note="diesel costs")
-    after = service.detail(tender_id)["bids"][0]
+    after = service.detail(tender_id, viewer=users["officer"])["bids"][0]
     assert (after["status"], after["turn"], after["offer"]["price_per_unit"], after["version"]) == ("countered", "gov", 64, 2)
     service.act(tender_id, cheap["id"], users["officer"], "accept", expected_version=2)
-    done = service.detail(tender_id)
+    done = service.detail(tender_id, viewer=users["officer"])
     assert done["bids"][0]["status"] == "accepted" and done["committed_kl_per_day"] == 100
 
 
 def test_a_stale_version_is_refused_instead_of_overwriting(setup):
     service, zone, users = setup
     tender_id = publish(service, zone, users)
-    bid = service.detail(tender_id)["bids"][0]
+    bid = service.detail(tender_id, viewer=users["officer"])["bids"][0]
     service.act(tender_id, bid["id"], users["cheap"], "counter", expected_version=1, price_per_unit=64, qty_per_day=100)
     with pytest.raises(ConflictError, match="changed"):
         service.act(tender_id, bid["id"], users["officer"], "accept", expected_version=1)
@@ -90,7 +90,7 @@ def test_a_stale_version_is_refused_instead_of_overwriting(setup):
 def test_out_of_turn_is_refused(setup):
     service, zone, users = setup
     tender_id = publish(service, zone, users)
-    bid = service.detail(tender_id)["bids"][0]
+    bid = service.detail(tender_id, viewer=users["officer"])["bids"][0]
     with pytest.raises(ConflictError):
         service.act(tender_id, bid["id"], users["officer"], "accept", expected_version=1)  # the vendor answers first
 
@@ -98,10 +98,10 @@ def test_out_of_turn_is_refused(setup):
 def test_messages_go_into_the_thread_without_changing_whose_turn_it_is(setup):
     service, zone, users = setup
     tender_id = publish(service, zone, users)
-    bid = service.detail(tender_id)["bids"][0]
+    bid = service.detail(tender_id, viewer=users["officer"])["bids"][0]
     service.message(tender_id, bid["id"], users["cheap"], "Can start from Monday with 9 tankers.")
     service.message(tender_id, bid["id"], users["officer"], "Monday works.")
-    after = service.detail(tender_id)["bids"][0]
+    after = service.detail(tender_id, viewer=users["officer"])["bids"][0]
     assert after["turn"] == "vendor" and after["version"] == 1
     human = [m for m in after["messages"] if m["side"] != "system"]
     assert [(m["side"], m["author"]) for m in human] == [("vendor", "Near Cheap Tankers desk"), ("gov", "Demo officer")]
@@ -117,7 +117,7 @@ def test_raising_the_price_makes_a_new_offer_on_every_open_bid(setup):
     with pytest.raises(ConflictError):
         service.raise_price(tender_id, users["officer"], 55)  # must be higher
     service.raise_price(tender_id, users["officer"], 70)
-    detail = service.detail(tender_id)
+    detail = service.detail(tender_id, viewer=users["officer"])
     assert detail["price_per_unit"] == 70
     for bid in detail["bids"]:
         assert (bid["offer"]["price_per_unit"], bid["offer"]["version"], bid["turn"]) == (70, 2, "vendor")
@@ -128,7 +128,7 @@ def test_the_vendor_inbox_sorts_bids_by_whose_move_it_is(setup):
     service, zone, users = setup
     tender_id = publish(service, zone, users)
     assert [b["zone_name"] for b in service.inbox(users["cheap"])["needs_action"]] == ["Akkalkot taluka, Solapur"]
-    bid = service.detail(tender_id)["bids"][0]
+    bid = service.detail(tender_id, viewer=users["officer"])["bids"][0]
     service.act(tender_id, bid["id"], users["cheap"], "counter", expected_version=1, price_per_unit=64, qty_per_day=100)
     inbox = service.inbox(users["cheap"])
     assert (len(inbox["needs_action"]), len(inbox["waiting"]), len(inbox["closed"])) == (0, 1, 0)
@@ -141,3 +141,18 @@ def test_suggested_price_and_vendor_list(setup):
     service, zone, _ = setup
     assert service.suggested_price(zone.id, radius_km=100) == 67.5
     assert {v["name"] for v in service.vendors()} >= {"Near Cheap Tankers", "Far Away Tankers"}
+
+
+def test_offers_and_messages_are_only_shown_to_the_officer_and_that_bid_s_vendor(setup):
+    service, zone, users = setup
+    tender_id = publish(service, zone, users)
+    bid = service.detail(tender_id, viewer=users["officer"])["bids"][0]
+    service.message(tender_id, bid["id"], users["cheap"], "Our best rate is 58")
+    public = service.detail(tender_id, viewer=None)
+    assert all(b["offer"] is None and b["messages"] == [] for b in public["bids"])     # tender, vendors, status: open
+    assert public["bids"][0]["vendor_name"] == "Near Cheap Tankers" and public["committed_kl_per_day"] == 0
+    rival = service.detail(tender_id, viewer=users["pricey"])
+    assert rival["bids"][0]["offer"] is None and rival["bids"][1]["offer"] is not None  # sees only its own
+    own = service.detail(tender_id, viewer=users["cheap"])["bids"][0]
+    assert own["offer"]["price_per_unit"] == 60 and any("58" in m["body"] for m in own["messages"])
+    assert service.detail(tender_id, viewer=users["officer"])["bids"][1]["offer"] is not None

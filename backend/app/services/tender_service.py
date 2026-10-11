@@ -40,10 +40,13 @@ class TenderService:
     def tenders(self) -> list[dict]:
         return [self._summary(t) for t in self.repo.tenders()]
 
-    def detail(self, tender_id: uuid.UUID) -> dict:
+    def detail(self, tender_id: uuid.UUID, viewer: User | None = None) -> dict:
+        """Everyone sees the tender, who was invited and each bid's status. Offers and messages are confidential:
+        only the relief officer and the bid's own vendor see them (vendors never see a rival's price)."""
         tender = self._tender(tender_id)
         out = self._summary(tender)
-        out["bids"] = [self._bid(bid) for bid in self.repo.bids(tender.id)]
+        out["bids"] = [self._bid(bid, with_messages=True) if self._party(viewer, bid) else self._bid_public(bid)
+                       for bid in self.repo.bids(tender.id)]
         return out
 
     def inbox(self, actor: User) -> dict:
@@ -89,7 +92,7 @@ class TenderService:
     def act(self, tender_id: uuid.UUID, bid_id: uuid.UUID, actor: User, action: str, expected_version: int,
             price_per_unit: float | None = None, qty_per_day: float | None = None, note: str | None = None) -> None:
         tender = self._tender(tender_id)
-        bid = self._bid_row(tender, bid_id)
+        bid = self._bid_row(tender, bid_id, lock=True)
         side = self._side(actor, bid)
         if bid.version != expected_version:
             raise ConflictError("This bid changed. Reload to see the latest offer.")
@@ -127,10 +130,12 @@ class TenderService:
     def raise_price(self, tender_id: uuid.UUID, actor: User, price_per_unit: float) -> None:
         """A higher government price for every open bid: a new offer each, and it is the vendors' move again."""
         self._officer(actor)
-        tender = self._tender(tender_id)
+        tender = self.repo.tender_for_update(tender_id)  # one raise at a time; bids below are locked too
+        if tender is None:
+            raise NotFoundError(f"tender {tender_id} not found")
         if price_per_unit <= tender.price_per_unit:
             raise ConflictError(f"the new price must be higher than ₹{tender.price_per_unit:g}/kL")
-        for bid in self.repo.bids(tender.id):
+        for bid in self.repo.bids(tender.id, lock=True):
             if bid.status not in OPEN:
                 continue
             latest = self.repo.offers(bid.id)[-1]
@@ -149,6 +154,14 @@ class TenderService:
     def _officer(actor: User) -> None:
         if actor.role != "gov_admin":
             raise ForbiddenError("only a relief officer can do this")
+
+    @staticmethod
+    def _party(viewer: User | None, bid: Bid) -> bool:
+        return viewer is not None and (viewer.role == "gov_admin"
+                                       or (viewer.role == "vendor" and viewer.org_id == bid.vendor_org_id))
+
+    def _bid_public(self, bid: Bid) -> dict:
+        return {**self._bid(bid, with_messages=False), "offer": None}
 
     @staticmethod
     def _side(actor: User, bid: Bid) -> str:
@@ -195,8 +208,8 @@ class TenderService:
                           o.reliability) for o, lat, lon in self.repo.vendors()]
         return match_vendors(point, vendors, radius_km, need_kl_per_day)
 
-    def _bid_row(self, tender: Tender, bid_id: uuid.UUID) -> Bid:
-        bid = self.repo.bid(tender.id, bid_id)
+    def _bid_row(self, tender: Tender, bid_id: uuid.UUID, lock: bool = False) -> Bid:
+        bid = self.repo.bid(tender.id, bid_id, lock=lock)
         if bid is None:
             raise NotFoundError(f"bid {bid_id} not found on this tender")
         return bid

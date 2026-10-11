@@ -37,12 +37,19 @@ class TenderRepository(BaseRepository[Tender]):
     def tenders(self) -> list[Tender]:
         return list(self.session.scalars(select(Tender).order_by(Tender.created_at.desc())))
 
-    def bids(self, tender_id: uuid.UUID) -> list[Bid]:
-        return list(self.session.scalars(select(Bid).where(Bid.tender_id == tender_id)
-                                         .order_by(Bid.rank_score.desc())))
+    def bids(self, tender_id: uuid.UUID, lock: bool = False) -> list[Bid]:
+        query = select(Bid).where(Bid.tender_id == tender_id).order_by(Bid.rank_score.desc(), Bid.id)
+        return list(self.session.scalars(query.with_for_update().execution_options(populate_existing=True) if lock else query))
 
-    def bid(self, tender_id: uuid.UUID, bid_id: uuid.UUID) -> Bid | None:
-        return self.session.scalar(select(Bid).where(Bid.id == bid_id, Bid.tender_id == tender_id))
+    def bid(self, tender_id: uuid.UUID, bid_id: uuid.UUID, lock: bool = False) -> Bid | None:
+        """With lock=True the row stays locked until the transaction ends: a second action on the same bid waits,
+        then sees the new version and is refused (no two people both 'winning')."""
+        query = select(Bid).where(Bid.id == bid_id, Bid.tender_id == tender_id)
+        return self.session.scalar(query.with_for_update().execution_options(populate_existing=True) if lock else query)
+
+    def tender_for_update(self, tender_id: uuid.UUID) -> Tender | None:
+        return self.session.scalar(select(Tender).where(Tender.id == tender_id)
+                                   .with_for_update().execution_options(populate_existing=True))
 
     def offers(self, bid_id: uuid.UUID) -> list[BidOffer]:
         return list(self.session.scalars(select(BidOffer).where(BidOffer.bid_id == bid_id)

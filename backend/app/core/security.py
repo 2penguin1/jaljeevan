@@ -43,7 +43,8 @@ def verify_password(password: str, hashed: str) -> bool:
 
 
 def signing_key() -> str:
-    if not settings.jwt_secret and settings.cookie_secure:  # a server without its own key would accept forged tokens
+    # a server (HTTPS cookies, or a database host from AWS) without its own key would accept forged tokens
+    if not settings.jwt_secret and (settings.cookie_secure or settings.db_host):
         raise RuntimeError("JWT_SECRET is not set")
     return settings.jwt_secret or DEV_KEY
 
@@ -73,11 +74,22 @@ class LoginBrake:
         self.clock = clock
         self._failures: dict[str, deque] = defaultdict(deque)
 
-    def allowed(self, email: str) -> bool:
-        times = self._failures[email.lower()]
+    @staticmethod
+    def _key(email: str, address: str) -> str:
+        # per email AND address: a stranger guessing from one place cannot lock the real user out everywhere
+        return f"{email.strip().lower()}|{address}"
+
+    def allowed(self, email: str, address: str) -> bool:
+        key = self._key(email, address)
+        times = self._failures.get(key)  # asking never stores anything
+        if not times:
+            return True
         while times and self.clock() - times[0] > self.window:
             times.popleft()
+        if not times:
+            del self._failures[key]
+            return True
         return len(times) < self.max_failures
 
-    def failed(self, email: str) -> None:
-        self._failures[email.lower()].append(self.clock())
+    def failed(self, email: str, address: str) -> None:
+        self._failures[self._key(email, address)].append(self.clock())

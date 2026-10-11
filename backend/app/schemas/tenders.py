@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class ReliefNeedOut(BaseModel):
@@ -14,11 +14,17 @@ class ReliefNeedOut(BaseModel):
     suggested_price: float
 
 
+MAX_PRICE = 10_000      # Rs per kL; far above any real tanker rate
+MAX_QTY = 1_000_000     # kL a day
+NO_INFINITY = ConfigDict(allow_inf_nan=False)  # 1e309 would be "Infinity" and break every page that shows it
+
+
 class TenderIn(BaseModel):
+    model_config = NO_INFINITY
     zone_id: uuid.UUID
-    qty_per_day: float = Field(gt=0)
+    qty_per_day: float = Field(gt=0, le=MAX_QTY)
     duration_days: int = Field(gt=0, le=180)
-    price_per_unit: float = Field(gt=0)
+    price_per_unit: float = Field(gt=0, le=MAX_PRICE)
     radius_km: float = Field(gt=0, le=500)
 
 
@@ -28,16 +34,18 @@ class TenderCreated(BaseModel):
 
 class BidActionIn(BaseModel):
     """Who acts (government or vendor) comes from the logged-in account, never from the request."""
+    model_config = NO_INFINITY
     action: Literal["accept", "counter", "decline", "message"]
     expected_version: int | None = Field(default=None, ge=1)  # required for accept / counter / decline
-    price_per_unit: float | None = Field(default=None, gt=0)
-    qty_per_day: float | None = Field(default=None, gt=0)
+    price_per_unit: float | None = Field(default=None, gt=0, le=MAX_PRICE)
+    qty_per_day: float | None = Field(default=None, gt=0, le=MAX_QTY)
     note: str | None = Field(default=None, max_length=300)
     body: str | None = Field(default=None, max_length=1000)  # the message text
 
 
 class RaisePriceIn(BaseModel):
-    price_per_unit: float = Field(gt=0)
+    model_config = NO_INFINITY
+    price_per_unit: float = Field(gt=0, le=MAX_PRICE)
 
 
 class OfferOut(BaseModel):

@@ -49,9 +49,10 @@ def test_login_sets_a_private_cookie_and_me_tells_who_you_are(accounts):
 
 def test_a_wrong_password_is_refused_and_guessing_is_braked(accounts):
     with TestClient(app) as c:
+        ip = {"X-Forwarded-For": "7.7.7.7"}
         for _ in range(5):
-            assert c.post("/api/v1/auth/login", json={"email": accounts["officer"], "password": "nope"}).status_code == 401
-        assert c.post("/api/v1/auth/login", json={"email": accounts["officer"], "password": PASSWORD}).status_code == 429
+            assert c.post("/api/v1/auth/login", json={"email": accounts["officer"], "password": "nope"}, headers=ip).status_code == 401
+        assert c.post("/api/v1/auth/login", json={"email": accounts["officer"], "password": PASSWORD}, headers=ip).status_code == 429
 
 
 def test_signup_always_makes_a_citizen_whatever_the_request_says():
@@ -73,3 +74,28 @@ def test_a_forged_cookie_is_not_a_session():
     with TestClient(app) as c:
         c.cookies.set("session", "not-a-real-token")
         assert c.get("/api/v1/auth/me").status_code == 401
+
+
+def test_spaces_and_capitals_do_not_get_extra_guesses(accounts):
+    with TestClient(app) as c:
+        for variant in (accounts["officer"], " " + accounts["officer"], accounts["officer"].upper() + "  ",
+                        "\t" + accounts["officer"], accounts["officer"] + " "):
+            c.post("/api/v1/auth/login", json={"email": variant, "password": "nope"}, headers={"X-Forwarded-For": "9.9.9.9"})
+        res = c.post("/api/v1/auth/login", json={"email": accounts["officer"], "password": PASSWORD},
+                     headers={"X-Forwarded-For": "9.9.9.9"})
+        assert res.status_code == 429
+        other = c.post("/api/v1/auth/login", json={"email": accounts["officer"], "password": PASSWORD},
+                       headers={"X-Forwarded-For": "8.8.8.8"})
+        assert other.status_code == 200  # the real officer, from another address, still gets in
+
+
+def test_too_long_passwords_get_a_clear_answer_not_a_crash():
+    with TestClient(app) as c:
+        res = c.post("/api/v1/auth/signup", json={"email": "long@example.org", "name": "A", "password": "x" * 80})
+        assert res.status_code == 422
+
+
+def test_a_rejected_password_is_never_echoed_back():
+    with TestClient(app) as c:
+        res = c.post("/api/v1/auth/signup", json={"email": "e@example.org", "name": "A", "password": "Zq9!x"})
+        assert res.status_code == 422 and "Zq9!x" not in res.text

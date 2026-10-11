@@ -49,3 +49,11 @@ def test_reading_is_open_and_unknown_things_say_so():
         assert c.get("/api/v1/vendors").status_code == 200
         assert c.get(f"/api/v1/zones/{uuid.uuid4()}/relief-need").status_code == 404
         assert c.get(f"/api/v1/tenders/{uuid.uuid4()}").status_code == 404
+
+
+def test_infinite_or_absurd_numbers_are_refused(logins):
+    with TestClient(app) as c:
+        c.post("/api/v1/auth/login", json={"email": logins["officer"], "password": PASSWORD})
+        raw = '{"zone_id": "%s", "qty_per_day": 1e309, "duration_days": 30, "price_per_unit": 60, "radius_km": 100}' % uuid.uuid4()
+        assert c.post("/api/v1/tenders", content=raw, headers={"Content-Type": "application/json"}).status_code == 422
+        assert c.post(f"/api/v1/tenders/{uuid.uuid4()}/raise-price", json={"price_per_unit": 10**9}).status_code == 422
