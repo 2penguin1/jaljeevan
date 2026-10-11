@@ -72,3 +72,4 @@ export type Notifications = S["NotificationsOut"];
 export type Brief = S["BriefOut"];
 export type Campaign = S["CampaignOut"];
 export type VolunteerTask = S["TaskOut"];
+export type Plan = S["PlanOut"];

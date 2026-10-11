@@ -16,7 +16,7 @@ const NAV: { to: string; label: string; icon: LucideIcon }[] = [
 ];
 
 const INBOX = { to: "/inbox", label: "Inbox", icon: Inbox };
-const BRIEFS = { to: "/briefs", label: "Briefs", icon: ClipboardCheck };
+const BRIEFS = { to: "/briefs", label: "Review", icon: ClipboardCheck };
 
 function NavItems({ compact }: { compact?: boolean }) {
   const me = useMe();
