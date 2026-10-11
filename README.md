@@ -1,211 +1,149 @@
 # JalJeevan
 
-A live map of India's water crisis: drought, floods, heat and broken water supply. It reads the news, satellite data and government orders every day, shows where people need water, and helps officials send tankers there.
+Real-time water-crisis intelligence for India. JalJeevan tracks drought, floods, heat and water-supply failures at taluka level and helps relief officers, tanker vendors and NGOs respond.
 
-**Stack:** FastAPI · PostgreSQL + PostGIS · React 19 · MapLibre + deck.gl · three.js · AWS (CDK, Fargate, RDS, CloudFront)
-**Live:** https://d77gmqy6y3kav.cloudfront.net  ·  Built for the WeMakeDevs × AWS Environmental Hacks, Heat and Water track.
+**Live:** https://d77gmqy6y3kav.cloudfront.net
+**Track:** Heat and Water · WeMakeDevs × AWS Environmental Hacks
 
-* * *
+---
 
-## Contents
+## Features
 
-- [What it does](#what-it-does)
-- [Numbers](#numbers)
-- [What's underneath](#whats-underneath)
-- [How it fits together](#how-it-fits-together)
-- [Who can do what](#who-can-do-what)
-- [Run it](#run-it)
-- [Check that it works](#check-that-it-works)
-- [Built on AWS](#built-on-aws)
-- [Decisions worth explaining](#decisions-worth-explaining)
-- [Project layout](#project-layout)
-- [Team](#team)
+- **Live hazard map:** drought, flood, heat and water-supply zones across India on an interactive globe, with a live feed of incoming reports.
+- **Zone intelligence:** each zone has a severity score, the supporting evidence, and measured drought indicators (rainfall, soil moisture, official declarations).
+- **Drought footprint:** per-taluka assessment based on the Government of India Drought Manual, with affected population counted from a 1 km population grid.
+- **Official declarations:** automatic extraction of state drought orders from government PDFs (including Marathi), plus a news-based watch for other states.
+- **Relief briefs:** AI-drafted situation summaries with computed water need, tanker trips and budget, approved by a relief officer.
+- **Tanker tenders:** tenders matched to the nearest vendors, with private negotiation (accept, counter, decline, message) and committed-supply tracking.
+- **Community:** NGO fundraising campaigns and volunteer tasks.
+- **Long-term plans:** costed water-security plans per zone, with a printable summary.
+- **Accounts and notifications:** role-based access for officers, vendors, NGOs and citizens, with in-app notifications.
+- **Light and dark themes.**
 
-* * *
+## Data sources
 
-## What it does
-
-| Screen | What happens there |
+| Source | Used for |
 |---|---|
-| **Landing** | A 3D model of India built from real terrain. Live zones glow on it. One plain story about the problem. |
-| **Live map** | Every zone for drought, flood, heat and water supply, with a live feed of new posts. Light and dark mode. |
-| **Zones** | A ranked list of where help is needed. Each zone page shows its score, the posts behind it word for word, and the drought data. |
-| **Tenders** | A relief officer asks for drinking water. The nearest tanker owners answer with their price. Offers stay private. |
-| **Briefs and plans** | The AI writes a short relief brief or a long-term plan in plain words. Code computes every number. An officer approves it. |
-| **Community** | NGOs raise pledges and ask for volunteers for a village. |
-| **Ops** | Pipeline health: what ran, what failed, how fresh the data is. |
+| GDELT, RSS news feeds | News reports |
+| Reddit, X | Citizen reports |
+| CHIRPS (satellite rainfall, SPI) | Drought rainfall indicator |
+| Copernicus GDO | Soil moisture anomaly |
+| WorldPop 2025 (1 km) | Population estimates |
+| geoBoundaries | District and taluka boundaries |
+| State government orders | Official drought declarations |
 
-* * *
-
-## Numbers
-
-| | |
-|---|---|
-| Talukas on the map | **6,822** (each one has a boundary) |
-| Live zones today | **246 active**, 29 on watch |
-| People in active zones | **9.3 crore**, counted only where it is actually dry |
-| Maharashtra drought order read automatically | **230 of 265** talukas matched, **0** wrong (checked against the order's own district counts) |
-| Posts read in the last 7 days | **353**, from news, Reddit, X and citizens |
-| Backend tests | **367** (pytest, real PostGIS database) |
-| Frontend tests | **60** unit + **11** end-to-end and accessibility |
-| Page size | every route under **250 KB** gzip |
-| Deploy time | **1–5 minutes** with one command |
-| Running cost | about **$60 a month** on AWS |
-
-* * *
-
-## What's underneath
-
-Each row is one mechanism. The last column says what happens when its source fails, because sources do fail.
-
-| Mechanism | How it works | When its source is down |
-|---|---|---|
-| **News and social media** | GDELT, RSS, Reddit and X, twice a day. Old posts and copies are dropped before any AI call. | That source is skipped; the run goes on. |
-| **AI labels** | Groq `gpt-oss-120b` labels each post by hazard. Every quote must appear word for word in the post, or it is thrown away. | Falls back to Amazon Bedrock (Nova). If both fail, posts wait for the next run. |
-| **Locations** | Place names are matched to a gazetteer, with Amazon Location as backup. | Unmatched posts stay off the map rather than being guessed. |
-| **Drought data** | Satellite rainfall (CHIRPS SPI ≤ −1) and Copernicus soil moisture, per taluka, following the Government of India Drought Manual. | Data older than 20 days counts as *unknown*, not *fine*. Zones are held, not closed. |
-| **People affected** | WorldPop 1 km grid. Only people in the dry cells are counted, not the whole district. | Falls back to the gazetteer population, and says so. |
-| **Official orders** | State drought orders are read from PDFs, including Marathi with broken fonts. Names are transliterated and fuzzy-matched. | Doubtful names go to a check list. Nothing is guessed silently. |
-| **Other states' orders** | A daily news watch. A taluka counts only if **1 official order** or **2 independent news sites** name it. | Rate-limited by GDELT? It retries after 2 hours. |
-| **Relief briefs and plans** | The AI writes words only. Any sentence with a number is removed. Code computes litres, tanker trips and budget. | After 20 seconds a plain template is used. The numbers never depend on the AI. |
-| **Tenders** | Vendors are ranked by distance, price, fleet size and reliability. Bids follow fixed rules, and each action is checked against the bid's version. | If two people act at once, one wins and the other is asked to reload. |
-| **Notifications** | Private, per user: new tenders, replies, pledges. | The bell checks every 15 seconds. |
-
-* * *
-
-## How it fits together
+## Architecture
 
 ```mermaid
 flowchart LR
-  S[News · Reddit · X<br/>CHIRPS · Copernicus<br/>State orders] --> P[Pipeline<br/>ECS Fargate task<br/>twice a day]
-  E[EventBridge] --> P
-  P -->|labels, zones, drought data| DB[(RDS PostgreSQL<br/>+ PostGIS)]
-  P -.->|AI| AI[Groq → Amazon Bedrock]
-  DB --> API[FastAPI<br/>ECS Fargate + ALB]
-  API --> CF[CloudFront]
-  S3[S3: React app] --> CF
-  CF --> U[Officers · Vendors · NGOs · Citizens]
+  SRC[News · Social · Satellite · Govt orders] --> PIPE[Data pipeline<br/>ECS Fargate · scheduled by EventBridge]
+  PIPE --> DB[(RDS PostgreSQL + PostGIS)]
+  PIPE --> AI[LLM classification<br/>Groq · Amazon Bedrock]
+  DB --> API[FastAPI · ECS Fargate + ALB]
+  WEB[React app · S3] --> CDN[CloudFront]
+  API --> CDN
+  CDN --> USERS[Officers · Vendors · NGOs · Citizens]
 ```
 
-- **One container image** runs both the API and the pipeline.
-- **The database is private.** Only the API and the pipeline can reach it.
-- **One HTTPS address** serves the site and the API, so there is no CORS.
+The pipeline runs twice a day: **ingest → indicators → declarations → classify → geocode → zones**.
 
-* * *
+## Tech stack
 
-## Who can do what
-
-Anyone can read the map, zones, tenders and campaigns. Writing needs an account.
-
-| Action | Citizen | Vendor | NGO | Relief officer |
-|---|:-:|:-:|:-:|:-:|
-| Sign up themselves | ✓ | — | — | — |
-| Pledge, volunteer | ✓ | ✓ | ✓ | ✓ |
-| Answer a tender (own company only) | — | ✓ | — | — |
-| See offers on a bid | — | own bid | — | ✓ |
-| Start campaigns, post tasks | — | — | ✓ | — |
-| Draft and approve briefs and plans, publish tenders | — | — | — | ✓ |
-
-Officer, vendor and NGO accounts are created by us, never by signing up. Demo accounts: `officer@relief.demo`, `solapur@vendor.demo`, `ngo@relief.demo` (password shared on request).
-
-* * *
-
-## Run it
-
-You need Docker, [uv](https://docs.astral.sh/uv/) and Node 20+.
-
-```bash
-docker compose up -d db                       # PostGIS on port 5433
-cd backend && uv sync
-uv run python -m app.cli.seed_geo             # districts, talukas, places (one time, ~6 min)
-uv run python -m app.cli.seed_crm             # demo office, vendors, NGO and accounts
-uv run python -m app.cli.run_pipeline         # collect, label and build zones once
-uv run fastapi dev                            # API on :8000
-
-cd ../frontend && npm install && npm run dev  # app on :5173
-```
-
-Keys go in `backend/.env`: `GROQ_API_KEY`, `APIFY_TOKEN`, `ADMIN_TOKEN`, `JWT_SECRET`, `DEMO_PASSWORD`, `AWS_PROFILE`.
-
-* * *
-
-## Check that it works
-
-```bash
-cd backend && uv run pytest -q                     # 367 tests
-cd frontend && npx vitest run                      # 60 tests
-npm run build && npm run budgets                   # size budget per route
-npx playwright test smoke a11y                     # end-to-end + accessibility, light and dark
-```
-
-* * *
-
-## Built on AWS
-
-Everything runs in Mumbai (`ap-south-1`) and is defined in `infra/` with the AWS CDK. One command deploys it; one removes it.
-
-| Service | Job |
+| Layer | Technologies |
 |---|---|
-| CloudFront + S3 | The website, and one HTTPS address for site and API |
-| ECS Fargate + Application Load Balancer | The API, and the scheduled pipeline from the same image |
-| RDS PostgreSQL + PostGIS | All geo data, in private subnets |
-| EventBridge | Runs the pipeline twice a day |
-| Secrets Manager | API keys, session signing key, database password |
-| Amazon Bedrock | AI fallback (Nova) |
-| Amazon Location | Geocoding fallback |
-| Certificate Manager | HTTPS for the custom domain |
-| ECR | Container images |
-| Amazon Polly | The voice in the demo video |
+| Frontend | React 19, TypeScript, Vite, TanStack Query, Tailwind CSS, MapLibre GL, deck.gl, three.js |
+| Backend | Python 3.13, FastAPI, SQLAlchemy 2, GeoAlchemy2, PostGIS, rasterio, pdfplumber |
+| AI | Groq (gpt-oss-120b), Amazon Bedrock (Nova) |
+| Infrastructure | AWS CDK (Python) |
+| Testing | pytest, Vitest, Testing Library, Playwright |
+
+## AWS services
+
+All resources run in `ap-south-1` (Mumbai) and are defined as code in `infra/`.
+
+| Service | Purpose |
+|---|---|
+| Amazon CloudFront | Content delivery and a single HTTPS endpoint for web and API |
+| Amazon S3 | Frontend hosting and raw data archive |
+| Amazon ECS (Fargate) | API service and scheduled pipeline tasks |
+| Elastic Load Balancing | Load balancer for the API |
+| Amazon RDS for PostgreSQL | Geospatial database (PostGIS) |
+| Amazon EventBridge | Pipeline scheduling |
+| AWS Secrets Manager | Application secrets and database credentials |
+| Amazon Bedrock | LLM inference |
+| Amazon Location Service | Geocoding |
+| AWS Certificate Manager | TLS certificate for the custom domain |
+| Amazon ECR | Container registry |
+| Amazon Polly | Demo video narration |
+
+## Getting started
+
+**Prerequisites:** Docker, [uv](https://docs.astral.sh/uv/), Node.js 20+
+
+```bash
+# Database
+docker compose up -d db
+
+# Backend
+cd backend
+uv sync
+uv run python -m app.cli.seed_geo        # load boundaries and gazetteer
+uv run python -m app.cli.seed_crm        # demo organisations and accounts
+uv run python -m app.cli.run_pipeline    # run the pipeline once
+uv run fastapi dev                       # http://localhost:8000
+
+# Frontend
+cd ../frontend
+npm install
+npm run dev                              # http://localhost:5173
+```
+
+Create `backend/.env` with:
+
+```
+GROQ_API_KEY=
+APIFY_TOKEN=
+ADMIN_TOKEN=
+JWT_SECRET=
+DEMO_PASSWORD=
+AWS_PROFILE=
+```
+
+## Testing
+
+```bash
+cd backend && uv run pytest -q              # unit, service and API tests
+cd frontend && npx vitest run               # component tests
+cd frontend && npx playwright test          # end-to-end and accessibility
+```
+
+## Deployment
 
 ```bash
 cd frontend && npm run build
-cd infra && npx cdk deploy          # npx cdk destroy removes everything
+cd infra && npx cdk deploy
 ```
 
-* * *
-
-## Decisions worth explaining
-
-**Drought comes from data, not headlines.** One news article once made a whole district look dry. Now drought needs measured rainfall or soil data, and posts only confirm it.
-
-**People are counted where it is dry.** Counting a whole district would make tanker and budget numbers wrong by lakhs.
-
-**The AI writes words; code writes numbers.** Every litre, rupee and person on the site comes from arithmetic you can check. Numbers the AI writes are deleted.
-
-**Nothing is guessed silently.** Unclear names, unclear states and doubtful matches go to a person to check.
-
-**Bids are private.** The public sees who was invited and the status. Only the officer and that vendor see the price.
-
-**No NAT gateway.** It would cost more than all our compute. Tasks use public subnets, and the database stays private.
-
-**Everything optional degrades.** If a source, the AI or a data feed is down, the rest keeps working and the page says what is missing.
-
-* * *
-
-## Project layout
+## Project structure
 
 ```
 backend/
   app/
-    domain/        pure rules: drought, scoring, matching, bids, playbook
-    services/      pipeline, zones, tenders, briefs, plans, community
-    repositories/  SQL, never commits
-    integrations/  GDELT, Groq, Bedrock, CHIRPS, Copernicus, WorldPop, PDFs
-    api/           FastAPI routes
-    cli/           seed, pipeline, declarations
-  tests/           domain, services, integrations, api
+    api/            REST endpoints
+    domain/         business rules
+    services/       pipeline, zones, tenders, briefs, plans, community
+    repositories/   data access
+    integrations/   external data sources and AI providers
+    cli/            seeding and pipeline commands
+  tests/
 frontend/
-  src/features/    landing, map, zones, tenders, briefs, plans, community, account, ops
-  e2e/             Playwright smoke and accessibility tests
-infra/             AWS CDK stack
+  src/features/     landing, map, zones, tenders, briefs, plans, community, account, ops
+  e2e/
+infra/              AWS CDK stack
 ```
-
-* * *
 
 ## Team
 
-| | Role |
-|---|---|
-| **Sujal Kumar Singh** | Lead. Data pipeline, drought data, AWS infrastructure. |
-| **Chetan Kumar S M** | Frontend and UX. |
-| **Taran Pal Singh** | Relief tools (tenders, briefs, community, plans) and the demo video. |
+- **Sujal Kumar Singh**: data pipeline, drought intelligence, AWS infrastructure
+- **Chetan Kumar S M**: frontend and UX
+- **Taran Pal Singh**: relief management (tenders, briefs, community, plans)
