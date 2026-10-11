@@ -93,23 +93,31 @@ class IndicatorStage:
 
 class DeclarationWatchStage:
     """Official drought declarations from the news (other states): read new articles, then apply the safety rule.
-    Runs at most once every 20 hours: GDELT and news sites are asked politely, declarations change slowly."""
+    Runs at most once every 20 hours (2 hours after a failure, e.g. GDELT rate-limiting us): GDELT and news sites
+    are asked politely, and declarations change slowly."""
 
     name = "watch"
 
     def __init__(self, watch: DeclarationWatchService, promoter: DeclarationPromoter, runs: PipelineRunRepository,
-                 min_gap: timedelta = timedelta(hours=20), force: bool = False):
+                 min_gap: timedelta = timedelta(hours=20), retry_gap: timedelta = timedelta(hours=2),
+                 force: bool = False):
         self.watch = watch
         self.promoter = promoter
         self.runs = runs
         self.min_gap = min_gap
+        self.retry_gap = retry_gap
         self.force = force
 
     def run(self, ctx: PipelineContext) -> None:
-        last = self.runs.last_success(self.name)
-        if not self.force and last is not None and ctx.now - last < self.min_gap:
-            ctx.stats[self.name] = {"skipped": f"ran {int((ctx.now - last).total_seconds() // 3600)}h ago"}
-            return
+        last = None if self.force else self.runs.last_attempt(self.name)
+        if last is not None:
+            at, failed = last
+            hours = int((ctx.now - at).total_seconds() // 3600)
+            if ctx.now - at < (self.retry_gap if failed else self.min_gap):
+                ctx.stats[self.name] = {"skipped": f"failed {hours}h ago, retrying after "
+                                                   f"{int(self.retry_gap.total_seconds() // 3600)}h" if failed
+                                        else f"ran {hours}h ago"}
+                return
         stats = self.watch.run(ctx.now)
         stats["promoted"] = self.promoter.promote(ctx.now)
         ctx.stats[self.name] = stats

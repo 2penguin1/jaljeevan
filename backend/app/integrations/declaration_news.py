@@ -109,10 +109,9 @@ class PoliteFetcher:
 
     def _robots_for(self, site: str) -> RobotFileParser | None:
         if site not in self._robots:
-            try:
-                status, text = self._download(site, f"{site}/robots.txt", self.html_cap, robots=True)
-            except FetchFailed:
-                status, text = "", b""
+            # no robots.txt (4xx) = no rules; a server error or network failure = ask again later (RFC 9309), so the
+            # FetchFailed is raised and the page is retried on the next run
+            status, text = self._download(site, f"{site}/robots.txt", self.html_cap, robots=True)
             parser = None
             if status == "ok":
                 parser = RobotFileParser()
@@ -128,10 +127,9 @@ class PoliteFetcher:
         try:
             with self.client.stream("GET", url, headers={"User-Agent": self.user_agent}, timeout=self.timeout,
                                     follow_redirects=True) as res:
-                if robots:
-                    if res.status_code >= 400:
-                        return "missing", b""
-                elif res.status_code >= 400:
+                if robots and 400 <= res.status_code < 500:
+                    return "missing", b""
+                if res.status_code >= 400:
                     raise FetchFailed(f"{url}: HTTP {res.status_code}")
                 chunks, size = [], 0
                 for chunk in res.iter_bytes():

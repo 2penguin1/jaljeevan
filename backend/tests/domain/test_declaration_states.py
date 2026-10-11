@@ -49,7 +49,7 @@ def test_the_state_needs_most_matches_and_its_name_in_the_article():
     assert pick_state({"KA": (5, 6), "AP": (1, 6)}, "Drought in Karnataka") == ka
     assert pick_state({"KA": (5, 6)}, "Drought in the south") is None          # never guessed from names alone
     assert pick_state({"KA": (3, 6), "AP": (3, 6)}, "Karnataka and Andhra") is None  # no clear winner
-    assert pick_state({"KA": (2, 2)}, "Karnataka") is None                     # too few names to be sure
+    assert pick_state({"KA": (2, 2)}, "Karnataka and Kerala") is None          # few names, two states named
     assert pick_state({"KA": (4, 6)}, "K'taka govt adds taluks") == ka         # press short form
 
 
@@ -57,3 +57,25 @@ def test_telangana_mandals_are_matched_in_the_old_andhra_pradesh_boundaries():
     tg = next(s for s in WATCH_STATES if s.code == "TG")
     assert tg.pool == "AP"
     assert "MH" not in {s.code for s in WATCH_STATES} and "BR" not in {s.code for s in WATCH_STATES}
+
+
+def test_future_and_not_yet_are_not_declarations():
+    for text in ("Taluks to be added in the next phase are Afzalpur, Aland, Jevargi and Sedam.",
+                 "The government will declare these taluks drought-hit: Afzalpur, Aland, Jevargi.",
+                 "Taluks not yet declared include Afzalpur, Aland and Jevargi."):
+        assert names(text) == [], text
+
+
+def test_one_taluka_counts_when_the_article_names_only_that_state():
+    assert pick_state({"KA": (1, 1)}, "Indi taluk added to the Karnataka drought list") is not None
+    assert pick_state({"KA": (1, 1)}, "Karnataka and Telangana farmers") is None  # two states named: unsure
+    assert pick_state({"KA": (1, 2), "AP": (1, 2)}, "Karnataka news") is None
+
+
+def test_dates_written_in_orders_are_found():
+    from datetime import date
+    from app.domain.declaration_states import order_dates
+    assert order_dates("No. RD 12 2023, dated 12/09/2023. Bengaluru, 28 September 2026") == [date(2023, 9, 12),
+                                                                                            date(2026, 9, 28)]
+    assert order_dates("दिनांक : २५.०९.२०२६") == [date(2026, 9, 25)]
+    assert order_dates("No date here, 2026 only") == []

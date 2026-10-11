@@ -3,7 +3,6 @@ by one official order, or by two independent news sources: different websites wh
 wire copy (simhash). A taluka that already has a declaration this season (any route, e.g. the Maharashtra GR) is never
 rewritten.
 """
-import re
 from collections import defaultdict
 from datetime import datetime, timedelta
 
@@ -40,15 +39,15 @@ class DeclarationPromoter:
             if not officials and len(news) < NEWS_SOURCES_NEEDED:
                 waiting += 1
                 continue
-            counting = officials + news
-            severities = {m.severity for m, _ in rows if m.severity}
+            counting = officials or news  # an official order speaks for itself: its own date, its own words
+            ids = {s.id for s in counting}
+            severities = {m.severity for m, s in rows if m.severity and s.id in ids}
             severity = "severe" if "severe" in severities else "moderate"
             ref = "official order" if officials else f"news: {len(news)} sources"
             if not severities:
                 ref += " (severity not stated)"
             first = min(counting, key=lambda s: (s.published_on, s.id))
-            self.declarations.upsert(area_id, state, first.published_on, severity, ref,
-                                     (officials[0] if officials else first).url)
+            self.declarations.upsert(area_id, state, first.published_on, severity, ref, first.url)
             declared[state] += 1
         return {"declared": dict(declared), "waiting": waiting}
 
@@ -81,6 +80,11 @@ class DeclarationPromoter:
         return kept
 
 
+_SECOND_LEVEL = {"co", "gov", "nic", "org", "net", "ac", "edu", "res", "gen", "firm", "ind"}  # x.co.in, x.gov.in
+
+
 def _site(domain: str) -> str:
-    """www.siasat.com, m.siasat.com and siasat.com are one website."""
-    return re.sub(r"^(?:www\d*|m|amp|mobile)\.", "", (domain or "").lower())
+    """The publisher behind a host: www.news18.com, kannada.news18.com and m.news18.com are one website."""
+    labels = (domain or "").lower().rstrip(".").split(".")
+    keep = 3 if len(labels) >= 3 and labels[-1] == "in" and labels[-2] in _SECOND_LEVEL else 2
+    return ".".join(labels[-keep:])

@@ -13,7 +13,7 @@ from urllib.parse import urlsplit
 
 import trafilatura
 
-from app.domain.declaration_states import WATCH_STATES, declares, list_sentences, pick_state
+from app.domain.declaration_states import WATCH_STATES, declares, list_sentences, order_dates, pick_state
 from app.domain.declarations import REVIEW_FROM, TalukaMatcher, severity_from_text
 from app.domain.text import TextFingerprinter
 from app.integrations.declaration_news import FetchBlocked, FetchFailed
@@ -59,7 +59,7 @@ class DeclarationWatchService:
         hits = self.search.search()  # a GDELT failure stops this run only; the stage records it
         queue: list[tuple[str, str, str | None, date]] = [(h.url, "news", h.title, h.published_on) for h in hits]
         queue += [(s.url, s.kind, s.title, s.published_on) for s in self.sources.retryable()]
-        stats = {"hits": len(hits), "new": 0, "listed": 0, "mentions": 0, "by_status": {}}
+        stats: dict = {"hits": len(hits), "new": 0, "listed": 0, "mentions": 0, "by_status": {}}
         done: set[str] = set()
         while queue:
             url, kind, title, published_on = queue.pop(0)
@@ -93,16 +93,35 @@ class DeclarationWatchService:
         except FetchFailed as exc:
             LOG.info("declaration source failed: %s", exc)
             source.status = "failed"
+        except Exception:  # noqa: BLE001 - one odd page (bad URL, ...) never stops the others
+            LOG.exception("declaration source failed: %s", url)
+            source.status = "failed"
         else:
-            if kind == "official":
-                text = "\n".join(self.pdf_text(fetched.body))
-            else:
-                text = self.html_text(fetched.body)
-                links = official_links(fetched.body.decode("utf-8", "replace"))
-            source.status, source.state_code, source.list_fingerprint, rows = self._mentions(f"{title or ''}\n{text}")
+            try:
+                links, rows = self._understand(source, fetched.body, now)
+            except Exception:  # noqa: BLE001 - a broken / truncated file fails only itself
+                LOG.exception("could not read declaration source %s", url)
+                source.status, links, rows = "failed", [], []
         self.sources.save(source)
         self.sources.add_mentions(source.id, rows)
         return source, links, len(rows)
+
+    def _understand(self, source: DeclarationSource, body: bytes, now: datetime) -> tuple[list[str], list[dict]]:
+        links: list[str] = []
+        if source.kind == "official":
+            text = "\n".join(self.pdf_text(body))
+            # an order is dated by its own text: a 2023 order linked from a 2026 article stays a 2023 order; with no
+            # date in it, it counts only like one news source (never declares alone)
+            dates = [d for d in order_dates(text) if d <= now.date()]
+            if dates:
+                source.published_on = dates[-1]
+            else:
+                source.kind = "news"
+        else:
+            text = self.html_text(body)
+            links = official_links(body.decode("utf-8", "replace"))
+        source.status, source.state_code, source.list_fingerprint, rows = self._mentions(f"{source.title or ''}\n{text}")
+        return links, rows
 
     def _mentions(self, text: str) -> tuple[str, str | None, int | None, list[dict]]:
         sentences = list_sentences(text)
@@ -113,7 +132,7 @@ class DeclarationWatchService:
         for pool in {s.pool for s in WATCH_STATES}:
             matcher = self._matcher(pool)
             hits[pool] = [(s, name, matcher.match(name)) for s, name in items]
-            accepted = sum(1 for *_, h in hits[pool] if h is not None and h.score >= TalukaMatcher.ACCEPT)
+            accepted = len({h.area_id for *_, h in hits[pool] if h is not None and h.score >= TalukaMatcher.ACCEPT})
             if accepted:
                 counts[pool] = (accepted, len(items))
         state = pick_state(counts, text)

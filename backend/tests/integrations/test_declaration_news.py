@@ -110,3 +110,9 @@ def test_oversized_bodies_fake_pdfs_and_server_errors_fail():
 def test_a_real_pdf_is_returned():
     f, _ = fetcher({"/order.pdf": httpx.Response(200, content=b"%PDF-1.7 data")})
     assert f.get("https://revenue.kar.nic.in/order.pdf", expect_pdf=True).body.startswith(b"%PDF")
+
+
+def test_a_robots_txt_server_error_means_try_later():
+    f, _ = fetcher({"/robots.txt": httpx.Response(503), "/a": httpx.Response(200, text="hi")})
+    with pytest.raises(FetchFailed):
+        f.get("https://down.test/a")

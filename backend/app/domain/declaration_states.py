@@ -6,6 +6,7 @@ declared"), so a list counts only when its own sentence declares and does not he
 """
 import re
 from dataclasses import dataclass
+from datetime import date
 
 
 @dataclass(frozen=True)
@@ -38,7 +39,8 @@ MIN_SHARE = 0.6       # the winning state must hold this share of all matched na
 _DECLARES = re.compile(r"declar|\badded\b|\bincluded\b|brought under|\bnotified\b|जाहीर|घोषित", re.I)
 _HEDGE = re.compile(
     r"\b(?:demand\w*|may|might|likely|could|would|should|seek\w*|sought|urg\w*|exclu\w*|left out|outside|protest\w*|"
-    r"warn\w*|propos\w*|recommend\w*|expected|yet to|if not|not declared|withdraw\w*)\b|मागणी|प्रस्ताव|वगळ|समावेश करा",
+    r"warn\w*|propos\w*|recommend\w*|expected|yet to|if not|not declared|withdraw\w*|will|to be|set to|plan\w*|"
+    r"not yet|not been|soon)\b|मागणी|प्रस्ताव|वगळ|समावेश करा",
     re.I)
 _MARKER = re.compile(r"\b(?:are|is|include|includes|including|namely)\b|:")
 _UNIT = r"(?:taluks?|talukas?|mandals?|tehsils?|tahsils?)"
@@ -109,12 +111,44 @@ def names_state(text: str, state: WatchState) -> bool:
 
 
 def pick_state(counts: dict[str, tuple[int, int]], text: str) -> WatchState | None:
-    """counts[pool] = (accepted matches, list items) per boundary pool. The pool with most matches wins only with
-    enough names, a clear share, and the state's name in the article; never guessed from names alone."""
+    """counts[pool] = (distinct talukas matched, list items) per boundary pool. The pool with most matches wins only
+    with enough names, a clear share, and the state's name in the article; never guessed from names alone. A short
+    article (one or two talukas) counts only when it names exactly one watched state and every match is in it."""
     if not counts:
         return None
     pool, (best, _) = max(counts.items(), key=lambda kv: kv[1][0])
     total = sum(accepted for accepted, _ in counts.values())
-    if best < MIN_MATCHES or best / total < MIN_SHARE:
+    named = [s for s in WATCH_STATES if names_state(text, s)]
+    if best < MIN_MATCHES:
+        if not (len(named) == 1 and named[0].pool == pool and best == total):
+            return None
+    elif best / total < MIN_SHARE:
         return None
-    return next((s for s in WATCH_STATES if s.pool == pool and names_state(text, s)), None)
+    return next((s for s in named if s.pool == pool), None)
+
+
+_MONTHS = {m: i for i, m in enumerate(("jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov",
+                                       "dec"), start=1)}
+# Devanagari, Bengali, Gurmukhi, Gujarati, Oriya, Tamil, Telugu, Kannada, Malayalam digits -> 0-9
+_INDIC_DIGITS = str.maketrans({chr(base + d): str(d) for base in (0x0966, 0x09E6, 0x0A66, 0x0AE6, 0x0B66, 0x0BE6,
+                                                                   0x0C66, 0x0CE6, 0x0D66) for d in range(10)})
+_NUMERIC_DATE = re.compile(r"\b(\d{1,2})[./-](\d{1,2})[./-](20\d\d)\b|\b(20\d\d)-(\d{2})-(\d{2})\b")
+_WORD_DATE = re.compile(r"\b(\d{1,2})(?:st|nd|rd|th)?\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?,?"
+                        r"\s+(20\d\d)\b", re.I)
+
+
+def order_dates(text: str) -> list[date]:
+    """Dates written in an order (12/09/2023, 2026-09-28, 28 September 2026; Indian digits too), oldest first."""
+    folded = text.translate(_INDIC_DIGITS)
+    found = []
+    for m in _NUMERIC_DATE.finditer(folded):
+        d, mo, y = (m.group(1), m.group(2), m.group(3)) if m.group(3) else (m.group(6), m.group(5), m.group(4))
+        found.append((int(y), int(mo), int(d)))
+    found += [(int(m.group(3)), _MONTHS[m.group(2).lower()[:3]], int(m.group(1))) for m in _WORD_DATE.finditer(folded)]
+    out = set()
+    for y, mo, d in found:
+        try:
+            out.add(date(y, mo, d))
+        except ValueError:
+            continue
+    return sorted(out)

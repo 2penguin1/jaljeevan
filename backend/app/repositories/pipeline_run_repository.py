@@ -30,12 +30,13 @@ class PipelineRunRepository(BaseRepository[PipelineRun]):
     def latest(self, limit: int = 20) -> list[PipelineRun]:
         return list(self.session.scalars(select(PipelineRun).order_by(PipelineRun.started_at.desc()).limit(limit)))
 
-    def last_success(self, stage: str, scan: int = 200) -> datetime | None:
-        """When a stage last finished without an error or a skip (newest of the last `scan` runs)."""
+    def last_attempt(self, stage: str, scan: int = 200) -> tuple[datetime, bool] | None:
+        """(when, failed?) of the newest finished run in which a stage really ran (not skipped), within the last
+        `scan` runs."""
         for run in self.latest(scan):
             result = (run.stats or {}).get(stage)
-            if run.finished_at and isinstance(result, dict) and not ({"error", "skipped"} & result.keys()):
-                return run.finished_at
+            if run.finished_at and isinstance(result, dict) and "skipped" not in result:
+                return run.finished_at, "error" in result
         return None
 
     def find(self, run_id: uuid.UUID) -> PipelineRun | None:

@@ -52,7 +52,7 @@ class DeclarationSourceRepository(BaseRepository[DeclarationSource]):
     def summary(self, since: date) -> dict:
         """For the ops page: sources by outcome, talukas declared through the watch per state, talukas waiting."""
         declared = self.session.execute(text("""
-            SELECT d.state_code, count(*) FROM drought_declarations d
+            SELECT d.state_code, count(DISTINCT d.area_id) FROM drought_declarations d
             WHERE d.declared_on >= :since AND d.source_url IN (SELECT url FROM declaration_sources)
             GROUP BY d.state_code"""), {"since": since}).all()
         waiting = self.session.scalar(text("""

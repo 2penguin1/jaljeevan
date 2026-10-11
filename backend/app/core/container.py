@@ -193,11 +193,15 @@ class Container:
                                        GdoSoilMoistureAnomaly(self.http, s.gdo_soil_base_url), self.population,
                                        imd=ImdDistrictRainfall(self.http), indicators=IndicatorRepository(session))
 
-    USER_AGENT = "jal-hackathon/0.1 (drought declarations watch)"
+    @property
+    def watch_user_agent(self) -> str:
+        """The product name comes from config (never hard-coded): "Jal (working name)" -> "jal/0.1 (...)"."""
+        product = "-".join(self.settings.app_name.split("(")[0].lower().split()) or "app"
+        return f"{product}/0.1 (drought declarations watch)"
 
     def declaration_watch_stage(self, session: Session, force: bool = False) -> DeclarationWatchStage:
         sources = DeclarationSourceRepository(session)
-        watch = DeclarationWatchService(DeclarationNewsSearch(self.http), PoliteFetcher(self.http, self.USER_AGENT),
+        watch = DeclarationWatchService(DeclarationNewsSearch(self.http), PoliteFetcher(self.http, self.watch_user_agent),
                                         sources, AdminAreaRepository(session), self.fingerprinter)
         promoter = DeclarationPromoter(sources, DeclarationRepository(session), self.fingerprinter)
         return DeclarationWatchStage(watch, promoter, PipelineRunRepository(session), force=force)

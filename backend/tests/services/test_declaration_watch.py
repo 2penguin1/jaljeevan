@@ -22,7 +22,7 @@ SIASAT = ("Bengaluru: Karnataka added 40 more taluks to the drought list.\n"
 DH = ("Karnataka government on Thursday declared more taluks drought-hit.\n"
       "The newly declared taluks include Gadag, Ron, Indi and Gokak, officials said.")
 WIRE_COPY = SIASAT  # the same wire text on another site
-ORDER = "Government of Karnataka. Revenue Department.\nThe following taluks are declared drought-affected: Indi, Gadag, Ron."
+ORDER = "Government of Karnataka. Revenue Department. Date: 28-09-2026.\nThe following taluks are declared drought-affected: Indi, Gadag, Ron."
 AP_LIST_KA_NAMED = "Karnataka officials said these were declared drought-hit: Adoni, Nandyal, Dhone."
 DEMAND = "Karnataka farmers demand that these taluks be declared drought-hit: Gadag, Ron, Indi."
 
@@ -130,6 +130,7 @@ def test_an_official_order_linked_from_an_article_is_enough_alone(db, areas):
     rows = declared(db)
     assert set(rows) == {"Indi", "Gadag", "Ron"}
     assert rows["Indi"].order_ref.startswith("official order")
+    assert rows["Indi"].declared_on == date(2026, 9, 28)  # the order's own date, not the article's
     assert rows["Indi"].source_url == "https://revenue.karnataka.gov.in/orders/drought-2026.pdf"
     official = db.query(DeclarationSource).filter_by(kind="official").one()
     assert official.status == "listed" and official.state_code == "KA"
@@ -267,3 +268,63 @@ def test_only_links_hosted_on_government_sites_count_as_official(db, areas):
     service, fetcher = watch(db, [hit(url)], {url: html("Karnataka drought news.", links)})
     service.run(NOW)
     assert fetcher.calls == [url]
+
+
+def test_a_broken_pdf_marks_only_that_source_failed(db, areas):
+    link = '<a href="https://revenue.karnataka.gov.in/orders/broken.pdf">order</a>'
+    pages = {"https://www.siasat.com/a": html(SIASAT, link),
+             "https://revenue.karnataka.gov.in/orders/broken.pdf": b"%PDF-1.7 truncated"}
+
+    def broken(body):
+        raise ValueError("PDFSyntaxError: truncated")
+
+    service, _ = watch(db, [hit("https://www.siasat.com/a")], pages, pdf_text=broken)
+    stats = service.run(NOW)
+    assert stats["by_status"] == {"listed": 1, "failed": 1}
+
+
+def test_an_old_order_linked_from_a_new_article_is_dated_by_its_own_text(db, areas):
+    link = '<a href="https://revenue.karnataka.gov.in/orders/2023.pdf">order</a>'
+    old = "Government of Karnataka. No. RD 2023, dated 12/09/2023.\nThe following taluks are declared drought-affected: Indi, Gadag, Ron."
+    pages = {"https://www.siasat.com/a": html("Karnataka drought news, no list.", link),
+             "https://revenue.karnataka.gov.in/orders/2023.pdf": old.encode()}
+    service, _ = watch(db, [hit("https://www.siasat.com/a")], pages)
+    service.run(NOW)
+    promote(db)
+    assert declared(db) == {}  # a 2023 order is outside this season
+
+
+def test_an_official_order_without_a_date_is_not_enough_alone(db, areas):
+    link = '<a href="https://revenue.karnataka.gov.in/orders/x.pdf">order</a>'
+    undated = "Government of Karnataka.\nThe following taluks are declared drought-affected: Indi, Gadag, Ron."
+    pages = {"https://www.siasat.com/a": html("Karnataka drought news, no list.", link),
+             "https://revenue.karnataka.gov.in/orders/x.pdf": undated.encode()}
+    service, _ = watch(db, [hit("https://www.siasat.com/a")], pages)
+    service.run(NOW)
+    promote(db)
+    assert declared(db) == {}
+
+
+def test_one_publisher_on_two_sub_sites_is_one_source(db, areas):
+    pages = {"https://kannada.news18.com/a": html(SIASAT), "https://www.news18.com/b": html(DH)}
+    service, _ = watch(db, [hit("https://kannada.news18.com/a"), hit("https://www.news18.com/b")], pages)
+    service.run(NOW)
+    promote(db)
+    assert declared(db) == {}
+
+
+def test_the_stage_waits_two_hours_after_a_failed_watch(db):
+    from app.models import PipelineRun
+    from app.repositories.pipeline_run_repository import PipelineRunRepository
+    from app.services.pipeline import DeclarationWatchStage, PipelineContext
+
+    db.add(PipelineRun(kind="local", started_at=NOW - timedelta(hours=1), finished_at=NOW - timedelta(hours=1),
+                       stats={"watch": {"error": "ExternalServiceError: gdelt: HTTP 429"}}))
+    db.flush()
+    w = CountingWatch()
+    stage = DeclarationWatchStage(w, CountingPromoter(), PipelineRunRepository(db))
+    ctx = PipelineContext(now=NOW, run_id="r")
+    stage.run(ctx)
+    assert w.runs == 0 and ctx.stats["watch"] == {"skipped": "failed 1h ago, retrying after 2h"}
+    stage.run(PipelineContext(now=NOW + timedelta(hours=2), run_id="r2"))
+    assert w.runs == 1
