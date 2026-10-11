@@ -7,6 +7,7 @@ only accepts CloudFront.
 from pathlib import Path
 
 import aws_cdk as cdk
+from aws_cdk import aws_certificatemanager as acm
 from aws_cdk import aws_cloudfront as cloudfront
 from aws_cdk import aws_cloudfront_origins as origins
 from aws_cdk import aws_ec2 as ec2
@@ -23,7 +24,7 @@ from aws_cdk import aws_secretsmanager as secretsmanager
 from aws_cdk.aws_ecr_assets import Platform
 from constructs import Construct
 
-from config import APP_SECRET_NAME, PIPELINE_CRON_HOURS, PROJECT
+from config import APP_SECRET_NAME, CERTIFICATE_ARN, DOMAIN_NAME, PIPELINE_CRON_HOURS, PROJECT
 
 ROOT = Path(__file__).resolve().parents[1]
 CONTAINER = "web"
@@ -122,6 +123,12 @@ class PlatformStack(cdk.Stack):
         # -- website: S3 behind CloudFront, /api/* to the load balancer -----------------------------------------
         spa = cloudfront.Function(self, "SpaRewrite", code=cloudfront.FunctionCode.from_inline(SPA_REWRITE),
                                   runtime=cloudfront.FunctionRuntime.JS_2_0)
+        custom_domain = {}
+        if DOMAIN_NAME and CERTIFICATE_ARN:
+            custom_domain = dict(
+                domain_names=[DOMAIN_NAME],
+                certificate=acm.Certificate.from_certificate_arn(self, "WebCert", CERTIFICATE_ARN),
+                minimum_protocol_version=cloudfront.SecurityPolicyProtocol.TLS_V1_2_2021)
         distribution = cloudfront.Distribution(
             self, "Web",
             default_root_object="index.html",
@@ -139,12 +146,15 @@ class PlatformStack(cdk.Stack):
                 cache_policy=cloudfront.CachePolicy.CACHING_DISABLED,
                 origin_request_policy=cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER)},
             price_class=cloudfront.PriceClass.PRICE_CLASS_200,  # includes India edge locations
+            **custom_domain,
         )
         s3deploy.BucketDeployment(self, "SiteFiles", sources=[s3deploy.Source.asset(str(ROOT / "frontend" / "dist"))],
                                   destination_bucket=site, distribution=distribution, distribution_paths=["/*"],
                                   memory_limit=512)
 
         cdk.CfnOutput(self, "WebsiteUrl", value=f"https://{distribution.distribution_domain_name}")
+        if custom_domain:
+            cdk.CfnOutput(self, "CustomDomainUrl", value=f"https://{DOMAIN_NAME}")
         cdk.CfnOutput(self, "RawBucket", value=raw.bucket_name)
         cdk.CfnOutput(self, "ClusterName", value=cluster.cluster_name)
         cdk.CfnOutput(self, "TaskDefinition", value=service.task_definition.task_definition_arn)
