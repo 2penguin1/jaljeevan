@@ -2,7 +2,8 @@
 
 Real-time water-crisis intelligence for India. JalJeevan tracks drought, floods, heat and water-supply failures at taluka level and helps relief officers, tanker vendors and NGOs respond.
 
-**Live:** https://d77gmqy6y3kav.cloudfront.net
+**Live:** https://jaljeevan.sujalsingh.dev
+**Demo video:** https://youtu.be/VMnoiK329nI
 **Track:** Heat and Water · WeMakeDevs × AWS Environmental Hacks
 
 ---
