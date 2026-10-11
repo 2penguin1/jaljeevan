@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     reddit_enabled: bool = True
     apify_x_actor: str = "kaitoeasyapi/twitter-x-data-tweet-scraper-pay-per-result-cheapest"  # no 10-item cap
     apify_max_usd_per_run: float = 0.5
+    worldpop_path: str = "app/data/seed/ind_pop_2025_CN_1km_R2025A_UA_v1.tif"  # WorldPop 2025 1 km, CC BY 4.0
     max_post_age_days: int = 30
     admin_token: str | None = None  # admin API stays locked until ADMIN_TOKEN is configured
 

@@ -17,6 +17,8 @@ dependencies = [
     "shapely>=2.0",
     "pyyaml>=6.0",
     "cachetools>=5.5",
+    "rasterio>=1.4",
+    "numpy>=2",
 ]
 
 [dependency-groups]

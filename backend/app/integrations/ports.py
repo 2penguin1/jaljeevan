@@ -42,3 +42,15 @@ class WeatherProvider(Protocol):
     def daily(self, points: list[tuple[int, float, float]]) -> dict[int, dict]:
         """Map district_id -> {'tmax_c', 'apparent_tmax_c', 'precip_mm_24h'} for today's forecast."""
         ...
+
+
+@dataclass(frozen=True)
+class PopulationCount:
+    total: int
+    urban: int
+
+
+class PopulationGrid(Protocol):
+    """People living inside a polygon (WKT, lon/lat). None when no grid is available."""
+
+    def count(self, wkt: str) -> PopulationCount | None: ...
