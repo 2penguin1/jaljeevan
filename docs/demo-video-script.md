@@ -23,8 +23,14 @@ Record the deployed site (the CloudFront URL) in a 1440 px wide browser. Speak s
 **Say:** "Every zone shows its evidence. The quotes are word for word from the source, and the AI isn't allowed to invent numbers. Every number on this page is computed in code, and you can see the arithmetic."
 
 ## 5b. From zone to water on the ground (2:15–2:35)
-**Screen:** on the zone page, the "Drinking water needed from tankers" card. Click "Create tanker tender" and publish (the demo code is already entered). On the tender page, switch "Viewing as" to the top vendor, click Counter (₹64), switch back to the government and click Accept. The committed bar fills.
-**Say:** "From a zone, the officer sees how much drinking water the rural families need: the formula is right there. One click publishes a tender. The nearest reliable tanker vendors are invited, each with a plain reason. Vendors can accept or counter, and the bar shows how much water is already committed."
+**Before recording:** log in as `officer@relief.demo` in one browser window and as `akkalkot@vendor.demo` in a private window (the password is `DEMO_PASSWORD` in `backend/.env`).
+**Screen:**
+1. Officer window, on the zone page: click "Draft a relief brief" and show the AI words next to the code numbers.
+2. Click "Approve and publish tender".
+3. Vendor window: the bell shows "New tender". Open it and counter at ₹64.
+4. Officer window: the bell shows the counter. Click Accept, and the committed bar fills.
+
+**Say:** "The officer drafts a relief brief: the AI writes the situation, and every number comes from code. One click approves it and publishes a tender. The nearest reliable tanker vendors are invited and notified. A vendor counters, the officer accepts, and the bar shows how much water is committed. Bids stay private between the officer and each vendor."
 
 ## 6. Built on AWS (2:35–2:55)
 **Screen:** an architecture slide (or the AWS console: the CloudFormation stack, the ECS service, RDS).
