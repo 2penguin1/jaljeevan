@@ -40,7 +40,9 @@ def test_level_table(spi_6p, spi_18p, soil, level):
 
 def test_boost_and_reasons_follow_the_level():
     severe = assess(-1.7, -2.73, -1.8)
-    assert severe.boost == 0.6 and severe.t1_class == "severe" and severe.soil_class == "severe"
+    # data alone stays below the activation score (60): a zone goes live only with ground reports or a declaration
+    assert severe.boost == 0.55 and severe.t1_class == "severe" and severe.soil_class == "severe"
+    assert assess(0.0, 0.0, declared="severe").boost == 0.6 and assess(-1.7, -2.73, -1.8, declared="moderate").boost == 0.6
     assert any("−2.7" in r or "-2.7" in r for r in severe.reasons) and len(severe.reasons) >= 2
     assert assess(0.0, 0.0).boost == 0.0 and assess(0.0, 0.0).reasons == ()
 

@@ -145,10 +145,11 @@ class ZoneDetectionService:
             level = drought.assessment.level if drought else "none"
             confidence = support.get(area_id, {})
             zone = self.zones.area_zone(policy.hazard, area_id)
-            worth_a_zone = (level in ("moderate", "severe") or (level == "watch" and confidence)
-                            or (drought is not None and drought.assessment.declared is not None))
-            if zone is None and not worth_a_zone:
-                continue  # watch-level talukas without posts stay in the map footprint only
+            declared = drought is not None and drought.assessment.declared is not None
+            if level == "none" and not declared:
+                confidence = {}  # once the data clears, old posts can't keep a drought zone alive
+            if zone is None and not (confidence or declared):
+                continue  # dry but unreported talukas are shown by the map's footprint layer, not as zones
             created = zone is None
             if created:
                 zone = Zone(hazard=policy.hazard, status=WATCH, zone_type="taluka", area_id=area_id, first_seen=now)

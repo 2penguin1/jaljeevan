@@ -10,6 +10,7 @@ Trigger 1 (the manual's rainfall test, 2016 Table 3.10):
 Impact: soil moisture. The manual grades soil moisture as a percentage of available water (PASM/MAI). We use the
   Copernicus GDO soil moisture *anomaly* (standardised like SPI): <= -1 moderate, <= -1.5 severe. That mapping is
   ours, so the label says "soil moisture anomaly".
+Confirmation: data alone gives at most a watch-level score; posts from the area or a declaration make it active.
 Combination (our reading of the 2020 "2 of 3 impacts" rule with one impact available):
   trigger not met -> none; met and soil unknown -> watch (moderate trigger) / moderate (severe trigger);
   soil normal -> watch; soil moderate -> moderate; severe trigger and severe soil -> severe.
@@ -73,7 +74,10 @@ class DroughtRules:
     IMD_DEFICIENT = -20.0            # IMD "deficient" starts at 20% below normal
     MAX_SPI_AGE_DAYS = 20
     MAX_SOIL_AGE_DAYS = 30           # the soil product's mirror runs ~3 weeks behind
-    BOOST = {"none": 0.0, "watch": 0.2, "moderate": 0.4, "severe": 0.6}
+    # Data alone stays below the activation score (60): like the manual's ground-truthing step, a drought zone
+    # goes live only when posts from the area confirm it, or the state has declared it.
+    BOOST = {"none": 0.0, "watch": 0.2, "moderate": 0.4, "severe": 0.55}
+    DECLARED_BOOST = 0.6
 
     def assess(self, x: DroughtInputs) -> DroughtAssessment:
         reasons: list[str] = []
@@ -103,8 +107,9 @@ class DroughtRules:
         if x.declared_severity:
             reasons.append(f"Officially declared ({x.declared_severity}) by the state government")
         imd = None if x.imd_departure_pct is None else x.imd_departure_pct <= self.IMD_DEFICIENT
+        boost = max(self.BOOST[level], self.DECLARED_BOOST) if x.declared_severity else self.BOOST[level]
         return DroughtAssessment(level=level, trigger1=trigger1, t1_class=t1_class, soil_class=soil_class,
-                                 boost=self.BOOST[level], reasons=tuple(reasons) if level != "none" else (),
+                                 boost=boost, reasons=tuple(reasons) if level != "none" else (),
                                  declared=x.declared_severity, imd_deficient=imd)
 
     @staticmethod

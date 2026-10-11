@@ -11,6 +11,7 @@ import numpy as np
 from app.core.exceptions import ExternalServiceError
 from app.domain.drought import DroughtRules, dekad_end, pentad_end
 from app.domain.text import TextFingerprinter
+from app.integrations.imd import season_is_mature
 from app.integrations.population import WorldPopGrid
 from app.integrations.raster import Grid, resample_nearest, shapes_from_wkb, zonal_mean, zonal_sums
 from app.repositories.admin_area_repository import AdminAreaRepository
@@ -53,6 +54,8 @@ class IndicatorRefreshService:
         if not readings:
             return {"skipped": "no readings"}
         day = max(r.day for r in readings)
+        if not season_is_mature(day):
+            return {"skipped": "season too young", "day": day.isoformat()}
         if self.indicators.has_period("imd", day):
             return {"skipped": "fresh", "day": day.isoformat()}
         matched = 0

@@ -122,13 +122,17 @@ def test_imd_district_departures_are_matched_by_name_and_ambiguous_names_are_ski
     db.add(AdminArea(level="subdistrict", name="T", name_norm="t", state_code="MH",
                      geom=from_shape(box(71, 14, 73, 16), srid=4326)))
     db.flush()
-    day = date(2026, 10, 10)
+    day = date(2026, 9, 25)  # deep into the monsoon season, so departures are meaningful
     imd = FakeImd([ImdReading("SOLAPUR", -45.0, day), ImdReading("AURANGABAD", 12.0, day),
                    ImdReading("NOWHERE", 3.0, day)])
     svc = IndicatorRefreshService(AreaIndicatorRepository(db), AdminAreaRepository(db), FakeChirps(), FakeSoil(),
                                   population, imd=imd, indicators=IndicatorRepository(db))
     stats = svc.refresh(NOW)
-    assert stats["imd"] == {"day": "2026-10-10", "matched": 1, "unmatched": 2}
+    assert stats["imd"] == {"day": "2026-09-25", "matched": 1, "unmatched": 2}
     row = db.query(DistrictIndicator).filter_by(source="imd").one()
     assert row.rainfall_departure_pct == -45.0 and row.period == day
-    assert svc.refresh(NOW)["imd"] == {"skipped": "fresh", "day": "2026-10-10"}
+    assert svc.refresh(NOW)["imd"] == {"skipped": "fresh", "day": "2026-09-25"}
+    young = IndicatorRefreshService(AreaIndicatorRepository(db), AdminAreaRepository(db), FakeChirps(), FakeSoil(),
+                                    population, imd=FakeImd([ImdReading("SOLAPUR", -100.0, date(2026, 10, 10))]),
+                                    indicators=IndicatorRepository(db))
+    assert young.refresh(NOW)["imd"] == {"skipped": "season too young", "day": "2026-10-10"}

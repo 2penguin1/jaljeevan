@@ -18,6 +18,17 @@ _PERCENT = re.compile(r"^(-?\d+(?:\.\d+)?)%$")
 _DATE = re.compile(r"Date\s*:\s*(\d{4}-\d{2}-\d{2})")
 
 
+SEASON_STARTS = ((1, 1), (3, 1), (6, 1), (10, 1))  # IMD seasons: winter, pre-monsoon, monsoon, post-monsoon
+MIN_SEASON_DAYS = 21
+
+
+def season_is_mature(day: date) -> bool:
+    """IMD's 'since the season began' departure is noise in a season's first weeks (10 days against a tiny
+    normal reads -100%). Only use it once the current season is at least three weeks old."""
+    start = max(date(day.year, m, d) for m, d in SEASON_STARTS if date(day.year, m, d) <= day)
+    return (day - start).days >= MIN_SEASON_DAYS
+
+
 @dataclass(frozen=True)
 class ImdReading:
     district: str

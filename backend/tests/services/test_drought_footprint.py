@@ -115,18 +115,31 @@ def test_water_reports_inside_a_dry_taluka_also_count_as_drought_evidence(db):
 def test_taluka_zone_identity_is_stable_across_runs(db):
     g = geo(db)
     dry(db, g["mohol"])
+    post(db, "https://hindu/mohol-stable", (75.7, 17.8))
     first = service(db).detect(NOW, hazards=("drought",))
     second = service(db).detect(NOW + timedelta(hours=1), hazards=("drought",))
     assert first.created == 1 and second.created == 0 and second.updated >= 1 and len(zones(db)) == 1
 
 
-def test_data_alone_severe_is_active_and_moderate_is_watch(db):
+def test_data_alone_makes_no_zone_it_stays_on_the_map_footprint(db):
+    """Dry talukas without ground reports or a declaration are shown as the map's footprint layer, not as zones."""
     g = geo(db)
-    dry(db, g["mohol"], spi_18p=-1.7, spi_6p=-1.6)   # severe trigger, soil unknown -> moderate (boost 0.4)
-    dry(db, g["akkalkot"], spi_18p=-1.2, spi_6p=-1.1)  # moderate trigger -> watch (boost 0.2), no posts -> no zone
+    dry(db, g["mohol"], spi_18p=-1.7, spi_6p=-1.6)
+    AreaIndicatorRepository(db).upsert_many([(g["mohol"].id, FRESH, "gdo-soil", "soil_anomaly", -1.8)])  # severe
+    dry(db, g["akkalkot"], spi_18p=-1.2, spi_6p=-1.1)
+    service(db).detect(NOW, hazards=("drought",))
+    assert zones(db) == []
+
+
+def test_a_severe_taluka_with_one_report_is_watch_until_confirmed(db):
+    g = geo(db)
+    dry(db, g["mohol"], spi_18p=-1.7, spi_6p=-1.6)
+    AreaIndicatorRepository(db).upsert_many([(g["mohol"].id, FRESH, "gdo-soil", "soil_anomaly", -1.8)])
+    post(db, "https://x/mohol-weak", (75.7, 17.8), domain="x.com")
+    db.query(Signal).filter(Signal.url == "https://x/mohol-weak").update({"credibility": 0.05})
     service(db).detect(NOW, hazards=("drought",))
     [z] = zones(db)
-    assert z.area_id == g["mohol"].id and z.status == "watch" and z.score == 40.0
+    assert z.status == "watch" and 55 <= z.score < 60
 
 
 def test_an_officially_declared_taluka_gets_a_zone_even_without_data(db):
@@ -144,6 +157,7 @@ def test_zone_resolves_after_the_data_clears_for_72_hours(db):
     DeclarationRepository(db).upsert(g["mohol"].id, "MH", (NOW - timedelta(days=200)).date(), "severe", None, None)
     dry(db, g["mohol"], spi_18p=-1.8, spi_6p=-1.6)
     AreaIndicatorRepository(db).upsert_many([(g["mohol"].id, FRESH, "gdo-soil", "soil_anomaly", -1.8)])
+    post(db, "https://hindu/mohol-dry", (75.7, 17.8))  # reports keep coming until the rain returns
     svc = service(db)
     svc.detect(NOW, hazards=("drought",))
     [z] = zones(db)

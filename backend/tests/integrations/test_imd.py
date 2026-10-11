@@ -39,3 +39,13 @@ def test_fetch_fails_soft():
     assert source(httpx.Response(500)).fetch() == []
     assert source(httpx.Response(200, text="<html>layout changed</html>")).fetch() == []
     assert len(source(httpx.Response(200, text=PAGE)).fetch()) == 2
+
+
+
+def test_departures_early_in_a_season_are_not_meaningful():
+    from datetime import date
+    from app.integrations.imd import season_is_mature
+    assert season_is_mature(date(2026, 10, 10)) is False   # post-monsoon season began 1 Oct: 10 days in
+    assert season_is_mature(date(2026, 10, 25)) is True
+    assert season_is_mature(date(2026, 9, 20)) is True     # monsoon season since 1 Jun
+    assert season_is_mature(date(2026, 6, 5)) is False
