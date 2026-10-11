@@ -4,6 +4,8 @@ Usage (from backend/): uv run python -m app.cli.seed_crm      (safe to run again
 Every vendor is marked is_demo and named "(demo)": they are not real businesses.
 Login accounts (officer, three vendors, one NGO) get DEMO_PASSWORD; without it they are created unable to log in.
 """
+from datetime import date, timedelta
+
 from geoalchemy2.shape import from_shape
 from shapely.geometry import Point
 from sqlalchemy import select
@@ -11,7 +13,7 @@ from sqlalchemy import select
 from app.core.config import settings
 from app.core.database import init_db, session_scope
 from app.core.security import hash_password, verify_password
-from app.models import Organization, User
+from app.models import Campaign, Organization, User, VolunteerTask, Zone
 
 GOVERNMENT = "Relief & Rehabilitation Department, Maharashtra"
 NGO = "Jal Seva Foundation (demo)"
@@ -69,8 +71,24 @@ def main() -> None:
                 s.add(User(email=email, name=name, role=role, org_id=orgs[org_name].id, password_hash=password))
             elif settings.demo_password and not verify_password(settings.demo_password, user.password_hash):
                 user.password_hash = password  # a new (rotated) demo password replaces the old one
+        _seed_community(s, orgs[NGO])
     print(f"government office ready; {added} demo vendors added; {len(ACCOUNTS)} login accounts ready"
           + ("" if settings.demo_password else " (no DEMO_PASSWORD: they cannot log in yet)"))
+
+
+def _seed_community(s, ngo: Organization) -> None:
+    """One demo campaign and one volunteer task for the demo NGO, on the Akkalkot drought zone when it exists."""
+    zone = s.scalar(select(Zone).where(Zone.name == "Akkalkot taluka, Solapur", Zone.hazard == "drought"))
+    title = "Drinking-water tankers for Akkalkot villages (demo)"
+    if s.scalar(select(Campaign).where(Campaign.title == title)) is None:
+        s.add(Campaign(ngo_org_id=ngo.id, zone_id=zone.id if zone else None, title=title, goal_inr=300000,
+                       story="Wells in many Akkalkot villages have run dry. Pledges fund extra tanker rounds to schools "
+                             "and anganwadis. This is a demo campaign: pledges are not payments."))
+    task = "Help hand out water cans at the Akkalkot water point (demo)"
+    if s.scalar(select(VolunteerTask).where(VolunteerTask.title == task)) is None:
+        s.add(VolunteerTask(org_id=ngo.id, zone_id=zone.id if zone else None, title=task, slots=12,
+                            task_date=date.today() + timedelta(days=4),
+                            description="Two-hour shifts in the morning. Bring a cap and a water bottle."))
 
 
 if __name__ == "__main__":
