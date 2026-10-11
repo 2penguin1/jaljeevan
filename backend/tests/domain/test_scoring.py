@@ -75,7 +75,8 @@ def test_hazard_policies():
     assert policies.get("drought").indicator_source == "imd" and policies.get("heat").indicator_source == "open-meteo"
     assert sorted(p.hazard for p in policies.all()) == ["drought", "flood", "heat", "water"]
     assert policies.get("water").boost({"precip_mm_24h": 500}) == 0.0 and policies.get("water").indicator_source is None
-    assert {p.hazard: p.zoning for p in policies.all()}["water"] == "posts"
+    zoning = {p.hazard: p.zoning for p in policies.all()}
+    assert zoning == {"drought": "footprint", "flood": "posts", "heat": "posts", "water": "posts"}
 
 
 def test_state_machine_hysteresis():

@@ -17,6 +17,7 @@ from app.core.database import session_scope
 from app.domain.classification import PromptBuilder
 from app.domain.events import SignalClassified, ZoneEscalated
 from app.domain.evidence import EvidenceValidator
+from app.domain.drought import DroughtRules
 from app.domain.hazards import HazardPolicies
 from app.domain.lifecycle import ZoneStateMachine
 from app.domain.prefilter import Prefilter
@@ -39,6 +40,7 @@ from app.integrations.sources.social import RedditFetcher, XFetcher
 from app.integrations.weather import OpenMeteoProvider
 from app.repositories.admin_area_repository import AdminAreaRepository
 from app.repositories.area_indicator_repository import AreaIndicatorRepository
+from app.repositories.declaration_repository import DeclarationRepository
 from app.repositories.geocode_cache_repository import GeocodeCacheRepository
 from app.repositories.indicator_repository import IndicatorRepository
 from app.repositories.map_repository import MapRepository
@@ -51,6 +53,7 @@ from app.services.classification_service import ClassificationService
 from app.services.credibility_resolver import CredibilityResolver
 from app.services.event_bus import EventBus
 from app.services.geocoding.geocoding_service import GeocodingService
+from app.services.drought_assessor import DroughtAssessor
 from app.services.indicator_refresh_service import IndicatorRefreshService
 from app.services.geocoding.resolvers import GazetteerResolver, LocatorResolver, ResolverChain
 from app.services.ingestion_service import IngestionService
@@ -162,7 +165,12 @@ class Container:
     def zone_detection_service(self, session: Session) -> ZoneDetectionService:
         return ZoneDetectionService(ZoneRepository(session), AdminAreaRepository(session),
                                     IndicatorRepository(session), self.scorer, self.policies, self.machine,
-                                    self.zone_types, population=self.population)
+                                    self.zone_types, population=self.population,
+                                    drought=self.drought_assessor(session))
+
+    def drought_assessor(self, session: Session) -> DroughtAssessor:
+        return DroughtAssessor(AreaIndicatorRepository(session), IndicatorRepository(session),
+                               DeclarationRepository(session), AdminAreaRepository(session), DroughtRules())
 
     def map_query_service(self, session: Session) -> MapQueryService:
         return MapQueryService(MapRepository(session), IndicatorRepository(session), self.policies,

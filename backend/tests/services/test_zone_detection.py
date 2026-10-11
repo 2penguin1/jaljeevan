@@ -54,7 +54,7 @@ def seed_geo(db):
 
 
 def sig(db, *, url, point, area=None, precision="ward", source="gdelt", domain="thehindu.com", cred=0.8,
-        severity=4, hazards=("drought",), period="current", author=None, conf=0.95, days_old=0, **kw):
+        severity=4, hazards=("flood",), period="current", author=None, conf=0.95, days_old=0, **kw):
     s = Signal(source=source, url=url, domain=domain, author=author, title="t", text="x", content_hash=url,
                simhash=0, status="classified", relevant=True, event_period=period, hazards=list(hazards),
                l1_codes=["SUPPLY"], max_severity=severity, credibility=cred,
@@ -68,7 +68,7 @@ def sig(db, *, url, point, area=None, precision="ward", source="gdelt", domain="
     return s
 
 
-def zones(db, hazard="drought"):
+def zones(db, hazard="flood"):
     return db.scalars(select(Zone).where(Zone.hazard == hazard)).all()
 
 
@@ -83,7 +83,7 @@ def test_two_independent_sources_make_an_active_urban_pocket_and_an_alert(db):
     g = seed_geo(db)
     sig(db, url="https://a/1", point=(77.690, 12.990), area=g["ward"])
     sig(db, url="https://b/1", point=(77.695, 12.993), area=g["ward"], domain="ndtv.com")
-    result = service(db).detect(NOW, hazards=("drought",))
+    result = service(db).detect(NOW, hazards=("flood",))
     [z] = zones(db)
     assert z.status == "active" and z.zone_type == "urban_pocket" and z.score >= 60
     assert z.independent_sources == 2 and z.population_est == 60000 and z.population_source == "gazetteer"
@@ -96,7 +96,7 @@ def test_single_social_post_is_only_a_watch_marker(db):
     g = seed_geo(db)
     sig(db, url="https://r/1", point=(77.69, 12.99), area=g["ward"], source="reddit", domain="reddit.com",
         cred=0.4, author="u1")
-    result = service(db).detect(NOW, hazards=("drought",))
+    result = service(db).detect(NOW, hazards=("flood",))
     [z] = zones(db)
     assert z.status == "watch" and z.score < 60 and result.events == []
 
@@ -113,17 +113,17 @@ def test_ineligible_signals_never_form_zones(db):
     db.flush()
     db.add(SignalFeedback(signal_id=flagged.id, user_id=reviewer.id, verdict="false"))
     db.flush()
-    service(db).detect(NOW, hazards=("drought",))
+    service(db).detect(NOW, hazards=("flood",))
     assert zones(db) == []
 
 
 def test_zone_keeps_its_id_across_runs_and_snapshots_accumulate(db):
     g = seed_geo(db)
     sig(db, url="https://a/1", point=(77.690, 12.990), area=g["ward"])
-    service(db).detect(NOW, hazards=("drought",))
+    service(db).detect(NOW, hazards=("flood",))
     first = zones(db)[0].id
     sig(db, url="https://b/1", point=(77.700, 12.995), area=g["ward"], domain="ndtv.com")
-    result = service(db).detect(NOW, hazards=("drought",))
+    result = service(db).detect(NOW, hazards=("flood",))
     assert [z.id for z in zones(db)] == [first] and result.updated == 1 and result.created == 0
     assert db.scalar(select(func.count()).select_from(ZoneSnapshot)) == 2
 
@@ -133,15 +133,15 @@ def test_far_apart_points_make_separate_zones_with_correct_types(db):
     for i, d in enumerate(("thehindu.com", "ndtv.com")):
         sig(db, url=f"https://u/{i}", point=(77.69, 12.99), area=g["ward"], domain=d)
         sig(db, url=f"https://v/{i}", point=(71.43, 25.20), area=g["vil"], precision="village", domain=d)
-    service(db).detect(NOW, hazards=("drought",))
+    service(db).detect(NOW, hazards=("flood",))
     assert sorted(z.zone_type for z in zones(db)) == ["rural", "urban_pocket"]
 
 
 def test_severe_indicator_alone_creates_a_district_wide_watch_zone(db):
     g = seed_geo(db)
-    db.add(DistrictIndicator(district_id=g["bmr"].id, period=NOW.date(), rainfall_departure_pct=-52, source="imd"))
+    db.add(DistrictIndicator(district_id=g["bmr"].id, period=NOW.date(), precip_mm_24h=130, source="open-meteo"))
     db.flush()
-    service(db).detect(NOW, hazards=("drought",))
+    service(db).detect(NOW, hazards=("flood",))
     [z] = zones(db)
     assert z.zone_type == "district_wide" and z.district_id == g["bmr"].id
     assert z.score == 40.0 and z.status == "watch" and z.population_est == 2_600_000
@@ -159,9 +159,9 @@ def test_zone_without_new_evidence_decays(db):
     g = seed_geo(db)
     sig(db, url="https://a/1", point=(77.690, 12.990), area=g["ward"])
     sig(db, url="https://b/1", point=(77.695, 12.993), area=g["ward"], domain="ndtv.com")
-    service(db).detect(NOW, hazards=("drought",))
+    service(db).detect(NOW, hazards=("flood",))
     later = NOW + timedelta(days=40)  # evidence now outside the 30-day window
-    service(db).detect(later, hazards=("drought",))
+    service(db).detect(later, hazards=("flood",))
     [z] = zones(db)
     assert z.score == 0.0
 
@@ -169,10 +169,10 @@ def test_zone_without_new_evidence_decays(db):
 def test_zone_that_becomes_active_on_a_later_run_raises_an_alert(db):
     g = seed_geo(db)
     sig(db, url="https://a/1", point=(77.690, 12.990), area=g["ward"])          # one source -> watch
-    first = service(db).detect(NOW, hazards=("drought",))
+    first = service(db).detect(NOW, hazards=("flood",))
     assert first.events == [] and zones(db)[0].status == "watch"
     sig(db, url="https://b/1", point=(77.695, 12.993), area=g["ward"], domain="ndtv.com")  # second source
-    second = service(db).detect(NOW, hazards=("drought",))
+    second = service(db).detect(NOW, hazards=("flood",))
     [z] = zones(db)
     assert z.status == "active" and z.score >= 70
     assert [e.zone_id for e in second.events] == [z.id]
@@ -194,7 +194,7 @@ def test_zone_population_comes_from_the_grid_not_the_whole_city(db):
     sig(db, url="https://a/p1", point=(77.690, 12.990), area=g["ward"])
     sig(db, url="https://b/p1", point=(77.695, 12.993), area=g["ward"], domain="ndtv.com")
     grid = FakeGrid()
-    service(db, population=grid).detect(NOW, hazards=("drought",))
+    service(db, population=grid).detect(NOW, hazards=("flood",))
     [z] = zones(db)
     assert (z.population_est, z.population_urban, z.population_source) == (4200, 3900, "worldpop")
     assert grid.asked and grid.asked[0].startswith("POLYGON")  # the zone's own shape, as plain WKT
@@ -204,7 +204,7 @@ def test_district_zone_population_comes_from_the_grid(db):
     g = seed_geo(db)
     sig(db, url="https://a/p2", point=(71.0, 25.0), area=g["bmr"], precision="district")
     sig(db, url="https://b/p2", point=(71.0, 25.0), area=g["bmr"], precision="district", domain="ndtv.com")
-    service(db, population=FakeGrid(total=2_100_000, urban=300_000)).detect(NOW, hazards=("drought",))
+    service(db, population=FakeGrid(total=2_100_000, urban=300_000)).detect(NOW, hazards=("flood",))
     [z] = zones(db)
     assert z.zone_type == "district_wide" and z.population_est == 2_100_000 and z.population_source == "worldpop"
 
@@ -213,6 +213,6 @@ def test_without_a_grid_population_falls_back_to_the_gazetteer(db):
     g = seed_geo(db)
     sig(db, url="https://a/p3", point=(77.690, 12.990), area=g["ward"])
     sig(db, url="https://b/p3", point=(77.695, 12.993), area=g["ward"], domain="ndtv.com")
-    service(db).detect(NOW, hazards=("drought",))
+    service(db).detect(NOW, hazards=("flood",))
     [z] = zones(db)
     assert z.population_est == 60000 and z.population_source == "gazetteer" and z.population_urban is None

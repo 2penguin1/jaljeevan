@@ -26,6 +26,10 @@ class AdminAreaRepository(BaseRepository[AdminArea]):
         return list(self.session.scalars(select(AdminArea.id).where(AdminArea.level == "district",
                                                                     AdminArea.name_norm == name_norm)))
 
+    def parent_ids(self, area_ids: list[int]) -> dict[int, int | None]:
+        rows = self.session.execute(select(AdminArea.id, AdminArea.parent_id).where(AdminArea.id.in_(area_ids))).all()
+        return {r.id: r.parent_id for r in rows}
+
     def talukas(self, state_code: str) -> list[tuple[int, str, str | None]]:
         """(id, name, district) of every taluka in a state, for matching names in official orders."""
         rows = self.session.execute(select(AdminArea.id, AdminArea.name, AdminArea.district_name).where(

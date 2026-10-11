@@ -11,7 +11,7 @@ from app.repositories.base import BaseRepository
 # Signals allowed to shape zones (spec): current, relevant, severe enough, recent, located, not near-duplicate,
 # not flagged false/irrelevant by a reviewer.
 _ELIGIBLE = """s.status = 'classified' AND s.relevant AND s.event_period = 'current'
-  AND :hz = ANY(s.hazards) AND s.dup_of IS NULL AND s.max_severity >= 3
+  AND s.hazards && CAST(:hzs AS varchar[]) AND s.dup_of IS NULL AND s.max_severity >= 3
   AND COALESCE(s.published_at, s.created_at) >= :since
   AND NOT sl.ambiguous AND sl.geom IS NOT NULL
   AND NOT EXISTS (SELECT 1 FROM signal_feedback f WHERE f.signal_id = s.id AND f.verdict IN ('false','irrelevant'))"""
@@ -44,7 +44,7 @@ class ZoneRepository(BaseRepository[Zone]):
                                    WHEN 'village' THEN :v ELSE :t END)::geometry AS buf
                   FROM signal_locations sl JOIN signals s ON s.id = sl.signal_id
                   WHERE {_ELIGIBLE} AND sl.precision IN ('ward','village','town')) pts"""),
-            {"hz": hazard, "since": since, "w": buffer_m["ward"], "v": buffer_m["village"], "t": buffer_m["town"]})
+            {"hzs": [hazard], "since": since, "w": buffer_m["ward"], "v": buffer_m["village"], "t": buffer_m["town"]})
         shapes = self.session.execute(text("""
             SELECT cid, ST_AsEWKT(ST_ConvexHull(ST_Collect(buf))) AS hull,
                    ST_AsEWKT(ST_Centroid(ST_Collect(buf))) AS centroid
@@ -68,10 +68,32 @@ class ZoneRepository(BaseRepository[Zone]):
             SELECT sl.admin_area_id AS district_id, sl.signal_id, MAX(sl.geo_confidence) AS conf
             FROM signal_locations sl JOIN signals s ON s.id = sl.signal_id
             WHERE {_ELIGIBLE} AND sl.precision = 'district' AND sl.admin_area_id IS NOT NULL
-            GROUP BY sl.admin_area_id, sl.signal_id"""), {"hz": hazard, "since": since}).all()
+            GROUP BY sl.admin_area_id, sl.signal_id"""), {"hzs": [hazard], "since": since}).all()
         out: dict[int, dict[uuid.UUID, float]] = {}
         for r in rows:
             out.setdefault(r.district_id, {})[r.signal_id] = r.conf
+        return out
+
+    def area_evidence(self, area_ids: list[int], hazards: tuple[str, ...],
+                      since: datetime) -> dict[int, dict[uuid.UUID, float]]:
+        """Posts that support each taluka: places inside it, mentions of the taluka itself, and mentions of its
+        whole district (half confidence, since a district-wide report doesn't say which taluka)."""
+        if not area_ids:
+            return {}
+        rows = self.session.execute(text(f"""
+            SELECT t.id AS area_id, s.id AS signal_id,
+                   MAX(sl.geo_confidence * CASE WHEN sl.precision = 'district' THEN 0.5 ELSE 1 END) AS conf
+            FROM admin_areas t
+            JOIN signal_locations sl ON (
+                   (sl.precision IN ('ward', 'village', 'town') AND ST_Intersects(t.geom, sl.geom))
+                OR (sl.precision = 'subdistrict' AND sl.admin_area_id = t.id)
+                OR (sl.precision = 'district' AND sl.admin_area_id = t.parent_id))
+            JOIN signals s ON s.id = sl.signal_id
+            WHERE t.id = ANY(:ids) AND {_ELIGIBLE}
+            GROUP BY t.id, s.id"""), {"ids": area_ids, "hzs": list(hazards), "since": since}).all()
+        out: dict[int, dict[uuid.UUID, float]] = {}
+        for r in rows:
+            out.setdefault(r.area_id, {})[r.signal_id] = r.conf
         return out
 
     def evidence(self, confidence: dict[uuid.UUID, float]) -> list[tuple[uuid.UUID, EvidenceSignal, int | None]]:
@@ -118,6 +140,21 @@ class ZoneRepository(BaseRepository[Zone]):
         return self.session.scalar(select(Zone).where(Zone.hazard == hazard, Zone.zone_type == "district_wide",
                                                       Zone.district_id == district_id))
 
+    def area_zone(self, hazard: str, area_id: int) -> Zone | None:
+        return self.session.scalar(select(Zone).where(Zone.hazard == hazard, Zone.area_id == area_id))
+
+    def area_ids_with_zones(self, hazard: str) -> list[int]:
+        return list(self.session.scalars(select(Zone.area_id).where(
+            Zone.hazard == hazard, Zone.area_id.isnot(None), Zone.status.notin_(("dismissed", "resolved")))))
+
+    def dismiss_legacy(self, hazard: str) -> int:
+        """Zones of a footprint hazard that were drawn from posts before data decided them (no area_id)."""
+        count = self.session.execute(text("""
+            UPDATE zones SET status = 'dismissed' WHERE hazard = :hz AND area_id IS NULL
+              AND status NOT IN ('dismissed', 'resolved')"""), {"hz": hazard}).rowcount
+        self.session.flush()
+        return count
+
     def district_at(self, point_ewkt: str) -> tuple[int, str] | None:
         row = self.session.execute(text("""SELECT id, name FROM admin_areas WHERE level = 'district'
                                            AND ST_Intersects(geom, ST_GeomFromEWKT(:p)) LIMIT 1"""),
@@ -136,10 +173,11 @@ class ZoneRepository(BaseRepository[Zone]):
         zone.centroid = func.ST_GeomFromEWKT(centroid_ewkt)
 
     @staticmethod
-    def set_shape_from_district(zone: Zone, district_id: int) -> None:
-        district_geom = select(AdminArea.geom).where(AdminArea.id == district_id).scalar_subquery()
-        zone.geom = district_geom
-        zone.centroid = func.ST_PointOnSurface(district_geom)
+    def set_shape_from_area(zone: Zone, area_id: int) -> None:
+        """The zone takes an admin area's outline (a whole district, or a taluka)."""
+        area_geom = select(AdminArea.geom).where(AdminArea.id == area_id).scalar_subquery()
+        zone.geom = area_geom
+        zone.centroid = func.ST_PointOnSurface(area_geom)
 
     # -- per-run bookkeeping ----------------------------------------------------------------------
     def replace_signals(self, zone_id: uuid.UUID, weights: dict[uuid.UUID, float]) -> None:

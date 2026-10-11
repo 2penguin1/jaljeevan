@@ -13,8 +13,12 @@ class HazardPolicy(Protocol):
 
 
 class DroughtPolicy:
+    """Drought zones come from measured data per taluka (see app/domain/drought.py). Posts tagged drought or
+    water supply that fall inside a flagged taluka add evidence; they can never create a drought zone."""
+
     hazard = "drought"
-    zoning = "posts"
+    zoning = "footprint"
+    evidence_hazards = ("drought", "water")
     indicator_source = "imd"
     indicator_field, indicator_label = "rainfall_departure_pct", "Rainfall vs normal (%)"
     SEVERE_DEPARTURE = -40.0   # % below normal monsoon rainfall

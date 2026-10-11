@@ -9,6 +9,7 @@ from app.domain.lifecycle import APPROVED, ACTIVE, WATCH, ZoneStateMachine
 from app.domain.scoring import EvidenceSignal, ZoneScorer
 from app.domain.zones import ZoneTypeClassifier
 from app.integrations.ports import PopulationGrid
+from app.services.drought_assessor import AreaDrought, DroughtAssessor
 from app.models import Zone
 from app.repositories.admin_area_repository import AdminAreaRepository
 from app.repositories.indicator_repository import IndicatorRepository
@@ -48,8 +49,10 @@ class ZoneDetectionService:
 
     def __init__(self, zones: ZoneRepository, areas: AdminAreaRepository, indicators: IndicatorRepository,
                  scorer: ZoneScorer, policies: HazardPolicies, machine: ZoneStateMachine,
-                 types: ZoneTypeClassifier, population: PopulationGrid | None = None):
+                 types: ZoneTypeClassifier, population: PopulationGrid | None = None,
+                 drought: DroughtAssessor | None = None):
         self.population = population  # people inside a zone's own shape; None -> gazetteer fallback
+        self.drought = drought        # measured drought data per taluka; None -> no footprint zones
         self.zones = zones
         self.areas = areas
         self.indicators = indicators
@@ -65,8 +68,11 @@ class ZoneDetectionService:
             if not self.zones.try_lock(policy.hazard):
                 result.skipped_locked.append(policy.hazard)
                 continue
-            indicators = self.indicators.latest_by_district(policy.indicator_source)
             taken: set[uuid.UUID] = set()
+            if policy.zoning == "footprint":
+                self._footprint_zones(policy, now, taken, result)
+                continue
+            indicators = self.indicators.latest_by_district(policy.indicator_source)
             self._fine_zones(policy, now, indicators, taken, result)
             self._district_zones(policy, now, indicators, taken, result)
             for zone in self.zones.unseen(policy.hazard, taken):
@@ -116,13 +122,54 @@ class ZoneDetectionService:
                 zone = Zone(hazard=policy.hazard, status=WATCH, zone_type="district_wide",
                             district_id=district_id, first_seen=now)
             zone.name = f"{district.name} district"
-            self.zones.set_shape_from_district(zone, district_id)
+            self.zones.set_shape_from_area(zone, district_id)
             evidence = self.zones.evidence(reports.get(district_id, {}))
             zone.population_est, zone.population_urban, zone.population_source = self._population(
                 self.areas.wkt(district_id), {district_id}, evidence)
             self._persist(zone, created, taken, result)
             self._record_event(self._finalize(zone, evidence, policy.boost(indicators.get(district_id)), now,
                                               created), result)
+
+    # -- data-driven (footprint) zones --------------------------------------------------------------
+    def _footprint_zones(self, policy: HazardPolicy, now: datetime, taken: set, result: DetectionResult) -> None:
+        """One zone per taluka that the data flags (or that the state declared). Posts inside add evidence."""
+        if self.drought is None:
+            return
+        self.zones.dismiss_legacy(policy.hazard)
+        assessed = self.drought.assess(now)
+        candidates = {a for a, d in assessed.items() if d.assessment.level != "none"}
+        candidates |= set(self.zones.area_ids_with_zones(policy.hazard))
+        support = self.zones.area_evidence(sorted(candidates), policy.evidence_hazards, now - self.WINDOW)
+        for area_id in sorted(candidates):
+            drought = assessed.get(area_id)
+            level = drought.assessment.level if drought else "none"
+            confidence = support.get(area_id, {})
+            zone = self.zones.area_zone(policy.hazard, area_id)
+            worth_a_zone = (level in ("moderate", "severe") or (level == "watch" and confidence)
+                            or (drought is not None and drought.assessment.declared is not None))
+            if zone is None and not worth_a_zone:
+                continue  # watch-level talukas without posts stay in the map footprint only
+            created = zone is None
+            if created:
+                zone = Zone(hazard=policy.hazard, status=WATCH, zone_type="taluka", area_id=area_id, first_seen=now)
+            area = self.areas.get(area_id)
+            zone.name = f"{area.name} taluka, {area.district_name}" if area.district_name else f"{area.name} taluka"
+            zone.district_id = area.parent_id
+            self.zones.set_shape_from_area(zone, area_id)
+            zone.population_est, zone.population_urban, zone.population_source = self._dry_population(drought, area_id)
+            self._persist(zone, created, taken, result)
+            evidence = self.zones.evidence(confidence)
+            boost = drought.assessment.boost if drought else 0.0
+            self._record_event(self._finalize(zone, evidence, boost, now, created, data_cleared=level == "none"),
+                               result)
+
+    def _dry_population(self, drought: AreaDrought | None, area_id: int) -> tuple[int | None, int | None, str | None]:
+        """People living in the taluka's grid cells that meet the rainfall trigger, not the whole taluka."""
+        metrics = drought.metrics if drought else {}
+        if metrics.get("pop_stressed") is not None:
+            urban = metrics.get("pop_stressed_urban")
+            return int(metrics["pop_stressed"]), int(urban) if urban is not None else None, "worldpop_dry_areas"
+        return self._population(self.areas.wkt(area_id), {area_id}, [])
 
     # -- shared ----------------------------------------------------------------------------------
     def _persist(self, zone: Zone, created: bool, taken: set, result: DetectionResult) -> None:
@@ -135,14 +182,15 @@ class ZoneDetectionService:
         taken.add(zone.id)
 
     def _finalize(self, zone: Zone, evidence: Evidence, boost: float, now: datetime,
-                  created: bool) -> ZoneEscalated | None:
+                  created: bool, data_cleared: bool = False) -> ZoneEscalated | None:
         previous_status = zone.status
         weights = {sid: self.scorer.weight(ev, now) for sid, ev, _ in evidence}
         signals = [ev for _, ev, _ in evidence]
         score = self.scorer.score(weights.values(), boost)
         ok = self.scorer.evidence_ok(signals, boost)
-        status, since = self.machine.next(zone.status, score, ok, zone.below_resolve_since, now,
-                                          self.zones.water_arrived(weights, now - self.WATER_WINDOW))
+        # footprint zones resolve when the data clears (nobody reports "water arrived" for a drought)
+        relief_seen = data_cleared or self.zones.water_arrived(weights, now - self.WATER_WINDOW)
+        status, since = self.machine.next(zone.status, score, ok, zone.below_resolve_since, now, relief_seen)
         zone.score, zone.status, zone.below_resolve_since = score, status, since
         zone.independent_sources = self.scorer.independent_sources(signals)
         if evidence:
