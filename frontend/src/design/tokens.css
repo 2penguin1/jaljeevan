@@ -141,7 +141,7 @@
     border-color: var(--hairline);
   }
   .glass {
-    background: rgba(19, 18, 16, 0.72);
+    background: color-mix(in srgb, var(--surface) 78%, transparent); /* follows the theme: dark glass or light glass */
     backdrop-filter: blur(14px) saturate(1.2);
     -webkit-backdrop-filter: blur(14px) saturate(1.2);
   }
