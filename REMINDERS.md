@@ -59,3 +59,8 @@ Claude keeps this list up to date. Tick items off as you finish them.
 - [ ] **Bihar, Jharkhand, Odisha, West Bengal** declare drought by block; they need block boundaries first.
 - [ ] **State revenue websites** could be read directly for one or two states (stronger than news), if those states matter.
 - [ ] **Review buttons in the app** (accept / reject on the ops page) instead of the CSV.
+
+## Relief tenders — left for later
+- [ ] Real logins and roles (government, vendor, NGO) instead of the "Viewing as" switch and the shared demo code.
+- [ ] Notify invited vendors (SNS email or in-app) and real vendor onboarding; the 16 vendors are demo data.
+- [ ] Delivery tracking (trips done vs promised) and vendor reliability updated from it.

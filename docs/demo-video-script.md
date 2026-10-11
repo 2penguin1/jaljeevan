@@ -1,6 +1,6 @@
 # Demo video script (3 minutes)
 
-Record the deployed site (the CloudFront URL) in a 1440 px wide browser. Speak slowly. Each scene lists **what's on screen** and **what to say**. The times add up to about 2:55.
+Record the deployed site (the CloudFront URL) in a 1440 px wide browser. Speak slowly. Each scene lists **what's on screen** and **what to say**. The times add up to about 3:00.
 
 ## 1. The problem (0:00–0:20)
 **Screen:** the landing page with the 3D India terrain and the live numbers.
@@ -18,15 +18,19 @@ Record the deployed site (the CloudFront URL) in a 1440 px wide browser. Speak s
 **Screen:** on the same zone page, the "Declared" badge and the order note. Then the ops page, "Declaration watch" box.
 **Say:** "Governments declare drought in long PDFs, often in Marathi with broken fonts. We read Maharashtra's 265-taluka order automatically: 230 talukas matched, checked against the order's own counts per district, and the doubtful ones go to a person. For other states, a watcher reads declaration news every day. It loads a taluka only if an official order, or two independent news sites, name it. Demands and 'may be declared' are ignored."
 
-## 5. Evidence you can trust (2:00–2:25)
+## 5. Evidence you can trust (2:00–2:15)
 **Screen:** zone page: the evidence quotes, the score breakdown, the trend.
 **Say:** "Every zone shows its evidence. The quotes are word for word from the source, and the AI isn't allowed to invent numbers. Every number on this page is computed in code, and you can see the arithmetic."
 
-## 6. Built on AWS (2:25–2:50)
+## 5b. From zone to water on the ground (2:15–2:35)
+**Screen:** on the zone page, the "Drinking water needed from tankers" card. Click "Create tanker tender" and publish (the demo code is already entered). On the tender page, switch "Viewing as" to the top vendor, click Counter (₹64), switch back to the government and click Accept. The committed bar fills.
+**Say:** "From a zone, the officer sees how much drinking water the rural families need: the formula is right there. One click publishes a tender. The nearest reliable tanker vendors are invited, each with a plain reason. Vendors can accept or counter, and the bar shows how much water is already committed."
+
+## 6. Built on AWS (2:35–2:55)
 **Screen:** an architecture slide (or the AWS console: the CloudFormation stack, the ECS service, RDS).
 **Say:** "It all runs on AWS in Mumbai, built as code with the AWS CDK. The website is on S3 and CloudFront. The API runs on ECS Fargate behind a load balancer. The data lives in RDS PostgreSQL with PostGIS for the maps. EventBridge runs the pipeline on a schedule. Secrets Manager holds the keys, Amazon Bedrock reads the posts, Amazon Location finds places, and S3 archives every raw post."
 
-## 7. Close (2:50–2:55)
+## 7. Close (2:55–3:00)
 **Screen:** back to the map.
 **Say:** "One live, honest picture of India's water crises, so relief reaches the right taluka first."
 

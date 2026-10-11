@@ -176,3 +176,15 @@ You asked me to decide the rest myself and build it. My decisions, in simple poi
   - no Step Functions; a scheduled task does the same job today.
 - **Data:** the local database (all zones, declarations, drought data, posts) was copied up once. From now on the cloud pipeline adds new data by itself.
 - **Cost:** about $60–65 a month from the $128 credits. Remove it after judging.
+
+## Relief tenders (lean vendor / government CRM, 2026-10-11 night)
+- **The flow:**
+  1. Zone page → "Drinking water needed from tankers". The number is computed in code, with the formula shown: rural people × share on tankers × 20 L a day.
+  2. Create a tender: the price is prefilled from nearby vendors' median.
+  3. Invited vendors are ranked by distance, price, fleet size and reliability, each with a plain reason.
+  4. Vendors accept, counter or decline, and the government answers.
+  5. A bar shows how much water is committed.
+- **No logins tonight.** A "Viewing as" switch lets one person play both sides for the demo. Because the site is public, every change needs the demo access code (the admin token in `backend/.env`); reading stays open.
+- **No AI here:** every number is arithmetic in code.
+- **All 16 vendors are invented demo businesses** and are labelled "(demo)".
+- **Left for later:** real accounts and roles, email or app notifications to vendors, NGO campaigns, long-term plans.
