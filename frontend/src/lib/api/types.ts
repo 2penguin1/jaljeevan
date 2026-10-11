@@ -70,3 +70,5 @@ export type Inbox = S["InboxOut"];
 export type InboxBid = S["InboxBid"];
 export type Notifications = S["NotificationsOut"];
 export type Brief = S["BriefOut"];
+export type Campaign = S["CampaignOut"];
+export type VolunteerTask = S["TaskOut"];

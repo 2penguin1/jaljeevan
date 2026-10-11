@@ -13,6 +13,7 @@ import { formatInt, formatPeople, timeAgo } from "@/lib/format";
 import { HAZARDS } from "@/lib/hazards";
 import { useZone } from "@/lib/hooks/queries";
 import { BriefCard } from "@/features/briefs/BriefCard";
+import { ZoneCommunity } from "@/features/community/ZoneCommunity";
 import { ReliefNeedCard } from "@/features/tenders/ReliefNeedCard";
 import { DroughtPanel } from "./DroughtPanel";
 import { ScoreBreakdown } from "./ScoreBreakdown";
@@ -138,6 +139,7 @@ export function ZonePage() {
           </aside>
         </div>
       </section>
+      <ZoneCommunity zoneId={zone.id} />
     </article>
   );
 }

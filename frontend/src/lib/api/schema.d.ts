@@ -590,6 +590,76 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/campaigns": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Campaigns */
+        get: operations["campaigns_api_v1_campaigns_get"];
+        put?: never;
+        /** Start Campaign */
+        post: operations["start_campaign_api_v1_campaigns_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/campaigns/{campaign_id}/pledges": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Pledge */
+        post: operations["pledge_api_v1_campaigns__campaign_id__pledges_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/volunteer-tasks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Tasks */
+        get: operations["tasks_api_v1_volunteer_tasks_get"];
+        put?: never;
+        /** Post Task */
+        post: operations["post_task_api_v1_volunteer_tasks_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/volunteer-tasks/{task_id}/signups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Sign Up */
+        post: operations["sign_up_api_v1_volunteer_tasks__task_id__signups_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -708,6 +778,49 @@ export interface components {
              */
             created_at: string;
         };
+        /** CampaignIn */
+        CampaignIn: {
+            /** Zone Id */
+            zone_id?: string | null;
+            /** Title */
+            title: string;
+            /**
+             * Story
+             * @default
+             */
+            story: string;
+            /** Goal Inr */
+            goal_inr: number;
+        };
+        /** CampaignOut */
+        CampaignOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Title */
+            title: string;
+            /** Story */
+            story: string;
+            /** Goal Inr */
+            goal_inr: number;
+            /** Pledged Inr */
+            pledged_inr: number;
+            /** Pledges */
+            pledges: number;
+            /** Zone Id */
+            zone_id: string | null;
+            /** Zone Name */
+            zone_name: string | null;
+            /** Ngo Name */
+            ngo_name: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
         /** Contribution */
         Contribution: {
             /**
@@ -719,6 +832,14 @@ export interface components {
             weight: number;
             /** Share */
             share: number;
+        };
+        /** Created */
+        Created: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
         };
         /** DeclarationInfo */
         DeclarationInfo: {
@@ -1105,6 +1226,16 @@ export interface components {
                 [key: string]: unknown;
             };
         };
+        /**
+         * PledgeIn
+         * @description A pledge only: no payment is taken.
+         */
+        PledgeIn: {
+            /** Amount Inr */
+            amount_inr: number;
+            /** Message */
+            message?: string | null;
+        };
         /** RaisePriceIn */
         RaisePriceIn: {
             /** Price Per Unit */
@@ -1179,6 +1310,48 @@ export interface components {
             people_affected: number;
             /** Sources */
             sources: number;
+        };
+        /** TaskIn */
+        TaskIn: {
+            /** Zone Id */
+            zone_id?: string | null;
+            /** Title */
+            title: string;
+            /**
+             * Description
+             * @default
+             */
+            description: string;
+            /** Task Date */
+            task_date?: string | null;
+            /** Slots */
+            slots: number;
+        };
+        /** TaskOut */
+        TaskOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Title */
+            title: string;
+            /** Description */
+            description: string;
+            /** Task Date */
+            task_date: string | null;
+            /** Slots */
+            slots: number;
+            /** Taken */
+            taken: number;
+            /** Signed Up */
+            signed_up: boolean;
+            /** Zone Id */
+            zone_id: string | null;
+            /** Zone Name */
+            zone_name: string | null;
+            /** Ngo Name */
+            ngo_name: string;
         };
         /** TenderCreated */
         TenderCreated: {
@@ -2431,6 +2604,206 @@ export interface operations {
                 "application/json": components["schemas"]["RejectIn"];
             };
         };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    campaigns_api_v1_campaigns_get: {
+        parameters: {
+            query?: {
+                zone_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CampaignOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    start_campaign_api_v1_campaigns_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: {
+                session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CampaignIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Created"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    pledge_api_v1_campaigns__campaign_id__pledges_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                campaign_id: string;
+            };
+            cookie?: {
+                session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PledgeIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    tasks_api_v1_volunteer_tasks_get: {
+        parameters: {
+            query?: {
+                zone_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: {
+                session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_task_api_v1_volunteer_tasks_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: {
+                session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TaskIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Created"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    sign_up_api_v1_volunteer_tasks__task_id__signups_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                task_id: string;
+            };
+            cookie?: {
+                session?: string | null;
+            };
+        };
+        requestBody?: never;
         responses: {
             /** @description Successful Response */
             204: {

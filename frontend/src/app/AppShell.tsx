@@ -1,4 +1,4 @@
-import { Activity, ClipboardCheck, Globe2, Inbox, Rows3, Truck, type LucideIcon } from "lucide-react";
+import { Activity, ClipboardCheck, Globe2, HandHeart, Inbox, Rows3, Truck, type LucideIcon } from "lucide-react";
 import { Link, NavLink, Outlet, useMatches, useNavigate } from "react-router";
 import { LiveDot } from "@/components/patterns/LiveDot";
 import { NotificationBell } from "@/features/account/NotificationBell";
@@ -11,6 +11,7 @@ const NAV: { to: string; label: string; icon: LucideIcon }[] = [
   { to: "/map", label: "Map", icon: Globe2 },
   { to: "/zones", label: "Zones", icon: Rows3 },
   { to: "/tenders", label: "Tenders", icon: Truck },
+  { to: "/community", label: "Help", icon: HandHeart },
   { to: "/ops", label: "Ops", icon: Activity },
 ];
 
@@ -20,7 +21,7 @@ const BRIEFS = { to: "/briefs", label: "Briefs", icon: ClipboardCheck };
 function NavItems({ compact }: { compact?: boolean }) {
   const me = useMe();
   const extra = me.data?.role === "vendor" ? [INBOX] : me.data?.role === "gov_admin" ? [BRIEFS] : [];
-  const items = [...NAV.slice(0, 3), ...extra, ...NAV.slice(3)];
+  const items = [...NAV.slice(0, 4), ...extra, ...NAV.slice(4)];
   return items.map(({ to, label, icon: Icon }) => (
     <NavLink
       key={to}
