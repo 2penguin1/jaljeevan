@@ -89,7 +89,8 @@ function BidCard({ bid, rank, tenderId, side }: { bid: BidOut; rank: number; ten
   const send = (action: BidAction) => act.mutate({ bidId: bid.id, action });
 
   return (
-    <article aria-label={bid.vendor_name} className="flex flex-col gap-3 rounded-[8px] border hairline bg-surface p-4">
+    <article aria-label={bid.vendor_name} style={{ borderLeftColor: bid.status === "accepted" ? "var(--success)" : bid.status === "declined" ? "var(--hairline-strong)" : bid.turn === side ? "var(--drought)" : "var(--flood)" }}
+      className="flex flex-col gap-3 rounded-[10px] border border-l-[3px] hairline bg-surface p-4">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="text-[15px] font-medium text-text"><span className="num text-text-3">{rank}.</span> {bid.vendor_name}</h2>
         <span className={bid.status === "accepted" ? "text-[12px] text-success" : "text-[12px] text-text-2"}>

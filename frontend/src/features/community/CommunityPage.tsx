@@ -1,7 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { HandCoins, HandHeart, Megaphone, UsersRound } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router";
 import { EmptyState } from "@/components/patterns/EmptyState";
+import { PageHeader } from "@/components/patterns/PageHeader";
+import { StatTile } from "@/components/patterns/StatTile";
 import { ErrorState } from "@/components/patterns/ErrorState";
 import { SkeletonRows } from "@/components/patterns/Skeleton";
 import { BUTTON, Field, INPUT, PRIMARY } from "@/features/tenders/ui";
@@ -29,12 +32,12 @@ export function CommunityPage() {
   if (campaigns.isError) return <div className="mx-auto max-w-5xl px-4 py-8 md:px-8"><ErrorState error={campaigns.error} onRetry={() => campaigns.refetch()} /></div>;
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-8 px-4 py-6 md:px-8 md:py-8">
-      <header className="flex flex-col gap-2">
-        <h1 className="font-display text-[34px] text-text">Community help</h1>
-        <p className="max-w-[70ch] text-[13px] text-text-2">
-          NGOs raise support for drought-hit areas and ask for volunteers. Pledges are promises, not payments: no money is taken here.
-        </p>
-      </header>
+      <PageHeader title="Community help" lead="NGOs raise support for drought-hit villages and ask for volunteers. Pledges are promises, not payments: no money is taken here.">
+        <StatTile label="Campaigns" value={campaigns.data.length} accent="var(--success)" icon={Megaphone} />
+        <StatTile label="Pledged so far" value={inr(campaigns.data.reduce((a, c) => a + c.pledged_inr, 0))} accent="var(--drought)" icon={HandCoins} />
+        <StatTile label="Volunteer tasks" value={(tasks.data ?? []).length} accent="var(--flood)" icon={HandHeart} />
+        <StatTile label="Places left" value={(tasks.data ?? []).reduce((a, t) => a + Math.max(0, t.slots - t.taken), 0)} accent="var(--water)" icon={UsersRound} />
+      </PageHeader>
       {me.data?.role === "ngo" && <NgoForms />}
       <section aria-labelledby="campaigns-title" className="flex flex-col gap-3">
         <h2 id="campaigns-title" className="text-[15px] font-medium text-text">Campaigns</h2>
@@ -60,7 +63,7 @@ export function CampaignCard({ campaign: c, me }: { campaign: Campaign; me: Me |
   });
   const share = Math.min(1, c.pledged_inr / c.goal_inr);
   return (
-    <article aria-label={c.title} className="flex flex-col gap-3 rounded-[8px] border hairline bg-surface p-4">
+    <article aria-label={c.title} style={{ borderLeftColor: "var(--success)" }} className="flex flex-col gap-3 rounded-[10px] border border-l-[3px] hairline bg-surface p-4">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h3 className="text-[15px] font-medium text-text">{c.title}</h3>
         <span className="text-[12px] text-text-3">
@@ -96,7 +99,7 @@ export function TaskCard({ task: t, me }: { task: VolunteerTask; me: Me | null }
   });
   const left = Math.max(0, t.slots - t.taken);
   return (
-    <article aria-label={t.title} className="flex flex-col gap-2 rounded-[8px] border hairline bg-surface p-4">
+    <article aria-label={t.title} style={{ borderLeftColor: "var(--flood)" }} className="flex flex-col gap-2 rounded-[10px] border border-l-[3px] hairline bg-surface p-4">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h3 className="text-[15px] font-medium text-text">{t.title}</h3>
         <span className="text-[12px] text-text-3">{t.task_date ? day.format(new Date(`${t.task_date}T00:00:00`)) : "Any day"} · {t.ngo_name}</span>

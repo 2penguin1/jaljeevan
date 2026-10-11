@@ -6,13 +6,24 @@ import { Link } from "react-router";
 import { EmptyState } from "@/components/patterns/EmptyState";
 import { useAnimationTime, usePrefersReducedMotion } from "@/lib/motion";
 import { buildLayers, type LayerInput } from "./layers";
-import { INDIA_BOUNDS, INDIA_CENTER, loadMapStyle } from "./mapStyle";
+import { INDIA_BOUNDS, INDIA_CENTER, isLightTheme, loadMapStyle } from "./mapStyle";
 
 /** MapLibre globe + deck.gl layers. Lazy-loaded: everything WebGL lives in this chunk. */
 export function GlobeMap({ input }: { input: Omit<LayerInput, "time"> }) {
   const container = useRef<HTMLDivElement>(null);
   const overlay = useRef<MapboxOverlay | null>(null);
   const [failed, setFailed] = useState(false);
+  const [light, setLight] = useState(isLightTheme);
+  useEffect(() => {
+    const update = () => setLight(isLightTheme());
+    window.addEventListener("themechange", update);
+    const media = typeof window.matchMedia === "function" ? window.matchMedia("(prefers-color-scheme: light)") : null;
+    media?.addEventListener?.("change", update);
+    return () => {
+      window.removeEventListener("themechange", update);
+      media?.removeEventListener?.("change", update);
+    };
+  }, []);
   const reduced = usePrefersReducedMotion();
   const time = useAnimationTime(!reduced);
   const layers = useMemo(() => buildLayers({ ...input, time }), [input, time]);
@@ -22,7 +33,7 @@ export function GlobeMap({ input }: { input: Omit<LayerInput, "time"> }) {
   useEffect(() => {
     const abort = new AbortController();
     let map: maplibregl.Map | undefined;
-    loadMapStyle(abort.signal)
+    loadMapStyle(abort.signal, light)
       .then((style) => {
         if (!container.current) return;
         map = new maplibregl.Map({
@@ -55,9 +66,9 @@ export function GlobeMap({ input }: { input: Omit<LayerInput, "time"> }) {
       overlay.current = null;
       map?.remove();
     };
-    // the map is created once; layer updates go through setProps below
+    // the map is created once per theme (a theme change swaps the basemap); layer updates go through setProps below
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [light]); // a new theme loads the matching basemap
 
   useEffect(() => {
     overlay.current?.setProps({ layers });

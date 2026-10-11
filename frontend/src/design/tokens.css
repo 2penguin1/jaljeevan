@@ -37,10 +37,10 @@
   --text: #121614;
   --text-2: #3f4744;
   --text-3: #58605c;
-  --drought: #a95f00;
-  --flood: #0b6f93;
-  --heat: #c0331c;
-  --water: #5b46c9;
+  --drought: #8a4d00;
+  --flood: #065c7a;
+  --heat: #a62915;
+  --water: #4a37b0;
   --success: #2c7a4b;
   color-scheme: light;
 }
@@ -54,10 +54,10 @@
     --text: #121614;
     --text-2: #3f4744;
     --text-3: #58605c;
-    --drought: #a95f00;
-    --flood: #0b6f93;
-    --heat: #c0331c;
-    --water: #5b46c9;
+    --drought: #8a4d00;
+    --flood: #065c7a;
+    --heat: #a62915;
+    --water: #4a37b0;
     --success: #2c7a4b;
     color-scheme: light;
   }
@@ -187,4 +187,18 @@
     opacity: 1;
     transform: none;
   }
+}
+
+/* Depth: cards float a little on the light page; the dark page keeps flat hairlines. */
+:root[data-theme="light"] .bg-surface { box-shadow: 0 1px 2px rgba(18, 28, 24, 0.06), 0 4px 16px rgba(18, 28, 24, 0.05); }
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme]) .bg-surface { box-shadow: 0 1px 2px rgba(18, 28, 24, 0.06), 0 4px 16px rgba(18, 28, 24, 0.05); }
+}
+
+/* App background: two very faint washes of the drought and flood colours at the top, so pages are not flat. */
+.app-bg {
+  background:
+    radial-gradient(60rem 22rem at 8% -6rem, color-mix(in srgb, var(--drought) 9%, transparent), transparent 70%),
+    radial-gradient(50rem 20rem at 92% -6rem, color-mix(in srgb, var(--flood) 8%, transparent), transparent 70%),
+    var(--canvas);
 }

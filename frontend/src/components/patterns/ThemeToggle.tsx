@@ -22,6 +22,7 @@ export function ThemeToggle({ className = "" }: { className?: string }) {
     setTheme(next);
     if (next === "system") delete document.documentElement.dataset.theme;
     else document.documentElement.dataset.theme = next;
+    window.dispatchEvent(new Event("themechange")); // the map swaps its basemap
     try {
       if (next === "system") localStorage.removeItem("theme");
       else localStorage.setItem("theme", next);

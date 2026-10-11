@@ -1,4 +1,4 @@
-import { Activity, ClipboardCheck, Globe2, HandHeart, Inbox, Rows3, Truck, type LucideIcon } from "lucide-react";
+import { Activity, ClipboardCheck, Droplet, Globe2, HandHeart, Inbox, Rows3, Truck, type LucideIcon } from "lucide-react";
 import { Link, NavLink, Outlet, useMatches, useNavigate } from "react-router";
 import { LiveDot } from "@/components/patterns/LiveDot";
 import { ThemeToggle } from "@/components/patterns/ThemeToggle";
@@ -31,7 +31,7 @@ function NavItems({ compact }: { compact?: boolean }) {
         cn(
           "flex flex-col items-center justify-center gap-1 rounded-[6px] text-[11px] transition-colors duration-[var(--dur-1)]",
           compact ? "h-full flex-1" : "h-12 w-12",
-          isActive ? "bg-raised text-text" : "text-text-3 hover:text-text",
+          isActive ? "bg-raised text-text shadow-[inset_2px_0_0_var(--flood)]" : "text-text-3 hover:bg-raised/60 hover:text-text",
         )
       }
     >
@@ -83,15 +83,15 @@ export function AppShell() {
     <LiveProvider>
       <div className="flex h-dvh overflow-hidden bg-canvas">
         <nav aria-label="Main" className="hidden w-16 shrink-0 flex-col items-center gap-1 border-r hairline py-3 md:flex">
-          <Link to="/" className="mb-3 grid h-10 w-10 place-items-center font-display text-[22px] text-text" title={APP_NAME}>
-            <span aria-hidden>{APP_NAME.charAt(0)}</span>
+          <Link to="/" className="mb-3 grid h-10 w-10 place-items-center rounded-[10px] bg-[linear-gradient(135deg,var(--flood),var(--water))] text-white shadow-[0_4px_14px_color-mix(in_srgb,var(--flood)_35%,transparent)]" title={APP_NAME}>
+            <Droplet size={18} strokeWidth={2.25} aria-hidden />
             <span className="sr-only">{APP_NAME} home</span>
           </Link>
           <NavItems />
         </nav>
         <div className="flex min-w-0 flex-1 flex-col">
           <TopBar />
-          <main className="relative min-h-0 flex-1 overflow-y-auto pb-14 md:pb-0">
+          <main className="app-bg relative min-h-0 flex-1 overflow-y-auto pb-14 md:pb-0">
             <Outlet />
           </main>
         </div>

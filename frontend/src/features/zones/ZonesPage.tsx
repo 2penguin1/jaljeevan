@@ -1,15 +1,18 @@
+import { AlertTriangle, Eye, Newspaper, Users } from "lucide-react";
 import { Link, useNavigate, useSearchParams } from "react-router";
 import { DataTable, type Column } from "@/components/patterns/DataTable";
 import { EmptyState } from "@/components/patterns/EmptyState";
+import { PageHeader } from "@/components/patterns/PageHeader";
+import { StatTile } from "@/components/patterns/StatTile";
 import { ErrorState } from "@/components/patterns/ErrorState";
 import { HazardBadge } from "@/components/patterns/HazardBadge";
 import { ScoreMeter } from "@/components/patterns/ScoreMeter";
 import { Segmented, type SegmentOption } from "@/components/patterns/Segmented";
 import { SkeletonRows } from "@/components/patterns/Skeleton";
 import type { Hazard, ZoneStatus, ZoneSummary } from "@/lib/api/types";
-import { formatPeople, timeAgo } from "@/lib/format";
+import { formatInt, formatPeople, timeAgo } from "@/lib/format";
 import { HAZARDS, HAZARD_LIST, isHazard } from "@/lib/hazards";
-import { useZones } from "@/lib/hooks/queries";
+import { useStats, useZones } from "@/lib/hooks/queries";
 import { TREND, ZONE_TYPE } from "./labels";
 
 const HAZARD_OPTIONS: SegmentOption<Hazard | "all">[] = [
@@ -58,9 +61,17 @@ export function ZonesPage() {
     });
 
   const noun = hazard ? `${HAZARDS[hazard].label.toLowerCase()} zones` : "zones";
+  const stats = useStats();
+  const s = stats.data;
 
   return (
-    <div className="mx-auto flex max-w-6xl flex-col gap-5 px-4 py-6 md:px-8 md:py-8">
+    <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-6 md:px-8 md:py-8">
+      <PageHeader title="Where help is needed" lead="Every zone is a taluka or neighbourhood where measured data, official orders or people's own posts point to a water crisis. Highest score first.">
+        <StatTile label="Active zones" value={s ? formatInt(s.active_zones) : "—"} accent="var(--heat)" icon={AlertTriangle} hint="Confirmed and needing action" />
+        <StatTile label="On watch" value={s ? formatInt(s.watch_zones) : "—"} accent="var(--drought)" icon={Eye} hint="Early signs, not confirmed yet" />
+        <StatTile label="People in active zones" value={s ? formatPeople(s.people_affected) : "—"} accent="var(--flood)" icon={Users} hint="Living in the affected parts" />
+        <StatTile label="Posts read this week" value={s ? formatInt(s.posts_analysed_7d) : "—"} accent="var(--water)" icon={Newspaper} hint="News, Reddit, X and citizens" />
+      </PageHeader>
       <div className="flex flex-wrap items-center gap-3">
         <Segmented label="Hazard" value={hazard ?? "all"} options={HAZARD_OPTIONS} onChange={(v) => setFilter("hazard", v)} />
         <Segmented label="Status" value={status ?? "all"} options={STATUS_OPTIONS} onChange={(v) => setFilter("status", v)} />
