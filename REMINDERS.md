@@ -9,6 +9,14 @@ Claude keeps this list up to date. Tick items off as you finish them.
   - **Afterwards:** tell Claude. It will set `LLM_PROVIDERS=bedrock,groq` in `backend/.env`, so Claude becomes the main AI and Groq the backup, and re-test.
 - [ ] **Optional:** set a $50 budget alert on account …8840 (Billing → Budgets) once the card is added.
 
+## Translation model (for Marathi drought orders)
+- [ ] **Unlock the IndicTrans2 model on Hugging Face** (free). Claude can't do this for you:
+  1. Make a free account at huggingface.co.
+  2. Open https://huggingface.co/ai4bharat/indictrans2-indic-en-dist-200M and accept AI4Bharat's terms.
+  3. Settings → Access Tokens → create a **Read** token.
+  4. Put it in `backend/.env` as `HF_TOKEN=...` (never in chat). Then tell Claude.
+  - **Why:** the model is "gated", so it only downloads after you accept its terms. Until then, drought orders still work through name matching, and only the sentence translation waits.
+
 ## Security (after the hackathon)
 - [ ] **Rotate the Apify API token** (apify.com → Settings → API & Integrations). It was pasted in chat.
 - [ ] **Rotate the Groq API key** (console.groq.com → API Keys). It was pasted in chat.
