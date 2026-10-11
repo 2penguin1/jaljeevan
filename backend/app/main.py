@@ -6,7 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.gzip import GZipMiddleware
 
 from app.api.error_handlers import register_error_handlers
-from app.api.v1.endpoints import health, live, map, pipeline, read
+from app.api.v1.endpoints import health, live, map, pipeline, read, tenders
 from app.core.config import settings
 from app.core.container import Container
 from app.core.database import init_db
@@ -34,3 +34,4 @@ app.include_router(pipeline.router)
 app.include_router(map.router)
 app.include_router(read.router)
 app.include_router(live.router)
+app.include_router(tenders.router)

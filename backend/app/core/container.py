@@ -50,6 +50,7 @@ from app.repositories.pipeline_run_repository import PipelineRunRepository
 from app.repositories.read_repository import ReadRepository
 from app.repositories.signal_repository import SignalRepository
 from app.repositories.source_domain_repository import SourceDomainRepository
+from app.repositories.tender_repository import TenderRepository
 from app.repositories.zone_repository import ZoneRepository
 from app.services.classification_service import ClassificationService
 from app.services.declaration_promoter import DeclarationPromoter
@@ -66,6 +67,7 @@ from app.services.read_query_service import ReadQueryService
 from app.services.pipeline import (ClassifyStage, DeclarationWatchStage, GeocodeStage, IndicatorStage, IngestStage,
                                    IntelligencePipeline, PipelineOutcome, ZoneStage)
 from app.services.subscribers import AlertLogSubscriber, LiveFeedNotifier
+from app.services.tender_service import TenderService
 from app.services.weather_service import WeatherService
 from app.services.zone_detection_service import ZoneDetectionService
 
@@ -179,6 +181,9 @@ class Container:
     def map_query_service(self, session: Session) -> MapQueryService:
         return MapQueryService(MapRepository(session), IndicatorRepository(session), self.policies,
                                self.district_cache, drought=self.drought_assessor(session))
+
+    def tender_service(self, session: Session) -> TenderService:
+        return TenderService(TenderRepository(session))
 
     def read_query_service(self, session: Session) -> ReadQueryService:
         return ReadQueryService(ReadRepository(session), ZoneRepository(session), IndicatorRepository(session),
