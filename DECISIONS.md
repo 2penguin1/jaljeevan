@@ -99,3 +99,17 @@ Simple notes on decisions Claude made for you, especially overnight. Newest at t
   Each one now has a test.
 - **Speed:** a pipeline run takes about 30 seconds when the data hasn't changed, about 3 minutes when new rainfall/soil files arrive.
 
+- **Final check by a fresh reviewer (strongest model):** "good to merge after fixes". I fixed each one with a test:
+  - if a data source is down or late, drought zones are **held**, not closed, and the zone page says the data is out of date;
+  - a taluka the state declared, but where the rain was normal, now shows its real population (not 0);
+  - two talukas with the same name in different districts are never guessed: they go to your check list;
+  - a zone that was confirmed earlier drops back to "watch" once its reports are older than 30 days and only data remains;
+  - the cleanup of old drought zones never touches zones the government has **approved**;
+  - the population overlay now uses about 100 MB of memory instead of about 1 GB (matters for AWS later).
+- **Small things left for later:**
+  - speeding up one database query when posts grow into the tens of thousands;
+  - taluka-level flood/heat reports;
+  - map shading refreshing instantly after new data (today, within 10 minutes);
+  - a few tiny edge cases. All are listed in the notes.
+- **Live result now:** 19 active and 15 watch drought zones, plus 22 water supply zones.
+- **Branch:** all of this is on `feat/drought-footprint` (nothing pushed or deployed).
