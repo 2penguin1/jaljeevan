@@ -16,12 +16,15 @@ SessionLocal = sessionmaker(engine, expire_on_commit=False)
 
 
 def init_db(bind=engine) -> None:
-    """Enable PostGIS and create every table registered on Base.metadata."""
+    """Enable PostGIS, create every table registered on Base.metadata, then apply idempotent column patches."""
     from app import models  # noqa: F401  (importing registers the tables)
+    from app.core import schema_patches
 
     with bind.begin() as conn:
         conn.exec_driver_sql("CREATE EXTENSION IF NOT EXISTS postgis")
     Base.metadata.create_all(bind)
+    with bind.begin() as conn:
+        schema_patches.apply(conn)
 
 
 @contextmanager

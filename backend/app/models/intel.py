@@ -1,8 +1,8 @@
 import uuid
 from datetime import date, datetime
 
-from sqlalchemy import (BigInteger, Boolean, Date, DateTime, Float, ForeignKey, Integer, String, Text,
-                        UniqueConstraint)
+from sqlalchemy import (BigInteger, Boolean, Date, DateTime, Float, ForeignKey, Index, Integer, String, Text,
+                        UniqueConstraint, text)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
@@ -61,7 +61,7 @@ class SignalLocation(Base):
     mention_text: Mapped[str] = mapped_column(String(300))
     admin_area_id: Mapped[int | None] = mapped_column(ForeignKey("admin_areas.id"))
     geom = geometry("POINT")
-    precision: Mapped[str] = mapped_column(String(10))  # ward|village|town|district|state
+    precision: Mapped[str] = mapped_column(String(16))  # ward|village|town|subdistrict|district|state
     geo_confidence: Mapped[float] = mapped_column(Float, default=0.0)
     ambiguous: Mapped[bool] = mapped_column(Boolean, default=False)
 
@@ -87,15 +87,19 @@ class Zone(Base):
     geom = geometry()
     centroid = geometry("POINT")
     district_id: Mapped[int | None] = mapped_column(ForeignKey("admin_areas.id"))
+    area_id: Mapped[int | None] = mapped_column(ForeignKey("admin_areas.id"))  # taluka of a footprint zone
     score: Mapped[float] = mapped_column(Float, default=0.0)
     trend: Mapped[str] = mapped_column(String(12), default="new")  # new|escalating|stable|easing
     independent_sources: Mapped[int] = mapped_column(Integer, default=0)
     population_est: Mapped[int | None] = mapped_column(BigInteger)
     population_source: Mapped[str | None] = mapped_column(String(40))
+    population_urban: Mapped[int | None] = mapped_column(BigInteger)
     status: Mapped[str] = mapped_column(String(12), default="watch", index=True)
     below_resolve_since: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     first_seen: Mapped[datetime] = created()
     last_seen: Mapped[datetime] = created()
+    __table_args__ = (Index("uq_zones_hazard_area", "hazard", "area_id", unique=True,
+                            postgresql_where=text("area_id IS NOT NULL")),)
 
 
 class ZoneSignal(Base):
