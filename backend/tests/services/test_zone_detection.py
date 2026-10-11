@@ -164,3 +164,11 @@ def test_zone_that_becomes_active_on_a_later_run_raises_an_alert(db):
     [z] = zones(db)
     assert z.status == "active" and z.score >= 70
     assert [e.zone_id for e in second.events] == [z.id]
+
+
+def test_city_tap_complaints_make_a_water_zone_not_a_drought_zone(db):
+    g = seed_geo(db)
+    sig(db, url="https://a/w1", point=(77.690, 12.990), area=g["ward"], hazards=("water",))
+    sig(db, url="https://b/w1", point=(77.695, 12.993), area=g["ward"], domain="ndtv.com", hazards=("water",))
+    service(db).detect(NOW)
+    assert len(zones(db, "water")) == 1 and zones(db, "drought") == []

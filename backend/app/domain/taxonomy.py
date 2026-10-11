@@ -6,7 +6,7 @@ from pathlib import Path
 
 import yaml
 
-HAZARDS = ("drought", "flood", "heat")
+HAZARDS = ("drought", "flood", "heat", "water")  # water = supply failure (taps, tankers, wells)
 DEFAULT_PATH = Path(__file__).resolve().parents[1] / "data" / "taxonomy.yaml"
 _LIST_FIELDS = ("includes", "excludes", "examples", "keywords")
 

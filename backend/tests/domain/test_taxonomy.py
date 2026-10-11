@@ -13,7 +13,7 @@ def test_shipped_taxonomy_is_valid():
 def test_hazards_for():
     tax = Taxonomy.load()
     assert tax.hazards_for(["RELIEF"]) == []  # generic category alone does not decide the hazard
-    assert tax.hazards_for(["SUPPLY", "HEAT"]) == ["drought", "heat"]
+    assert tax.hazards_for(["SUPPLY", "HEAT"]) == ["heat", "water"]  # supply failure is its own hazard
     assert tax.hazards_for([]) == []
 
 

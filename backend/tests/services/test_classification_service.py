@@ -56,7 +56,7 @@ def test_persists_labels_hazards_and_locations(db):
     db.refresh(s)
     assert stats.classified == 1 and stats.input_tokens == 100 and stats.cache_read_tokens == 80
     assert s.status == "classified" and s.relevant is True and s.event_period == "current"
-    assert s.l1_codes == ["SUPPLY"] and s.hazards == ["drought"] and s.max_severity == 4
+    assert s.l1_codes == ["SUPPLY"] and s.hazards == ["water"] and s.max_severity == 4
     assert s.meta["locations"][0]["mention"] == "Mahadevapura"
     assert db.get(SignalLabel, (s.id, "SUPPLY.DRY_TAPS")).evidence == "no water for 11 days"
     assert stats.providers == {"groq:m": 1} and s.meta["llm_provider"] == "groq:m"

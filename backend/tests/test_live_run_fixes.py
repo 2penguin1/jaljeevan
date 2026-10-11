@@ -17,7 +17,7 @@ class Answer(BaseModel):
 # Bug B: generic categories must not decide the hazard
 def test_generic_categories_do_not_assign_every_hazard():
     tax = Taxonomy.load()
-    assert tax.hazards_for(["RELIEF", "SUPPLY"]) == ["drought"]
+    assert tax.hazards_for(["RELIEF", "SUPPLY"]) == ["water"]
     assert tax.hazards_for(["RELIEF"]) == []                       # generic only -> no hazard -> no zone
     assert tax.hazards_for(["HEALTH", "FLOOD", "HEAT"]) == ["flood", "heat"]
 

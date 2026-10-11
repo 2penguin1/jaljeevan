@@ -4,6 +4,8 @@ from typing import Literal
 
 from pydantic import BaseModel
 
+from app.domain.taxonomy import HAZARDS
+
 
 class FeedItem(BaseModel):
     id: uuid.UUID
@@ -26,7 +28,7 @@ class FeedPage(BaseModel):
     next_cursor: str | None  # opaque: pass it back as ?cursor= for the next page
 
 
-Hazard = Literal["drought", "flood", "heat"]
+Hazard = Literal[HAZARDS]  # one source of truth: app/domain/taxonomy.py
 
 
 class ZoneSummary(BaseModel):

@@ -1,11 +1,12 @@
-# Hazard-tagged two-level taxonomy (Taneira card format). hazards: drought|flood|heat|all
+# Hazard-tagged two-level taxonomy (Taneira card format). hazards: drought|flood|heat|water|all
+# Drought itself is decided by rainfall/soil data per taluka; posts tagged water or drought add evidence there.
 l1:
   SUPPLY:
     name: Drinking and household water supply failure
-    hazards: [drought]
-    description: Taps, municipal supply, borewells or wells failing to deliver water for drinking and household use because of scarcity.
+    hazards: [water]
+    description: Taps, municipal supply, borewells or wells failing to deliver water for drinking and household use, for any reason (scarcity, rationing, broken infrastructure).
     includes: [dry taps, supply cuts, borewells drying, walking long distances for water]
-    excludes: ["Floodwater entering homes belongs to FLOOD", "Tanker deliveries arranged by authorities belong to RELIEF"]
+    excludes: ["Floodwater entering homes belongs to FLOOD", "Tanker deliveries arranged by authorities belong to RELIEF", "Crop or livestock distress belongs to AGRI"]
     l2:
       SUPPLY.DRY_TAPS:
         name: Taps and municipal supply dry

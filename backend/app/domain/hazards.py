@@ -4,8 +4,9 @@ from typing import Protocol
 
 class HazardPolicy(Protocol):
     hazard: str
-    indicator_source: str
-    indicator_field: str   # the headline indicator shown on the map
+    zoning: str            # "posts": zones from clustered posts | "footprint": zones from measured data per taluka
+    indicator_source: str | None
+    indicator_field: str | None   # the headline indicator shown on the map
     indicator_label: str
 
     def boost(self, indicator: dict | None) -> float: ...
@@ -13,6 +14,7 @@ class HazardPolicy(Protocol):
 
 class DroughtPolicy:
     hazard = "drought"
+    zoning = "posts"
     indicator_source = "imd"
     indicator_field, indicator_label = "rainfall_departure_pct", "Rainfall vs normal (%)"
     SEVERE_DEPARTURE = -40.0   # % below normal monsoon rainfall
@@ -27,6 +29,7 @@ class DroughtPolicy:
 
 class FloodPolicy:
     hazard = "flood"
+    zoning = "posts"
     indicator_source = "open-meteo"
     indicator_field, indicator_label = "precip_mm_24h", "Rain in 24 h (mm)"
     VERY_HEAVY_MM = 115.6      # IMD "very heavy rain"
@@ -41,6 +44,7 @@ class FloodPolicy:
 
 class HeatPolicy:
     hazard = "heat"
+    zoning = "posts"
     indicator_source = "open-meteo"
     indicator_field, indicator_label = "apparent_tmax_c", "Feels-like max (°C)"
     SEVERE_FEELS_LIKE_C = 45.0
@@ -51,6 +55,19 @@ class HeatPolicy:
         if ind.get("apparent_tmax_c") is not None and ind["apparent_tmax_c"] >= self.SEVERE_FEELS_LIKE_C:
             return 0.4
         return 0.2 if ind.get("tmax_c") is not None and ind["tmax_c"] >= self.HOT_MAX_C else 0.0
+
+
+class WaterPolicy:
+    """Drinking/household supply failure (dry taps, tankers, failing wells). No measured indicator yet:
+    zones come from posts only, so the boost is always 0."""
+
+    hazard = "water"
+    zoning = "posts"
+    indicator_source = None
+    indicator_field, indicator_label = None, ""
+
+    def boost(self, indicator: dict | None) -> float:
+        return 0.0
 
 
 def band(boost: float) -> str:
@@ -66,7 +83,7 @@ class HazardPolicies:
 
     @classmethod
     def default(cls) -> "HazardPolicies":
-        return cls([DroughtPolicy(), FloodPolicy(), HeatPolicy()])
+        return cls([DroughtPolicy(), FloodPolicy(), HeatPolicy(), WaterPolicy()])
 
     def get(self, hazard: str) -> HazardPolicy:
         return self._by_hazard[hazard]

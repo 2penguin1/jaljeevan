@@ -29,7 +29,9 @@ class IndicatorRepository(BaseRepository[DistrictIndicator]):
             "FROM admin_areas WHERE level = 'district'")).all()
         return [(r.id, r.lat, r.lon) for r in rows]
 
-    def latest_by_district(self, source: str) -> dict[int, dict]:
+    def latest_by_district(self, source: str | None) -> dict[int, dict]:
+        if source is None:  # hazards without a district indicator (e.g. water supply)
+            return {}
         rows = self.session.execute(text(
             "SELECT DISTINCT ON (district_id) district_id, rainfall_departure_pct, tmax_c, apparent_tmax_c, "
             "precip_mm_24h FROM district_indicators WHERE source = :src ORDER BY district_id, period DESC"),

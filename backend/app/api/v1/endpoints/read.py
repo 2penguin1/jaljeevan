@@ -4,7 +4,7 @@ from typing import Annotated, Literal
 from fastapi import APIRouter, Query
 
 from app.api.dependencies import ContainerDep, SessionDep
-from app.schemas.read import FeedPage, OpsSummary, StatsOverview, ZoneDetail, ZoneSummary
+from app.schemas.read import FeedPage, Hazard, OpsSummary, StatsOverview, ZoneDetail, ZoneSummary
 
 router = APIRouter(prefix="/api/v1", tags=["read"])
 
@@ -18,7 +18,7 @@ def feed(db: SessionDep, container: ContainerDep, cursor: Annotated[str | None, 
 
 @router.get("/zones")
 def zones(db: SessionDep, container: ContainerDep,
-          hazard: Annotated[Literal["drought", "flood", "heat"] | None, Query()] = None,
+          hazard: Annotated[Hazard | None, Query()] = None,
           status: Annotated[Literal["watch", "active", "approved", "resolving"] | None, Query()] = None
           ) -> list[ZoneSummary]:
     return container.read_query_service(db).zones_list(hazard, status)

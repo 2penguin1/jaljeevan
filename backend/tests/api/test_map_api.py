@@ -58,3 +58,10 @@ def test_map_rejects_unknown_hazard_and_handles_empty():
         assert c.get("/api/v1/map/zones", params={"hazard": "volcano"}).status_code == 422
         empty = c.get("/api/v1/map/zones", params={"hazard": "heat"}).json()
         assert empty["type"] == "FeatureCollection" and isinstance(empty["features"], list)
+
+
+def test_water_supply_is_a_hazard_on_every_map_endpoint():
+    with TestClient(app) as c:
+        for path in ("/api/v1/map/zones", "/api/v1/map/districts", "/api/v1/map/signals"):
+            assert c.get(path, params={"hazard": "water"}).status_code == 200
+        assert c.get("/api/v1/zones", params={"hazard": "water"}).status_code == 200
