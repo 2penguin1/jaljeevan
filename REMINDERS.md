@@ -26,6 +26,7 @@ Claude keeps this list up to date. Tick items off as you finish them.
 
 ## Code
 - [x] ~~Decide what to do with branch `feat/p1-backend`~~: merged into `main` on 2026-10-11.
+- [x] ~~Branches `feat/p3-frontend` and `feat/drought-footprint`~~: merged into `main` on 2026-10-11 (local only, nothing pushed).
 
 ## Later (planned at the end)
 - [ ] **Redis:** add it at the end only if needed: caching (map layers, zone pages) or rate limits, mainly once more than one API server runs. Today Postgres and a small in-memory cache do these jobs.
