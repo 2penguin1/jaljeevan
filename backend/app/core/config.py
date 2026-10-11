@@ -24,6 +24,9 @@ class Settings(BaseSettings):
     apify_x_actor: str = "kaitoeasyapi/twitter-x-data-tweet-scraper-pay-per-result-cheapest"  # no 10-item cap
     apify_max_usd_per_run: float = 0.5
     worldpop_path: str = "app/data/seed/ind_pop_2025_CN_1km_R2025A_UA_v1.tif"  # WorldPop 2025 1 km, CC BY 4.0
+    chirps_base_url: str = "https://data.chc.ucsb.edu/products/SPI/CHIRPS3"
+    gdo_soil_base_url: str = ("https://jeodpp.jrc.ec.europa.eu/ftp/jrc-opendata/DROUGHTOBS/Drought_Observatories_datasets/"
+                              "GDO_Soil_Moisture_Anomaly/ver3-0-1/")
     max_post_age_days: int = 30
     admin_token: str | None = None  # admin API stays locked until ADMIN_TOKEN is configured
 

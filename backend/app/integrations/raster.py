@@ -117,3 +117,39 @@ def resample_nearest(grid: Grid, transform: Affine, shape: tuple[int, int]) -> n
 def shapes_from_wkb(rows: Iterable[tuple[int, bytes]]) -> list[tuple[int, BaseGeometry]]:
     from shapely import wkb
     return [(area_id, wkb.loads(bytes(blob))) for area_id, blob in rows]
+
+
+INDIA_BOUNDS = (68.0, 6.0, 98.0, 38.0)  # lon/lat window read from global rasters
+
+
+def fetch_window(http, url: str, bounds: tuple[float, float, float, float], service: str) -> Grid:
+    """Download a GeoTIFF to a temporary file, read one window, delete the file.
+
+    Simpler and sturdier than HTTP range reads across differently laid-out files; India-sized windows of the
+    global drought rasters cost ~70-90 MB per download, a few times a month.
+    """
+    import tempfile
+    from pathlib import Path
+
+    import httpx
+    import rasterio
+
+    from app.core.exceptions import ExternalServiceError
+
+    with tempfile.TemporaryDirectory() as tmp:
+        path = Path(tmp) / "raster.tif"
+        try:
+            with http.stream("GET", url, timeout=300) as res:
+                if res.status_code >= 400:
+                    raise ExternalServiceError(service, f"HTTP {res.status_code}",
+                                               retryable=res.status_code >= 500 or res.status_code == 429)
+                with path.open("wb") as fh:
+                    for chunk in res.iter_bytes():
+                        fh.write(chunk)
+        except httpx.HTTPError as exc:
+            raise ExternalServiceError(service, f"download failed ({type(exc).__name__})") from None
+        try:
+            with rasterio.open(path) as src:
+                return read_window(src, bounds)
+        except rasterio.errors.RasterioIOError:
+            raise ExternalServiceError(service, "downloaded file is not a readable raster", retryable=False) from None

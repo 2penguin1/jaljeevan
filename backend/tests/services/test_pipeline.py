@@ -82,6 +82,7 @@ def test_pipeline_end_to_end_with_events(db, tmp_path):
     assert stats["ingest"]["x"] == {"error": "x: down"}          # one broken source is isolated
     assert stats["classify"]["classified"] == 2 and stats["geocode"]["located"] == 2
     assert stats["zones"]["created"] == 1
+    assert stats["indicators"] == {"skipped": "no talukas loaded"}
     zone = db.scalar(select(Zone))
     assert zone.status == "active" and zone.zone_type == "urban_pocket"
     assert sum(isinstance(e, SignalClassified) for e in outcome.events) == 2
@@ -105,3 +106,15 @@ def test_recent_contrasts_come_from_reviewer_feedback(db):
     db.add(SignalFeedback(signal_id=s.id, user_id=u.id, verdict="irrelevant"))
     db.flush()
     assert SignalRepository(db).recent_contrasts() == ["A water polo match result."]
+
+
+
+def test_drought_data_sources_failing_never_stop_the_run(db, tmp_path):
+    seed(db)
+    db.add(AdminArea(level="subdistrict", name="Anekal", name_norm="anekal", state_code="KA",
+                     geom=from_shape(Polygon([(77.5, 12.7), (77.8, 12.7), (77.8, 12.9), (77.5, 12.9)]), srid=4326)))
+    db.flush()
+    outcome = container(tmp_path, [FakeFetcher("gdelt", news())]).pipeline(db).run(NOW)  # all HTTP returns 503
+    stats = outcome.run.stats
+    assert "error" in stats["indicators"]["chirps-spi"] and "error" in stats["indicators"]["gdo-soil"]
+    assert stats["zones"]["created"] == 1

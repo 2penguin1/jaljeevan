@@ -26,7 +26,9 @@ from app.domain.text import TextFingerprinter
 from app.domain.zones import ZoneTypeClassifier
 from app.integrations.apify import ApifyClient
 from app.integrations.archive import make_archive
+from app.integrations.chirps import ChirpsSpiSource
 from app.integrations.population import WorldPopGrid
+from app.integrations.soil import GdoSoilMoistureAnomaly
 from app.integrations.article import ArticleExtractor
 from app.integrations.ports import LLMClient, RawArchive
 from app.integrations.sources.gdelt import GdeltFetcher
@@ -35,6 +37,7 @@ from app.integrations.sources.rss import RssFetcher
 from app.integrations.sources.social import RedditFetcher, XFetcher
 from app.integrations.weather import OpenMeteoProvider
 from app.repositories.admin_area_repository import AdminAreaRepository
+from app.repositories.area_indicator_repository import AreaIndicatorRepository
 from app.repositories.geocode_cache_repository import GeocodeCacheRepository
 from app.repositories.indicator_repository import IndicatorRepository
 from app.repositories.map_repository import MapRepository
@@ -47,11 +50,12 @@ from app.services.classification_service import ClassificationService
 from app.services.credibility_resolver import CredibilityResolver
 from app.services.event_bus import EventBus
 from app.services.geocoding.geocoding_service import GeocodingService
+from app.services.indicator_refresh_service import IndicatorRefreshService
 from app.services.geocoding.resolvers import GazetteerResolver, LocatorResolver, ResolverChain
 from app.services.ingestion_service import IngestionService
 from app.services.map_query_service import MapQueryService
 from app.services.read_query_service import ReadQueryService
-from app.services.pipeline import (ClassifyStage, GeocodeStage, IngestStage, IntelligencePipeline,
+from app.services.pipeline import (ClassifyStage, GeocodeStage, IndicatorStage, IngestStage, IntelligencePipeline,
                                    PipelineOutcome, ZoneStage)
 from app.services.subscribers import AlertLogSubscriber, LiveFeedNotifier
 from app.services.weather_service import WeatherService
@@ -167,12 +171,19 @@ class Container:
         return ReadQueryService(ReadRepository(session), ZoneRepository(session), IndicatorRepository(session),
                                 PipelineRunRepository(session), self.scorer, self.policies)
 
+    def indicator_refresh_service(self, session: Session) -> IndicatorRefreshService:
+        s = self.settings
+        return IndicatorRefreshService(AreaIndicatorRepository(session), AdminAreaRepository(session),
+                                       ChirpsSpiSource(self.http, s.chirps_base_url),
+                                       GdoSoilMoistureAnomaly(self.http, s.gdo_soil_base_url), self.population)
+
     def pipeline(self, session: Session) -> IntelligencePipeline:
         signals = SignalRepository(session)
         ingestion = IngestionService(signals, CredibilityResolver(SourceDomainRepository(session)), self.prefilter,
                                      self.fingerprinter, self.archive)
         weather = WeatherService(IndicatorRepository(session), OpenMeteoProvider(self.http))
         stages = [IngestStage(self.registry, ingestion, ArticleExtractor(self.http), weather),
+                  IndicatorStage(self.indicator_refresh_service(session)),
                   ClassifyStage(self.classification_service(session), signals),
                   GeocodeStage(self.geocoding_service(session), signals),
                   ZoneStage(self.zone_detection_service(session))]

@@ -17,6 +17,7 @@ from app.repositories.pipeline_run_repository import PipelineRunRepository
 from app.repositories.signal_repository import SignalRepository
 from app.services.classification_service import ClassificationService
 from app.services.geocoding.geocoding_service import GeocodingService
+from app.services.indicator_refresh_service import IndicatorRefreshService
 from app.services.ingestion_service import IngestionService
 from app.services.weather_service import WeatherService
 from app.services.zone_detection_service import ZoneDetectionService
@@ -74,6 +75,18 @@ class IngestStage:
                                    "rejected": result.rejected}
         stats["weather"] = {"districts": self.weather.refresh(ctx.now.date())}
         ctx.stats[self.name] = stats
+
+
+class IndicatorStage:
+    """Measured drought data per taluka (rainfall SPI, soil moisture). Downloads only when a newer period exists."""
+
+    name = "indicators"
+
+    def __init__(self, refresher: IndicatorRefreshService):
+        self.refresher = refresher
+
+    def run(self, ctx: PipelineContext) -> None:
+        ctx.stats[self.name] = self.refresher.refresh(ctx.now)
 
 
 class ClassifyStage:
