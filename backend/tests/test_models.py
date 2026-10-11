@@ -6,7 +6,7 @@ from app.core.database import engine
 from app.models import AdminArea, Signal, SignalLocation
 
 EXPECTED = {
-    "admin_areas", "district_indicators", "source_domains", "geocode_cache", "signals",
+    "admin_areas", "district_indicators", "area_indicators", "drought_declarations", "source_domains", "geocode_cache", "signals",
     "signal_labels", "signal_locations", "signal_feedback", "zones", "zone_signals",
     "zone_snapshots", "relief_briefs", "long_term_plans", "pipeline_runs", "organizations",
     "users", "tenders", "bids", "bid_offers", "bid_messages", "notifications", "reactions",

@@ -1,6 +1,6 @@
 from datetime import date
 
-from sqlalchemy import BigInteger, Boolean, Date, Float, ForeignKey, Index, Integer, String, UniqueConstraint
+from sqlalchemy import BigInteger, Boolean, Date, Float, ForeignKey, Index, Integer, String, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -40,6 +40,35 @@ class DistrictIndicator(Base):
     precip_mm_24h: Mapped[float | None] = mapped_column(Float)
     source: Mapped[str] = mapped_column(String(40))
     __table_args__ = (UniqueConstraint("district_id", "period", "source"),)
+
+
+class AreaIndicator(Base):
+    """Measured values per area (taluka) and period, one row per metric: SPI, soil anomaly, people in dry areas.
+    A long table, so a new data source needs no schema change."""
+
+    __tablename__ = "area_indicators"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    area_id: Mapped[int] = mapped_column(ForeignKey("admin_areas.id"), index=True)
+    period: Mapped[date] = mapped_column(Date)  # last day the value covers
+    source: Mapped[str] = mapped_column(String(40))  # chirps-spi | gdo-soil | ...
+    metric: Mapped[str] = mapped_column(String(40))
+    value: Mapped[float] = mapped_column(Float)
+    __table_args__ = (UniqueConstraint("area_id", "period", "source", "metric"),
+                      Index("ix_area_indicators_source_period", "source", "period"))
+
+
+class DroughtDeclaration(Base):
+    """An official state drought declaration for one taluka (Government Resolution / revenue order)."""
+
+    __tablename__ = "drought_declarations"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    area_id: Mapped[int] = mapped_column(ForeignKey("admin_areas.id"), index=True)
+    state_code: Mapped[str] = mapped_column(String(4))
+    declared_on: Mapped[date] = mapped_column(Date)
+    severity: Mapped[str] = mapped_column(String(12))  # moderate | severe
+    order_ref: Mapped[str | None] = mapped_column(Text)
+    source_url: Mapped[str | None] = mapped_column(Text)
+    __table_args__ = (UniqueConstraint("area_id", "declared_on"),)
 
 
 class SourceDomain(Base):
