@@ -179,3 +179,20 @@ def test_old_post_driven_drought_zones_are_dismissed(db):
     service(db).detect(NOW, hazards=("drought",))
     db.refresh(legacy)
     assert legacy.status == "dismissed"
+
+
+def test_city_supply_complaints_in_an_urban_dry_taluka_stay_water_supply(db):
+    """Chennai: dry weather plus dry taps is a supply problem; only rural well failures are drought evidence."""
+    g = geo(db)
+    AreaIndicatorRepository(db).upsert_many([
+        (g["mohol"].id, FRESH, "chirps-spi", "spi_18p", -1.7), (g["mohol"].id, FRESH, "chirps-spi", "spi_6p", -1.6),
+        (g["mohol"].id, FRESH, "chirps-spi", "pop_stressed", 1_860_000),
+        (g["mohol"].id, FRESH, "chirps-spi", "pop_stressed_urban", 1_850_000),  # a city
+        (g["mohol"].id, FRESH, "gdo-soil", "soil_anomaly", -1.8)])
+    post(db, "https://hindu/city-taps", (75.7, 17.8), hazards=("water",), precision="ward")
+    post(db, "https://ndtv/city-taps", (75.71, 17.81), hazards=("water",), precision="ward", domain="ndtv.com")
+    service(db).detect(NOW, hazards=("drought",))
+    assert zones(db) == []
+    post(db, "https://hindu/city-crops", (75.72, 17.82), hazards=("drought",))  # an explicit drought report counts
+    service(db).detect(NOW, hazards=("drought",))
+    assert len(zones(db)) == 1

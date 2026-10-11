@@ -139,7 +139,12 @@ class ZoneDetectionService:
         assessed = self.drought.assess(now)
         candidates = {a for a, d in assessed.items() if d.assessment.level != "none"}
         candidates |= set(self.zones.area_ids_with_zones(policy.hazard))
-        support = self.zones.area_evidence(sorted(candidates), policy.evidence_hazards, now - self.WINDOW)
+        # supply complaints (water) are drought evidence only in mostly rural talukas, where failing wells and
+        # tankers follow the rain; in a city they are a supply problem and stay under Water supply
+        urban = {a for a in candidates if self._mostly_urban(assessed.get(a))}
+        since = now - self.WINDOW
+        support = self.zones.area_evidence(sorted(candidates - urban), policy.evidence_hazards, since)
+        support |= self.zones.area_evidence(sorted(urban), (policy.hazard,), since)
         for area_id in sorted(candidates):
             drought = assessed.get(area_id)
             level = drought.assessment.level if drought else "none"
@@ -163,6 +168,12 @@ class ZoneDetectionService:
             boost = drought.assessment.boost if drought else 0.0
             self._record_event(self._finalize(zone, evidence, boost, now, created, data_cleared=level == "none"),
                                result)
+
+    @staticmethod
+    def _mostly_urban(drought: AreaDrought | None) -> bool:
+        m = drought.metrics if drought else {}
+        total, urban = m.get("pop_stressed") or 0, m.get("pop_stressed_urban") or 0
+        return total > 0 and urban / total > 0.5
 
     def _dry_population(self, drought: AreaDrought | None, area_id: int) -> tuple[int | None, int | None, str | None]:
         """People living in the taluka's grid cells that meet the rainfall trigger, not the whole taluka."""
