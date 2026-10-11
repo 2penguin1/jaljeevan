@@ -18,3 +18,18 @@ Claude keeps this list up to date. Tick items off as you finish them.
 
 ## Code
 - [x] ~~Decide what to do with branch `feat/p1-backend`~~: merged into `main` on 2026-10-11.
+
+## Later (planned at the end)
+- [ ] **Redis:** add it at the end only if needed: caching (map layers, zone pages) or rate limits, mainly once more than one API server runs. Today Postgres and a small in-memory cache do these jobs.
+- [ ] **S3:** switch on at deploy time (P2) for:
+  - the raw post archive (set `RAW_BUCKET` in `backend/.env`; the code already supports it);
+  - website files (served through CloudFront);
+  - citizen photo uploads;
+  - downloaded rainfall/soil files, if we want to keep them.
+- [ ] **RAG** (search our own documents and give the AI the right pieces before it writes):
+  - relief briefs grounded in the Drought Manual and past similar zones;
+  - an "ask the data" chat for officials;
+  - long-term plans that cite official guidance;
+  - summaries and insights generated from collected posts.
+
+  Use pgvector inside our Postgres, so no new server. Not part of the current drought work.
