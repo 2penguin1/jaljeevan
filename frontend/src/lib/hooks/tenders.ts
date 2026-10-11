@@ -45,6 +45,7 @@ export const useBidAction = (tenderId: string) => {
     onSuccess: (data) => {
       client.setQueryData(["tender", tenderId], data);
       client.invalidateQueries({ queryKey: ["inbox"] });
+      client.invalidateQueries({ queryKey: ["notifications"] });
     },
     onError: (err) => {
       if (err instanceof ApiError && err.status === 409) client.invalidateQueries({ queryKey: ["tender", tenderId] });

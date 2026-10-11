@@ -1,6 +1,7 @@
 import { Activity, Globe2, Inbox, Rows3, Truck, type LucideIcon } from "lucide-react";
 import { Link, NavLink, Outlet, useMatches, useNavigate } from "react-router";
 import { LiveDot } from "@/components/patterns/LiveDot";
+import { NotificationBell } from "@/features/account/NotificationBell";
 import { APP_NAME } from "@/lib/config";
 import { cn } from "@/lib/format";
 import { ROLE_NAME, useLogout, useMe } from "@/lib/hooks/session";
@@ -60,6 +61,7 @@ function Account() {
   if (!me.data) return <Link to="/login" className="text-[13px] text-text-2 hover:text-text">Log in</Link>;
   return (
     <div className="flex items-center gap-3 text-[13px]">
+      <NotificationBell />
       <span className="hidden text-text-2 sm:inline">
         {me.data.name} <span className="text-text-3">· {ROLE_NAME[me.data.role] ?? me.data.role}</span>
       </span>
