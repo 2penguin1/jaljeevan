@@ -66,3 +66,12 @@ def test_nonsense_numbers_and_unknown_zones_are_refused(world):
         service.start_campaign(users["ngo"], zone.id, "x", "", -5)
     with pytest.raises(DomainValidationError):
         service.post_task(users["ngo"], zone.id, "x", "", None, 0)
+
+
+def test_one_pledge_per_person_per_campaign_and_people_are_counted_once(world):
+    service, zone, users, db = world
+    cid = service.start_campaign(users["ngo"], zone.id, "Tankers for Akkalkot", "", 200000)
+    service.pledge(users["citizen"], cid, 5000, None)
+    service.pledge(users["citizen"], cid, 8000, "raised my pledge")
+    [campaign] = service.campaigns(zone_id=zone.id)
+    assert (campaign["pledged_inr"], campaign["pledges"]) == (8000, 1)

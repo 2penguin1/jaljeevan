@@ -19,7 +19,7 @@ class CommunityRepository(BaseRepository[Campaign]):
 
     def campaigns(self, zone_id: uuid.UUID | None) -> list[tuple[Campaign, float, int]]:
         totals = (select(Pledge.campaign_id, func.coalesce(func.sum(Pledge.amount_inr), 0).label("total"),
-                         func.count(Pledge.id).label("n")).group_by(Pledge.campaign_id).subquery())
+                         func.count(func.distinct(Pledge.user_id)).label("n")).group_by(Pledge.campaign_id).subquery())
         query = (select(Campaign, func.coalesce(totals.c.total, 0), func.coalesce(totals.c.n, 0))
                  .outerjoin(totals, totals.c.campaign_id == Campaign.id).where(Campaign.status == "active")
                  .order_by(Campaign.created_at.desc()))
@@ -34,6 +34,10 @@ class CommunityRepository(BaseRepository[Campaign]):
         if zone_id:
             query = query.where(VolunteerTask.zone_id == zone_id)
         return [(t, int(n)) for t, n in self.session.execute(query).all()]
+
+    def pledge_of(self, campaign_id: uuid.UUID, user_id: uuid.UUID) -> Pledge | None:
+        return self.session.scalar(select(Pledge).where(Pledge.campaign_id == campaign_id, Pledge.user_id == user_id)
+                                   .with_for_update())
 
     def task_for_update(self, task_id: uuid.UUID) -> VolunteerTask | None:
         return self.session.scalar(select(VolunteerTask).where(VolunteerTask.id == task_id)

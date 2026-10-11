@@ -54,3 +54,11 @@ test("visitors see nothing until a brief is approved", async () => {
   await new Promise((r) => setTimeout(r, 50));
   expect(screen.queryByRole("region", { name: "Relief brief" })).not.toBeInTheDocument();
 });
+
+test("after approval an officer can draft a new version", async () => {
+  let drafted = false;
+  server.use(http.post(`/api/v1/zones/${ZID}/briefs`, () => { drafted = true; return HttpResponse.json(draft, { status: 201 }); }));
+  renderCard(OFFICER, { ...draft, status: "approved" });
+  await userEvent.click(await screen.findByRole("button", { name: "Draft a new version" }));
+  expect(drafted).toBe(true);
+});

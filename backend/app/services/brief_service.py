@@ -19,6 +19,7 @@ from app.integrations.ports import LLMClient
 from app.models import ReliefBrief, User
 from app.repositories.brief_repository import BriefRepository
 from app.repositories.tender_repository import TenderRepository
+from app.services.ai_deadline import ask
 from app.services.tender_service import TenderService
 
 LOG = logging.getLogger(__name__)
@@ -26,6 +27,7 @@ DURATION_DAYS = 30
 RADIUS_KM = 100
 TANKER_SHARE = 0.10
 MAX_EVIDENCE = 8
+AI_DEADLINE_S = 20.0  # a person is waiting; CloudFront gives up at 60 s
 
 
 class BriefDraft(BaseModel):
@@ -72,27 +74,26 @@ class BriefService:
         zone = self.tenders_repo.zone(zone_id)
         if zone is None:
             raise NotFoundError(f"zone {zone_id} not found")
+        open_draft = self.briefs.latest(zone_id, ("draft",))
+        if open_draft is not None:
+            return self._out(open_draft)  # a double click (or a retry after a timeout) never makes a second draft
         need = self.tenders.relief_need(zone_id, TANKER_SHARE)
         if need.kl_per_day <= 0:
             raise DomainValidationError("this zone has no population estimate yet, so its water need cannot be sized")
         price = self.tenders.suggested_price(zone_id, RADIUS_KM)
         budget = round(need.kl_per_day * DURATION_DAYS * price)
-        evidence = self.evidence(zone_id)[:MAX_EVIDENCE]
+        evidence = self.evidence(zone_id, MAX_EVIDENCE)
         hazard = zone.hazard if zone.hazard in PLAYBOOK else "drought"
         written_by, situation, actions, cited = "template", "", [], []
-        if self.llm is not None:
-            try:
-                result = self.llm.parse(system=SYSTEM, user=self._prompt(zone.name, hazard, need, price, budget, evidence),
-                                        schema=BriefDraft, max_tokens=900)
-                if result.parsed is not None:
-                    draft: BriefDraft = result.parsed  # type: ignore[assignment]
-                    situation = without_numbers(draft.situation)
-                    actions = keep_actions(hazard, draft.action_keys)
-                    allowed = {str(e["signal_id"]) for e in evidence}
-                    cited = list(dict.fromkeys(i for i in draft.cited_signal_ids if i in allowed))
-                    written_by = result.provider or "ai"
-            except Exception:  # noqa: BLE001 - any AI failure falls back to the template; numbers never depend on it
-                LOG.exception("brief AI failed; using the template")
+        result = ask(self.llm, AI_DEADLINE_S, system=SYSTEM, schema=BriefDraft, max_tokens=900,
+                     user=self._prompt(zone.name, hazard, need, price, budget, evidence))
+        if result is not None and result.parsed is not None:
+            draft: BriefDraft = result.parsed  # type: ignore[assignment]
+            situation = without_numbers(draft.situation)
+            actions = keep_actions(hazard, draft.action_keys)
+            allowed = {str(e["signal_id"]) for e in evidence}
+            cited = list(dict.fromkeys(i for i in draft.cited_signal_ids if i in allowed))
+            written_by = result.provider or "ai"
         if not situation:
             written_by = "template"
             situation = (f"Measured data and {'local reports' if evidence else 'no local reports yet'} show a "

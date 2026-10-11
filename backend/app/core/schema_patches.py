@@ -10,6 +10,8 @@ PATCHES: list[str] = [
     "ALTER TABLE zones ADD COLUMN IF NOT EXISTS area_id integer REFERENCES admin_areas(id)",
     "ALTER TABLE zones ADD COLUMN IF NOT EXISTS population_urban bigint",
     "CREATE UNIQUE INDEX IF NOT EXISTS uq_zones_hazard_area ON zones (hazard, area_id) WHERE area_id IS NOT NULL",
+    # one pledge per person per campaign (pledging again changes the amount)
+    "CREATE UNIQUE INDEX IF NOT EXISTS uq_pledges_campaign_user ON pledges (campaign_id, user_id)",
     # 'subdistrict' needs 11 characters; only alter when still narrow, so normal starts take no lock
     """DO $$ BEGIN
          IF (SELECT character_maximum_length FROM information_schema.columns

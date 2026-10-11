@@ -35,6 +35,10 @@ PLAYBOOK: dict[str, dict[str, str]] = {
 }
 
 _DIGIT = re.compile(r"\d")  # \d matches Indian digits (२५) too
+# numbers written as words are numbers too ("twenty thousand villagers")
+_NUMBER_WORD = re.compile(r"\b(?:one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|fifteen|twenty|"
+                          r"thirty|forty|fifty|sixty|seventy|eighty|ninety|hundreds?|thousands?|lakhs?|crores?|"
+                          r"millions?|billions?|dozens?|half|percent)\b", re.I)
 _SENTENCE = re.compile(r"(?<=[.!?।])\s+")
 
 
@@ -45,4 +49,5 @@ def keep_actions(hazard: str, keys: list[str]) -> list[str]:
 
 def without_numbers(text: str) -> str:
     """Drop every sentence that contains a digit: numbers in a brief come from code, never from the AI."""
-    return " ".join(s for s in _SENTENCE.split((text or "").strip()) if s and not _DIGIT.search(s))
+    return " ".join(s for s in _SENTENCE.split((text or "").strip())
+                    if s and not _DIGIT.search(s) and not _NUMBER_WORD.search(s))

@@ -13,8 +13,10 @@ from app.domain.playbook import without_numbers
 from app.integrations.ports import LLMClient
 from app.models import LongTermPlan, User
 from app.repositories.plan_repository import PlanRepository
+from app.services.ai_deadline import ask
 
 LOG = logging.getLogger(__name__)
+AI_DEADLINE_S = 20.0  # a person is waiting; CloudFront gives up at 60 s
 
 
 class PlanDraft(BaseModel):
@@ -55,6 +57,9 @@ class PlanService:
         zone = self.plans.zone(zone_id)
         if zone is None:
             raise NotFoundError(f"zone {zone_id} not found")
+        open_draft = self.plans.latest(zone_id, ("draft",))
+        if open_draft is not None:
+            return self._out(open_draft)  # a double click (or a retry after a timeout) never makes a second draft
         hazard = zone.hazard if zone.hazard in MENU else "drought"
         rural = max(0, (zone.population_est or 0) - (zone.population_urban or 0))
         if rural <= 0:
@@ -63,19 +68,15 @@ class PlanService:
         trend = {"first_score": points[0]["score"] if points else None, "last_score": points[-1]["score"] if points else None,
                  "since": points[0]["at"].date().isoformat() if points else None, "points": len(points)}
         title, summary, keys, written_by = "", "", [], "template"
-        if self.llm is not None:
-            try:
-                menu = "\n".join(f"- {k}: {item.label}" for k, item in MENU[hazard].items())
-                facts = (f"Zone: {zone.name} (hazard: {hazard}); about {villages(rural)} villages; score moved from "
-                         f"{trend['first_score']} to {trend['last_score']} since {trend['since']}.")
-                result = self.llm.parse(system=SYSTEM, user=f"{facts}\n\nMenu keys:\n{menu}", schema=PlanDraft,
-                                        max_tokens=900)
-                if result.parsed is not None:
-                    d: PlanDraft = result.parsed  # type: ignore[assignment]
-                    title, summary, keys = without_numbers(d.title), without_numbers(d.problem_summary), d.option_keys
-                    written_by = result.provider or "ai"
-            except Exception:  # noqa: BLE001 - the AI is optional: numbers and options never depend on it
-                LOG.exception("plan AI failed; using the template")
+        menu = "\n".join(f"- {k}: {item.label}" for k, item in MENU[hazard].items())
+        facts = (f"Zone: {zone.name} (hazard: {hazard}); about {villages(rural)} villages; score moved from "
+                 f"{trend['first_score']} to {trend['last_score']} since {trend['since']}.")
+        result = ask(self.llm, AI_DEADLINE_S, system=SYSTEM, user=f"{facts}\n\nMenu keys:\n{menu}", schema=PlanDraft,
+                     max_tokens=900)
+        if result is not None and result.parsed is not None:
+            d: PlanDraft = result.parsed  # type: ignore[assignment]
+            title, summary, keys = without_numbers(d.title), without_numbers(d.problem_summary), d.option_keys
+            written_by = result.provider or "ai"
         options = plan_options(hazard, keys, rural) or plan_options(hazard, list(MENU[hazard])[:3], rural)
         if not summary:
             written_by = "template"

@@ -67,6 +67,9 @@ export function BriefCard({ zoneId }: { zoneId: string }) {
             {b.written_by === "template" ? "Template words (AI unavailable)" : `Words by AI (${b.written_by})`}; numbers computed in code: {b.formula}
             {b.cited_signal_ids.length > 0 && `; cites ${b.cited_signal_ids.length} post${b.cited_signal_ids.length > 1 ? "s" : ""} from this zone`}.
           </p>
+          {officer && b.status === "approved" && (
+            <button type="button" className={BUTTON} disabled={draft.isPending} onClick={() => draft.mutate()}>Draft a new version</button>
+          )}
           {officer && b.status === "draft" && (
             <div className="flex flex-col gap-2 border-t hairline pt-3">
               <button type="button" className={PRIMARY} disabled={approve.isPending} onClick={() => approve.mutate(b.id)}>Approve and publish tender</button>

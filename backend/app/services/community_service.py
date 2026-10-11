@@ -54,11 +54,17 @@ class CommunityService:
             raise NotFoundError("campaign not found")
         if not (0 < amount_inr <= MAX_PLEDGE):
             raise DomainValidationError("a pledge must be between ₹1 and ₹1 crore")
-        self.repo.session.add(Pledge(campaign_id=campaign.id, user_id=actor.id, amount_inr=amount_inr,
-                                     message=(message or "").strip()[:500] or None))
+        note = (message or "").strip()[:500] or None
+        existing = self.repo.pledge_of(campaign.id, actor.id)
+        if existing is not None:  # one pledge per person: pledging again changes it (no inflated totals or counts)
+            existing.amount_inr, existing.message = amount_inr, note
+            verb = "changed their pledge to"
+        else:
+            self.repo.session.add(Pledge(campaign_id=campaign.id, user_id=actor.id, amount_inr=amount_inr, message=note))
+            verb = "pledged"
         self.repo.session.flush()
         self.notifications.tell_org(campaign.ngo_org_id, "pledge",
-                                    f"{actor.name} pledged ₹{amount_inr:,.0f} to “{campaign.title}”",
+                                    f"{actor.name} {verb} ₹{amount_inr:,.0f} for “{campaign.title}”",
                                     campaign.id, actor.id, link="/community")
 
     def post_task(self, actor: User, zone_id: uuid.UUID | None, title: str, description: str,

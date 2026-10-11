@@ -1,7 +1,7 @@
 import uuid
 from datetime import date, datetime
 
-from sqlalchemy import Date, Float, Integer, String, Text
+from sqlalchemy import Date, Float, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
@@ -47,6 +47,7 @@ class Pledge(Base):
     amount_inr: Mapped[float] = mapped_column(Float)
     message: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = created()
+    __table_args__ = (UniqueConstraint("campaign_id", "user_id"),)  # one pledge per person per campaign
 
 
 class VolunteerTask(Base):

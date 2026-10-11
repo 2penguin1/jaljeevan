@@ -45,7 +45,7 @@ def test_a_plan_has_ai_words_menu_options_and_code_costs(world):
                       option_keys=["farm_ponds", "teleporters", "check_dams"])
     plan = service(db, draft).draft(zone.id, officer)
     assert plan["title"] == "Long-term water plan for Akkalkot taluka, Solapur"  # an invented year is a number too
-    assert plan["problem_summary"] == "Rains have failed for two seasons. Groundwater keeps falling."
+    assert plan["problem_summary"] == "Groundwater keeps falling."  # "two seasons" is a number in words
     assert [o["key"] for o in plan["options"]] == ["farm_ponds", "check_dams"]
     assert plan["total_cost_inr"] == sum(o["cost_inr"] for o in plan["options"])
     assert plan["trend"]["first_score"] == 40.0 and plan["trend"]["last_score"] == 79.0
@@ -71,3 +71,10 @@ def test_only_officers_draft_and_review_and_drafts_stay_private(world):
     assert svc.get(plan["id"], viewer=None)["status"] == "approved"
     with pytest.raises(ConflictError):
         svc.reject(plan["id"], officer, "late")
+
+
+def test_drafting_a_plan_twice_returns_the_open_draft(world):
+    db, zone, officer, _ = world
+    svc = service(db, None)
+    first = svc.draft(zone.id, officer)
+    assert svc.draft(zone.id, officer)["id"] == first["id"]

@@ -11,3 +11,8 @@ def test_sentences_with_numbers_are_removed_because_numbers_come_from_code():
     text = "Wells have dried up across the taluka. About 40,000 people need water. Farmers report losing their kharif crop."
     assert without_numbers(text) == "Wells have dried up across the taluka. Farmers report losing their kharif crop."
     assert without_numbers("२५ गावे कोरडी. Wells are dry.") == "Wells are dry."  # Indian digits count too
+
+
+def test_number_words_are_numbers_too():
+    text = "Over twenty thousand villagers have no water. Wells are dry. Two lakh cattle need fodder."
+    assert without_numbers(text) == "Wells are dry."

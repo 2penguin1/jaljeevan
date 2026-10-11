@@ -45,7 +45,7 @@ def world(db):
 
 def service(db, llm):
     return BriefService(BriefRepository(db), TenderRepository(db), TenderService(TenderRepository(db)), llm,
-                        evidence=lambda zone_id: EVIDENCE)
+                        evidence=lambda zone_id, limit=None: EVIDENCE[:limit])
 
 
 def test_the_ai_writes_words_and_code_writes_every_number(world):
@@ -105,3 +105,29 @@ def test_a_zone_without_a_population_estimate_gets_no_brief_instead_of_a_zero_on
     db.flush()
     with pytest.raises(DomainValidationError, match="population"):
         service(db, FakeLLM(None)).draft(zone.id, officer)
+
+
+class SlowLLM:
+    def parse(self, *, system, user, schema, max_tokens):
+        import time
+        time.sleep(3)
+        return LLMResult(parsed=BriefDraft(situation="Too late.", action_keys=[], cited_signal_ids=[]), provider="slow")
+
+
+def test_a_slow_ai_falls_back_to_the_template_in_time(world, monkeypatch):
+    import time
+    from app.services import brief_service
+    monkeypatch.setattr(brief_service, "AI_DEADLINE_S", 0.5)
+    db, zone, officer, _ = world
+    started = time.monotonic()
+    brief = service(db, SlowLLM()).draft(zone.id, officer)
+    assert time.monotonic() - started < 2.5 and brief["written_by"] == "template"
+
+
+def test_drafting_again_returns_the_open_draft_and_after_approval_a_new_version_is_made(world):
+    db, zone, officer, _ = world
+    svc = service(db, FakeLLM(BriefDraft(situation="Wells are dry.", action_keys=[], cited_signal_ids=[])))
+    first = svc.draft(zone.id, officer)
+    assert svc.draft(zone.id, officer)["id"] == first["id"]  # a double click never makes two drafts
+    svc.approve(first["id"], officer)
+    assert svc.draft(zone.id, officer)["version"] == 2

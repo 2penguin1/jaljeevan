@@ -51,12 +51,13 @@ class ReadRepository:
             FROM zones z LEFT JOIN admin_areas d ON d.id = z.district_id WHERE z.id = :id""", {"id": zone_id})
         return rows[0] if rows else None
 
-    def zone_evidence(self, zone_id: uuid.UUID) -> list[dict]:
+    def zone_evidence(self, zone_id: uuid.UUID, limit: int | None = None) -> list[dict]:
         return self._rows(f"""
             SELECT s.id AS signal_id, {_QUOTE} AS quote, s.english_summary AS summary, s.title, s.source, s.domain,
                    s.credibility, zs.weight, s.max_severity AS severity, s.url, s.published_at, {_PLACE} AS place
             FROM zone_signals zs JOIN signals s ON s.id = zs.signal_id
-            WHERE zs.zone_id = :id ORDER BY zs.weight DESC""", {"id": zone_id})
+            WHERE zs.zone_id = :id ORDER BY zs.weight DESC
+            {"LIMIT :lim" if limit else ""}""", {"id": zone_id, "lim": limit})
 
     def zone_trend(self, zone_id: uuid.UUID, limit: int = 200) -> list[dict]:
         return self._rows("""
