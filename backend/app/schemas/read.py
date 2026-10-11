@@ -165,7 +165,16 @@ class IndicatorFreshness(BaseModel):
     areas: int
 
 
+class DeclarationWatchInfo(BaseModel):
+    """What the news-based declaration watch found this season (other states)."""
+    last_checked: datetime | None
+    sources: dict[str, int]            # articles / orders by outcome: listed, no_list, failed, ...
+    declared_by_state: dict[str, int]  # talukas declared through the watch
+    waiting: int                       # named but not declared yet (one source, or a doubtful name)
+
+
 class OpsSummary(BaseModel):
     runs: list[OpsRun]
     totals: OpsTotals
     indicators: list[IndicatorFreshness] = []
+    declarations: DeclarationWatchInfo | None = None

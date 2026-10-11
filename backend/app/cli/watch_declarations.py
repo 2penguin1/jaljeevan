@@ -14,6 +14,7 @@ from datetime import datetime, timezone
 from app.core.config import settings
 from app.core.container import Container
 from app.core.database import init_db, session_scope
+from app.core.exceptions import ExternalServiceError
 from app.repositories.pipeline_run_repository import PipelineRunRepository
 from app.services.pipeline import PipelineContext
 
@@ -31,7 +32,10 @@ def main() -> None:
         runs = PipelineRunRepository(session)  # recorded like a pipeline run, so the 20-hour gap sees it
         run = runs.start("watch", now)
         ctx = PipelineContext(now=now, run_id=str(run.id))
-        container.declaration_watch_stage(session, force=args.force).run(ctx)
+        try:
+            container.declaration_watch_stage(session, force=args.force).run(ctx)
+        except ExternalServiceError as exc:  # GDELT down or rate-limited: recorded; the next run tries again
+            ctx.stats["watch"] = {"error": str(exc)}
         runs.finish(run, ctx.stats, datetime.now(timezone.utc))
     print(json.dumps(ctx.stats, indent=2, ensure_ascii=False, default=str))
 

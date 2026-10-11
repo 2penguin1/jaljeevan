@@ -14,14 +14,13 @@ from urllib.parse import urlsplit
 import trafilatura
 
 from app.domain.declaration_states import WATCH_STATES, declares, list_sentences, pick_state
-from app.domain.declarations import TalukaMatcher, severity_from_text
+from app.domain.declarations import REVIEW_FROM, TalukaMatcher, severity_from_text
 from app.domain.text import TextFingerprinter
 from app.integrations.declaration_news import FetchBlocked, FetchFailed
 from app.integrations.pdf_text import pdf_lines
 from app.models import DeclarationSource
 from app.repositories.admin_area_repository import AdminAreaRepository
 from app.repositories.declaration_source_repository import DeclarationSourceRepository
-from app.services.declaration_extractor import REVIEW_FROM
 
 LOG = logging.getLogger(__name__)
 # links to official orders inside an article: government (.gov.in / .nic.in) PDFs only

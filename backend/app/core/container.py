@@ -183,7 +183,8 @@ class Container:
     def read_query_service(self, session: Session) -> ReadQueryService:
         return ReadQueryService(ReadRepository(session), ZoneRepository(session), IndicatorRepository(session),
                                 PipelineRunRepository(session), self.scorer, self.policies,
-                                drought=self.drought_assessor(session), area_indicators=AreaIndicatorRepository(session))
+                                drought=self.drought_assessor(session), area_indicators=AreaIndicatorRepository(session),
+                                declaration_sources=DeclarationSourceRepository(session))
 
     def indicator_refresh_service(self, session: Session) -> IndicatorRefreshService:
         s = self.settings

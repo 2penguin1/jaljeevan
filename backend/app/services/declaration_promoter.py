@@ -7,12 +7,11 @@ import re
 from collections import defaultdict
 from datetime import datetime, timedelta
 
-from app.domain.declarations import TalukaMatcher
+from app.domain.declarations import REVIEW_FROM, TalukaMatcher
 from app.domain.text import TextFingerprinter
 from app.models import DeclarationMention, DeclarationSource
 from app.repositories.declaration_repository import DeclarationRepository
 from app.repositories.declaration_source_repository import DeclarationSourceRepository
-from app.services.declaration_extractor import REVIEW_FROM
 
 SEASON = timedelta(days=120)
 NEWS_SOURCES_NEEDED = 2

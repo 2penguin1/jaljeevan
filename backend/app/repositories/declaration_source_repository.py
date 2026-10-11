@@ -1,8 +1,9 @@
 from datetime import date
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, text
 from sqlalchemy.dialects.postgresql import insert
 
+from app.domain.declarations import REVIEW_FROM
 from app.models import DeclarationMention, DeclarationSource
 from app.repositories.base import BaseRepository
 
@@ -47,3 +48,19 @@ class DeclarationSourceRepository(BaseRepository[DeclarationSource]):
 
     def last_checked(self):
         return self.session.scalar(select(func.max(DeclarationSource.checked_at)))
+
+    def summary(self, since: date) -> dict:
+        """For the ops page: sources by outcome, talukas declared through the watch per state, talukas waiting."""
+        declared = self.session.execute(text("""
+            SELECT d.state_code, count(*) FROM drought_declarations d
+            WHERE d.declared_on >= :since AND d.source_url IN (SELECT url FROM declaration_sources)
+            GROUP BY d.state_code"""), {"since": since}).all()
+        waiting = self.session.scalar(text("""
+            SELECT count(DISTINCT m.area_id) FROM declaration_mentions m
+            JOIN declaration_sources s ON s.id = m.source_id
+            WHERE s.status = 'listed' AND s.published_on >= :since AND m.score >= :min_score
+              AND NOT EXISTS (SELECT 1 FROM drought_declarations d
+                              WHERE d.area_id = m.area_id AND d.declared_on >= :since)"""),
+            {"since": since, "min_score": REVIEW_FROM})
+        return {"last_checked": self.last_checked(), "sources": self.status_counts(since),
+                "declared_by_state": {state: n for state, n in declared}, "waiting": waiting or 0}

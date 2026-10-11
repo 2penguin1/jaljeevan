@@ -122,6 +122,9 @@ _SUFFIX_FORMS = {"(Rural)": ("{}",), "(Urban)": ("{} shahar",), "City": ("{} sha
                  "North": ("u {}", "uttar {}"), "South": ("d {}", "dakshin {}")}
 
 
+REVIEW_FROM = 70.0  # match scores between this and TalukaMatcher.ACCEPT go to a person's "check me" list
+
+
 @dataclass(frozen=True)
 class TalukaMatch:
     area_id: int

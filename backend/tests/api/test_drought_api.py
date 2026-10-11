@@ -72,3 +72,41 @@ def test_ops_shows_how_fresh_the_drought_data_is(drought_zone):
         ops = c.get("/api/v1/ops/summary").json()
     sources = {i["source"]: i for i in ops["indicators"]}
     assert sources["chirps-spi"]["period"] == PERIOD.isoformat() and sources["chirps-spi"]["areas"] >= 1
+
+
+@pytest.fixture
+def watched():
+    from app.models import DeclarationMention, DeclarationSource
+    with SessionLocal() as s:
+        gadag = AdminArea(level="subdistrict", name="Gadag", name_norm="gadag", state_code="KA", district_name="Gadag",
+                          geom=from_shape(box(75.5, 15.3, 75.8, 15.6), srid=4326))
+        ron = AdminArea(level="subdistrict", name="Ron", name_norm="ron", state_code="KA", district_name="Gadag",
+                        geom=from_shape(box(75.6, 15.6, 75.9, 15.9), srid=4326))
+        s.add_all([gadag, ron])
+        s.flush()
+        a = DeclarationSource(url="https://watch.test/a", domain="watch.test", kind="news", state_code="KA", title="t",
+                              published_on=PERIOD, status="listed", attempts=1, checked_at=NOW)
+        b = DeclarationSource(url="https://watch.test/b", domain="watch.test", kind="news", state_code=None, title="t",
+                              published_on=PERIOD, status="no_list", attempts=1, checked_at=NOW)
+        s.add_all([a, b])
+        s.flush()
+        s.add_all([DeclarationMention(source_id=a.id, area_id=gadag.id, score=100, text="Gadag"),
+                   DeclarationMention(source_id=a.id, area_id=ron.id, score=100, text="Ron")])
+        s.add(DroughtDeclaration(area_id=ron.id, state_code="KA", declared_on=PERIOD, severity="moderate",
+                                 order_ref="news: 2 sources", source_url="https://watch.test/a"))
+        s.commit()
+        ids = (gadag.id, ron.id, a.id, b.id)
+    yield ids
+    with SessionLocal() as s:
+        s.query(DroughtDeclaration).filter(DroughtDeclaration.area_id.in_(ids[:2])).delete(synchronize_session=False)
+        s.query(DeclarationMention).filter(DeclarationMention.source_id == ids[2]).delete()
+        s.query(DeclarationSource).filter(DeclarationSource.id.in_(ids[2:])).delete(synchronize_session=False)
+        s.query(AdminArea).filter(AdminArea.id.in_(ids[:2])).delete(synchronize_session=False)
+        s.commit()
+
+
+def test_ops_shows_what_the_declaration_watch_found(watched):
+    with TestClient(app) as c:
+        info = c.get("/api/v1/ops/summary").json()["declarations"]
+    assert info["sources"]["listed"] >= 1 and info["sources"]["no_list"] >= 1
+    assert info["declared_by_state"]["KA"] >= 1 and info["waiting"] >= 1 and info["last_checked"] is not None

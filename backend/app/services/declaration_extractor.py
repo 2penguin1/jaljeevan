@@ -11,7 +11,7 @@ import re
 from dataclasses import dataclass, field, replace
 from datetime import date
 
-from app.domain.declarations import TalukaMatcher, severity_from_text
+from app.domain.declarations import REVIEW_FROM, TalukaMatcher, severity_from_text
 from app.integrations.ports import Translator
 
 _NUMBER = re.compile(r"[०-९0-9]+[.)]?")  # serial numbers and counts: the cell breaks of a table row
@@ -24,7 +24,6 @@ _TABLE_END = re.compile(r"एकूण|एकूर्|एकुण|^\s*total\b"
 # lines inside the table that hold no talukas: column titles, the header repeated on every page, "निरंक" (none)
 _TABLE_HEADER = re.compile(r"नावे|नािे|सांख्या|संख्या|names|number|शासन|हंगाम|हांगाम|trigger|पृष्ठ|परिशिष्ट|पनिनशष्ट"
                            r"|अ\.\s*क्र|निरंक|\bnil\b", re.I)
-REVIEW_FROM = 70.0  # scores between this and TalukaMatcher.ACCEPT go to the "check me" list
 
 
 @dataclass

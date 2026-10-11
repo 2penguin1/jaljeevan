@@ -5,6 +5,8 @@ from datetime import datetime, timedelta, timezone
 from app.core.exceptions import DomainValidationError, NotFoundError
 from app.domain.drought import FOOTPRINT_LABEL, RULES_VERSION
 from app.repositories.area_indicator_repository import AreaIndicatorRepository
+from app.repositories.declaration_source_repository import DeclarationSourceRepository
+from app.services.declaration_promoter import SEASON
 from app.services.drought_assessor import AreaDrought, DroughtAssessor
 from app.domain.hazards import HazardPolicies, band
 from app.domain.scoring import ZoneScorer
@@ -12,7 +14,7 @@ from app.repositories.indicator_repository import IndicatorRepository
 from app.repositories.pipeline_run_repository import PipelineRunRepository
 from app.repositories.read_repository import ReadRepository
 from app.repositories.zone_repository import ZoneRepository
-from app.schemas.read import (Contribution, DeclarationInfo, DroughtPanel, IndicatorFreshness, EvidenceItem, FeedItem, FeedPage, IndicatorInfo, OpsRun, OpsSummary,
+from app.schemas.read import (Contribution, DeclarationInfo, DeclarationWatchInfo, DroughtPanel, IndicatorFreshness, EvidenceItem, FeedItem, FeedPage, IndicatorInfo, OpsRun, OpsSummary,
                               OpsTotals, ScoreBreakdown, StatsOverview, TrendPoint, ZoneDetail, ZoneInfo,
                               ZoneSummary)
 
@@ -35,8 +37,10 @@ class ReadQueryService:
 
     def __init__(self, reads: ReadRepository, zones: ZoneRepository, indicators: IndicatorRepository,
                  runs: PipelineRunRepository, scorer: ZoneScorer, policies: HazardPolicies,
-                 drought: DroughtAssessor | None = None, area_indicators: AreaIndicatorRepository | None = None):
+                 drought: DroughtAssessor | None = None, area_indicators: AreaIndicatorRepository | None = None,
+                 declaration_sources: DeclarationSourceRepository | None = None):
         self.drought = drought
+        self.declaration_sources = declaration_sources
         self.area_indicators = area_indicators
         self.reads = reads
         self.zones = zones
@@ -110,4 +114,11 @@ class ReadQueryService:
         freshness = self.area_indicators.freshness() if self.area_indicators is not None else []
         return OpsSummary(runs=[OpsRun.model_validate(r, from_attributes=True) for r in self.runs.latest(20)],
                           totals=OpsTotals.model_validate(self.reads.totals()),
-                          indicators=[IndicatorFreshness(source=s, period=p, areas=n) for s, p, n in freshness])
+                          indicators=[IndicatorFreshness(source=s, period=p, areas=n) for s, p, n in freshness],
+                          declarations=self._watch_info())
+
+    def _watch_info(self) -> DeclarationWatchInfo | None:
+        if self.declaration_sources is None:
+            return None
+        since = datetime.now(timezone.utc).date() - SEASON
+        return DeclarationWatchInfo.model_validate(self.declaration_sources.summary(since))
