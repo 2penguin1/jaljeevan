@@ -7,6 +7,10 @@
     <title>%VITE_APP_NAME%: live water-crisis map of India</title>
     <meta name="theme-color" content="#0B0A09" />
     <meta name="description" content="Live signals from news, social media and citizens, turned into verified relief zones across India." />
+    <script>
+      // apply the saved theme before the first paint (no flash); no saved choice = follow the system
+      try { var t = localStorage.getItem("theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>

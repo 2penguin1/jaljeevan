@@ -1,6 +1,7 @@
 import { Activity, ClipboardCheck, Globe2, HandHeart, Inbox, Rows3, Truck, type LucideIcon } from "lucide-react";
 import { Link, NavLink, Outlet, useMatches, useNavigate } from "react-router";
 import { LiveDot } from "@/components/patterns/LiveDot";
+import { ThemeToggle } from "@/components/patterns/ThemeToggle";
 import { NotificationBell } from "@/features/account/NotificationBell";
 import { APP_NAME } from "@/lib/config";
 import { cn } from "@/lib/format";
@@ -48,7 +49,8 @@ function TopBar() {
   return (
     <header className="flex h-12 shrink-0 items-center justify-between border-b hairline px-4 md:px-6">
       <span className="text-[14px] font-medium text-text">{title?.title ?? APP_NAME}</span>
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3">
+        <ThemeToggle />
         <Account />
         <LiveDot status={status} />
       </div>

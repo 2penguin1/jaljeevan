@@ -4,8 +4,8 @@ import react from "@vitejs/plugin-react";
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "vite";
 
-// Product name is undecided: one value, overridable with VITE_APP_NAME (used by index.html and src/lib/config.ts).
-process.env.VITE_APP_NAME ||= "Jal";
+// Product name: JalJeevan. One value, overridable with VITE_APP_NAME (used by index.html and src/lib/config.ts).
+process.env.VITE_APP_NAME ||= "JalJeevan";
 const API = process.env.API_URL ?? "http://localhost:8000"; // e2e points this at the fixture API
 
 export default defineConfig({

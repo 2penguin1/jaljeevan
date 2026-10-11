@@ -93,9 +93,9 @@ function Embers({ embers, heightAt, motion }: { embers: Ember[]; heightAt: Heigh
       {embers.map((e) => {
         const [x, z] = project(e.lon, e.lat);
         const [r, g, b] = HAZARDS[e.hazard].rgb;
-        const glow = e.active ? 6 : 1.6; // >1 drives the bloom
+        const glow = e.active ? 2.2 : 1.3; // >1 drives the bloom; higher blows hundreds of talukas into one white blob
         const color = new THREE.Color(r / 255, g / 255, b / 255).multiplyScalar(glow);
-        const radius = (e.active ? 0.0075 : 0.0045) * (0.7 + e.score / 160);
+        const radius = (e.active ? 0.0048 : 0.0036) * (0.7 + e.score / 160);
         return (
           <mesh key={e.id} position={[x, heightAt(e.lon, e.lat) + radius, z]}>
             <sphereGeometry args={[radius, 16, 16]} />

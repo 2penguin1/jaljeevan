@@ -26,6 +26,61 @@
   color-scheme: dark;
 }
 
+/* Light theme: chosen with the toggle, or follows the system when no choice is stored. Hazard colours are deepened so
+   they keep 4.5:1 contrast on a light page. */
+:root[data-theme="light"] {
+  --canvas: #f4f6f4;
+  --surface: #ffffff;
+  --raised: #e9ede9;
+  --hairline: rgba(18, 28, 24, 0.1);
+  --hairline-strong: rgba(18, 28, 24, 0.2);
+  --text: #121614;
+  --text-2: #3f4744;
+  --text-3: #58605c;
+  --drought: #a95f00;
+  --flood: #0b6f93;
+  --heat: #c0331c;
+  --water: #5b46c9;
+  --success: #2c7a4b;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme]) {
+    --canvas: #f4f6f4;
+    --surface: #ffffff;
+    --raised: #e9ede9;
+    --hairline: rgba(18, 28, 24, 0.1);
+    --hairline-strong: rgba(18, 28, 24, 0.2);
+    --text: #121614;
+    --text-2: #3f4744;
+    --text-3: #58605c;
+    --drought: #a95f00;
+    --flood: #0b6f93;
+    --heat: #c0331c;
+    --water: #5b46c9;
+    --success: #2c7a4b;
+    color-scheme: light;
+  }
+}
+
+/* The landing page is dark terrain art: it keeps the dark palette whatever the theme. */
+.force-dark {
+  --canvas: #0b0a09;
+  --surface: #131210;
+  --raised: #1b1916;
+  --hairline: rgba(255, 245, 230, 0.08);
+  --hairline-strong: rgba(255, 245, 230, 0.16);
+  --text: #ede8e1;
+  --text-2: #a39e96;
+  --text-3: #8a857e;
+  --drought: #e8a33d;
+  --flood: #3fb6d8;
+  --heat: #f0533a;
+  --water: #9d8cf2;
+  --success: #7fb592;
+  color-scheme: dark;
+}
+
 @theme inline {
   --color-canvas: var(--canvas);
   --color-surface: var(--surface);

@@ -9,7 +9,7 @@ class Settings(BaseSettings):
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
-    app_name: str = "Jal (working name)"
+    app_name: str = "JalJeevan"
     database_url: str = "postgresql+psycopg://jal:jal@localhost:5433/jal"
     aws_region: str = "ap-south-1"
     aws_profile: str | None = None  # "spice" (personal account); NEVER the office "default" profile

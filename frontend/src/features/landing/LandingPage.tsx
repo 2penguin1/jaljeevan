@@ -60,6 +60,15 @@ function Figure({ value, label, className }: { value: string; label: string; cla
   );
 }
 
+const AUDIENCES = [
+  { title: "For the relief officer", color: "var(--drought)",
+    body: "See which talukas are dry today and why, and how much drinking water their families need. Draft a brief, approve it, and the nearest tanker owners get the request in the same minute." },
+  { title: "For tanker owners", color: "var(--flood)",
+    body: "Tenders near your depot arrive in your inbox. Answer with your own price, counter when diesel goes up, and see exactly what was agreed. No chasing anyone on the phone." },
+  { title: "For NGOs and neighbours", color: "var(--success)",
+    body: "Raise support for a village, ask for hands at a water point, or simply tell us your tap has been dry for nine days. It all lands on the same map the officer is looking at." },
+];
+
 export function LandingPage() {
   const stats = useStats();
   const { embers, hotspot } = useEmbers();
@@ -70,7 +79,7 @@ export function LandingPage() {
   const s = stats.data;
 
   return (
-    <div className="relative bg-canvas text-[16px] text-text">
+    <div className="force-dark relative bg-canvas text-[16px] text-text">
       <div aria-hidden className="fixed inset-0">
         <img src="/landing/poster.webp" alt="" className="h-full w-full object-cover object-[62%_50%] max-md:object-[60%_85%]" />
         {webgl && (
@@ -109,7 +118,40 @@ export function LandingPage() {
         </section>
         <section className="flex min-h-dvh flex-col justify-end px-5 pb-24 md:px-10">
           <Figure value={s ? formatInt(s.posts_analysed_7d) : "—"} label="posts read and checked in the last seven days" />
-          <p className="mt-16 max-w-[70ch] text-[12px] leading-relaxed text-text-3">
+        </section>
+        <section aria-labelledby="why-title" className="relative bg-canvas/95 px-5 py-24 backdrop-blur-sm md:px-10">
+          <div className="mx-auto flex max-w-6xl flex-col gap-14">
+            <div className="flex max-w-[62ch] flex-col gap-5">
+              <h2 id="why-title" className="font-display text-[40px] leading-[1.05] md:text-[56px]">
+                Every summer, someone builds the tanker list by hand.
+              </h2>
+              <p className="text-[17px] leading-relaxed text-text-2">
+                Phone calls from sarpanches, WhatsApp forwards, a line in the morning paper, a government order typed in Marathi.
+                By the time it is all on one sheet, the wells have been dry for a week. {APP_NAME} does that reading every few
+                hours, for the whole country, and puts it on one map.
+              </p>
+            </div>
+            <div className="grid gap-10 md:grid-cols-3">
+              {AUDIENCES.map((a) => (
+                <div key={a.title} className="flex flex-col gap-3 border-t pt-5" style={{ borderColor: a.color }}>
+                  <h3 className="text-[15px] font-medium text-text">{a.title}</h3>
+                  <p className="text-[15px] leading-relaxed text-text-2">{a.body}</p>
+                </div>
+              ))}
+            </div>
+            <div className="flex flex-col gap-4 border-t hairline pt-8 md:flex-row md:items-end md:justify-between">
+              <p className="max-w-[70ch] text-[14px] leading-relaxed text-text-2">
+                Rain comes from CHIRPS satellite data, soil moisture from Copernicus, drought orders straight from state
+                government PDFs, and population from WorldPop. The AI writes sentences. Every number on this site is
+                arithmetic you can open and check.
+              </p>
+              <div className="flex shrink-0 gap-3">
+                <Link to="/zones" className="inline-flex h-11 items-center rounded-full bg-text px-6 text-[14px] font-medium text-canvas hover:opacity-90">See the worst-hit zones</Link>
+                <Link to="/login" className="inline-flex h-11 items-center rounded-full border border-hairline-strong px-6 text-[14px] text-text hover:bg-raised">Log in</Link>
+              </div>
+            </div>
+          </div>
+          <p className="mx-auto mt-16 max-w-6xl text-[12px] leading-relaxed text-text-3">
             Relief from AWS Open Data Terrain Tiles. Rivers from Natural Earth. India&rsquo;s outline from official district boundaries.
           </p>
         </section>
