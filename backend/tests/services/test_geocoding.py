@@ -130,3 +130,15 @@ def test_unresolvable_ambiguity_is_stored_without_geometry(db):
     GeocodingService(ResolverChain([gazetteer(db)]), SignalRepository(db)).geocode(s)
     row = db.scalar(select(SignalLocation).where(SignalLocation.signal_id == s.id))
     assert row.ambiguous and row.geom is None and row.precision == "state"
+
+
+def test_district_precision_falls_back_to_a_taluka_but_prefers_a_real_district(db):
+    seed(db)
+    mohol = area(db, "subdistrict", "Mohol", "MH", Polygon([(75.4, 17.6), (76.0, 17.6), (76.0, 18.0), (75.4, 18.0)]),
+                 district="Solapur")
+    area(db, "subdistrict", "Barmer", "RJ", Polygon([(70.5, 25), (71.5, 25), (71.5, 26), (70.5, 26)]), district="Barmer")
+    resolver = GazetteerResolver(AdminAreaRepository(db))
+    r = resolver.resolve(LocationQuery("Mohol taluka", "Maharashtra", "Solapur", "district"))
+    assert r.admin_area_id == mohol.id and r.precision == "subdistrict"
+    barmer = resolver.resolve(LocationQuery("Barmer", "Rajasthan", None, "district"))
+    assert barmer.precision == "district"  # a district and a taluka share the name: the district wins

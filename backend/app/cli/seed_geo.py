@@ -37,6 +37,11 @@ def main() -> None:
                 print("wards:", svc.load_wards(wards, args.ward_name_prop, args.bengaluru_population,
                                                "KA", "Bangalore Urban"))
             svc.link_parents()
+        talukas = DATA / "india_subdistrict.geojson"  # separate guard: can be added to an existing database
+        if talukas.exists() and not areas.has_level("subdistrict"):
+            print("talukas:", svc.load_subdistricts(talukas))
+            linked, dropped = areas.link_subdistricts()
+            print(f"talukas linked to districts: {linked} (dropped outside every district: {dropped})")
         imd = DATA / "imd_rainfall_2026.csv"
         if imd.exists():
             print("indicators:", svc.load_indicators(imd))

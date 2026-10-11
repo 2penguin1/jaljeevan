@@ -72,3 +72,23 @@ def test_indicators_and_source_domains(db, tmp_path):
     assert svc.seed_source_domains() == 36  # idempotent
     assert db.scalar(select(func.count()).select_from(SourceDomain)) == 36
     assert SourceDomainRepository(db).credibility("pib.gov.in") == 1.0
+
+
+def test_subdistricts_load_and_link_to_their_district(db, tmp_path):
+    svc = service(db)
+    svc.load_districts(district_file(tmp_path))
+    inside = {"type": "Polygon", "coordinates": [[[71.1, 25.1], [71.5, 25.1], [71.5, 25.5], [71.1, 25.5], [71.1, 25.1]]]}
+    abroad = {"type": "Polygon", "coordinates": [[[60, 30], [61, 30], [61, 31], [60, 31], [60, 30]]]}
+    gj = tmp_path / "s.geojson"
+    gj.write_text(json.dumps({"type": "FeatureCollection", "features": [
+        {"type": "Feature", "properties": {"shapeName": "Chohtan"}, "geometry": inside},
+        {"type": "Feature", "properties": {"shapeName": "Abroad"}, "geometry": abroad}]}))
+    areas = AdminAreaRepository(db)
+    assert not areas.has_level("subdistrict")
+    assert svc.load_subdistricts(gj) == 2
+    linked, dropped = areas.link_subdistricts()
+    assert (linked, dropped) == (1, 1)  # the polygon outside every district is removed
+    [taluka] = db.scalars(select(AdminArea).where(AdminArea.level == "subdistrict")).all()
+    barmer = db.scalar(select(AdminArea).where(AdminArea.level == "district"))
+    assert (taluka.name, taluka.parent_id, taluka.district_name, taluka.state_code) == ("Chohtan", barmer.id, "Barmer", "RJ")
+    assert areas.has_level("subdistrict") and [i for i, _ in areas.geometries("subdistrict")] == [taluka.id]

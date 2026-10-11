@@ -54,6 +54,18 @@ class GeoSeedService:
                          "wkt": shape(feature["geometry"]).wkt})
         return self.areas.bulk_insert(rows)
 
+    def load_subdistricts(self, geojson_path, name_prop: str = "shapeName") -> int:
+        """Talukas/tehsils (geoBoundaries IND ADM3). State and parent district are filled by
+        AdminAreaRepository.link_subdistricts, from the district polygon that contains each one."""
+        rows = []
+        for feature in json.loads(Path(geojson_path).read_text(encoding="utf-8"))["features"]:
+            name = (feature.get("properties") or {}).get(name_prop)
+            if not name or not feature.get("geometry"):
+                continue
+            rows.append({"level": "subdistrict", "name": name, "name_norm": self.fp.norm_name(name),
+                         "state_code": "", "wkt": shape(feature["geometry"]).wkt})
+        return self.areas.bulk_insert(rows)
+
     def load_geonames(self, places_txt, admin1_txt) -> int:
         """GeoNames IN.txt: every populated place (feature class P) in India with coordinates and population."""
         admin1 = {}

@@ -22,6 +22,28 @@ class AdminAreaRepository(BaseRepository[AdminArea]):
     def has_any(self) -> bool:
         return self.session.scalar(select(AdminArea.id).limit(1)) is not None
 
+    def has_level(self, level: str) -> bool:
+        return self.session.scalar(select(AdminArea.id).where(AdminArea.level == level).limit(1)) is not None
+
+    def link_subdistricts(self) -> tuple[int, int]:
+        """Give each taluka its parent district, district name and state; drop talukas outside every district
+        (boundary files from different years disagree at the edges). Returns (linked, dropped)."""
+        linked = self.session.execute(text("""
+            UPDATE admin_areas a SET parent_id = d.id, district_name = d.name, state_code = d.state_code
+            FROM admin_areas d
+            WHERE a.level = 'subdistrict' AND a.parent_id IS NULL AND d.level = 'district'
+              AND ST_Intersects(d.geom, ST_PointOnSurface(a.geom))""")).rowcount
+        dropped = self.session.execute(text(
+            "DELETE FROM admin_areas WHERE level = 'subdistrict' AND parent_id IS NULL")).rowcount
+        self.session.flush()
+        return linked, dropped
+
+    def geometries(self, level: str) -> list[tuple[int, bytes]]:
+        """(id, WKB outline) for every area of a level, for raster statistics."""
+        rows = self.session.execute(text("SELECT id, ST_AsBinary(geom) FROM admin_areas WHERE level = :l ORDER BY id"),
+                                    {"l": level}).all()
+        return [(r[0], bytes(r[1])) for r in rows]
+
     def wkt(self, area_id: int) -> str | None:
         """An area's outline as plain WKT (lon/lat), for counting people inside it."""
         return self.session.scalar(text("SELECT ST_AsText(geom) FROM admin_areas WHERE id = :id"), {"id": area_id})

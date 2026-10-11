@@ -42,7 +42,12 @@ class GazetteerResolver:
         if not name:
             return None
         levels = LEVELS_FOR.get(query.precision, ("town", "village", "ward"))
-        candidates = self.areas.find_candidates(name, levels, StateCodes.code(query.state_hint))
+        state = StateCodes.code(query.state_hint)
+        candidates = self.areas.find_candidates(name, levels, state)
+        if not candidates and query.precision == "district":
+            # "Mohol taluka" arrives as district precision: try talukas only when no district has the name,
+            # so a district and a taluka sharing a name (Barmer) never become ambiguous
+            candidates = self.areas.find_candidates(name, ("subdistrict",), state)
         district_matched = False
         if query.district_hint and candidates:
             wanted = self.clean(query.district_hint)
