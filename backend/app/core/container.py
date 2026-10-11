@@ -48,6 +48,7 @@ from app.repositories.geocode_cache_repository import GeocodeCacheRepository
 from app.repositories.indicator_repository import IndicatorRepository
 from app.repositories.map_repository import MapRepository
 from app.repositories.pipeline_run_repository import PipelineRunRepository
+from app.repositories.plan_repository import PlanRepository
 from app.repositories.read_repository import ReadRepository
 from app.repositories.signal_repository import SignalRepository
 from app.repositories.source_domain_repository import SourceDomainRepository
@@ -65,6 +66,7 @@ from app.services.indicator_refresh_service import IndicatorRefreshService
 from app.services.geocoding.resolvers import GazetteerResolver, LocatorResolver, ResolverChain
 from app.services.ingestion_service import IngestionService
 from app.services.map_query_service import MapQueryService
+from app.services.plan_service import PlanService
 from app.services.read_query_service import ReadQueryService
 from app.services.pipeline import (ClassifyStage, DeclarationWatchStage, GeocodeStage, IndicatorStage, IngestStage,
                                    IntelligencePipeline, PipelineOutcome, ZoneStage)
@@ -186,6 +188,9 @@ class Container:
 
     def tender_service(self, session: Session) -> TenderService:
         return TenderService(TenderRepository(session))
+
+    def plan_service(self, session: Session) -> PlanService:
+        return PlanService(PlanRepository(session), self.llm, trend=ReadRepository(session).zone_trend)
 
     def brief_service(self, session: Session) -> BriefService:
         return BriefService(BriefRepository(session), TenderRepository(session), self.tender_service(session),

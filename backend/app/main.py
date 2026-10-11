@@ -6,7 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.gzip import GZipMiddleware
 
 from app.api.error_handlers import register_error_handlers
-from app.api.v1.endpoints import auth, briefs, community, health, live, map, notifications, pipeline, read, tenders
+from app.api.v1.endpoints import auth, briefs, community, health, live, map, notifications, pipeline, plans, read, tenders
 from app.core.config import settings
 from app.core.container import Container
 from app.core.database import init_db
@@ -39,3 +39,4 @@ app.include_router(auth.router)
 app.include_router(notifications.router)
 app.include_router(briefs.router)
 app.include_router(community.router)
+app.include_router(plans.router)
