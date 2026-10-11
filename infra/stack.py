@@ -77,6 +77,8 @@ class PlatformStack(cdk.Stack):
             "GROQ_API_KEY": ecs.Secret.from_secrets_manager(app_secret, "GROQ_API_KEY"),
             "APIFY_TOKEN": ecs.Secret.from_secrets_manager(app_secret, "APIFY_TOKEN"),
             "ADMIN_TOKEN": ecs.Secret.from_secrets_manager(app_secret, "ADMIN_TOKEN"),
+            "JWT_SECRET": ecs.Secret.from_secrets_manager(app_secret, "JWT_SECRET"),
+            "DEMO_PASSWORD": ecs.Secret.from_secrets_manager(app_secret, "DEMO_PASSWORD"),
         }
         service = ecs_patterns.ApplicationLoadBalancedFargateService(
             self, "Api", cluster=cluster, cpu=1024, memory_limit_mib=2048, desired_count=1, min_healthy_percent=100,
@@ -85,7 +87,8 @@ class PlatformStack(cdk.Stack):
             health_check_grace_period=cdk.Duration.seconds(120),
             task_image_options=ecs_patterns.ApplicationLoadBalancedTaskImageOptions(
                 image=image, container_name=CONTAINER, container_port=8000,
-                environment={"DB_NAME": "jal", "RAW_BUCKET": raw.bucket_name, "AWS_REGION": self.region},
+                environment={"DB_NAME": "jal", "RAW_BUCKET": raw.bucket_name, "AWS_REGION": self.region,
+                             "COOKIE_SECURE": "true"},  # HTTPS through CloudFront: session cookies are Secure
                 secrets=secrets,
                 log_driver=ecs.LogDrivers.aws_logs(stream_prefix="api", log_retention=logs.RetentionDays.TWO_WEEKS),
             ),
