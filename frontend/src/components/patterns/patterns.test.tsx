@@ -81,3 +81,16 @@ test("map legend describes watch zones without claiming a source count", async (
   expect(screen.getByText("Watch: not confirmed yet")).toBeInTheDocument();
   expect(screen.queryByText(/one source/)).toBeNull();
 });
+
+test("water supply is a fourth hazard everywhere hazards are listed", async () => {
+  const { HAZARD_LIST, isHazard } = await import("@/lib/hazards");
+  const { HazardSwitch } = await import("@/features/map/HazardSwitch");
+  expect(HAZARD_LIST).toEqual(["drought", "flood", "heat", "water"]);
+  expect(isHazard("water")).toBe(true);
+  expect(isHazard("volcano")).toBe(false);
+  render(<HazardBadge hazard="water" status="active" />);
+  expect(screen.getByText("Water supply")).toBeInTheDocument();
+  render(<HazardSwitch value="water" onChange={() => {}} />);
+  expect(screen.getByRole("button", { name: "Water supply" })).toHaveAttribute("aria-pressed", "true");
+  expect(screen.getAllByRole("button", { pressed: false })).toHaveLength(3);
+});

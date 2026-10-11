@@ -4,7 +4,8 @@ import type { Feature, ZoneProps } from "@/lib/api/types";
 import { APP_NAME } from "@/lib/config";
 import { cn, formatInt, formatPeople } from "@/lib/format";
 import { HAZARD_LIST } from "@/lib/hazards";
-import { useMapZones, useStats } from "@/lib/hooks/queries";
+import { mapZonesQuery, useStats } from "@/lib/hooks/queries";
+import { useQueries } from "@tanstack/react-query";
 import { usePrefersReducedMotion } from "@/lib/motion";
 import type { Ember } from "./Scene";
 
@@ -32,11 +33,10 @@ function hasWebGL(): boolean {
 const isLite = () => window.innerWidth < 768 || (navigator.hardwareConcurrency ?? 8) <= 4;
 
 function useEmbers() {
-  const drought = useMapZones("drought");
-  const flood = useMapZones("flood");
-  const heat = useMapZones("heat");
+  const results = useQueries({ queries: HAZARD_LIST.map(mapZonesQuery) });
+  const data = results.map((r) => r.data);
   return useMemo(() => {
-    const all: Feature<ZoneProps>[] = [drought.data, flood.data, heat.data].flatMap((fc) => fc?.features ?? []);
+    const all: Feature<ZoneProps>[] = data.flatMap((fc) => fc?.features ?? []);
     const embers: Ember[] = all
       .filter((f) => f.properties.centroid)
       .map((f) => ({
@@ -47,7 +47,8 @@ function useEmbers() {
     const top = all.filter((f) => f.properties.centroid).sort((a, b) => b.properties.score - a.properties.score)[0];
     const hotspot = top ? { lon: top.properties.centroid![0], lat: top.properties.centroid![1], name: top.properties.name } : null;
     return { embers, hotspot };
-  }, [drought.data, flood.data, heat.data]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, data);
 }
 
 function Figure({ value, label, className }: { value: string; label: string; className?: string }) {

@@ -17,6 +17,7 @@
   --drought: #e8a33d;
   --flood: #3fb6d8;
   --heat: #f0533a;
+  --water: #9d8cf2; /* supply failure: violet, distinct from flood cyan */
   --success: #7fb592;
   --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
   --dur-1: 120ms;
@@ -37,6 +38,7 @@
   --color-drought: var(--drought);
   --color-flood: var(--flood);
   --color-heat: var(--heat);
+  --color-water: var(--water);
   --color-success: var(--success);
   --font-sans: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "Geist Mono Variable", ui-monospace, monospace;

@@ -15,7 +15,7 @@ export function HazardSwitch({ value, onChange }: { value: Hazard; onChange: (h:
             aria-pressed={active}
             onClick={() => onChange(h)}
             className={cn(
-              "inline-flex h-8 items-center gap-1.5 rounded-[6px] px-3 text-[13px] transition-colors duration-[var(--dur-2)]",
+              "inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-[6px] px-3 text-[13px] transition-colors duration-[var(--dur-2)]",
               active ? "bg-raised text-text" : "text-text-2 hover:text-text",
             )}
           >

@@ -1,7 +1,7 @@
 """Deterministic fixture for the frontend end-to-end tests, in its own database (jal_e2e).
 
 Run: cd backend && uv run python -m scripts.seed_e2e
-Creates the database if needed, empties it, and loads three zones (one per hazard), their posts and history.
+Creates the database if needed, empties it, and loads one zone per hazard, their posts and history.
 Never point this at a database whose name does not end in "_e2e": it deletes every row.
 """
 import os
@@ -55,6 +55,13 @@ ZONES = [
     ("Jaipur", "heat", "town", "watch", 31.0, (75.79, 26.91), ("Jaipur", "RJ", (75.3, 26.5, 76.3, 27.3)), [
         ("x.com", "x", "", "Jaipur hit 46 degrees today, two labourers fainted at the site", "two labourers fainted",
          "Jaipur", 3, 0.4),
+    ]),
+    ("Velachery, Chennai", "water", "urban_pocket", "active", 64.0, (80.22, 12.98),
+     ("Chennai", "TN", (80.0, 12.8, 80.4, 13.25)), [
+        ("thehindu.com", "rss", "Velachery taps dry for a week", "Taps in Velachery have been dry for a week",
+         "Taps in Velachery have been dry for a week", "Velachery", 4, 0.8),
+        ("reddit.com", "reddit", "Paying for tankers again", "Our apartment pays for private tankers every day now",
+         "pays for private tankers every day", "Velachery", 3, 0.4),
     ]),
 ]
 

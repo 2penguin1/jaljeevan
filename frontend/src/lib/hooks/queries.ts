@@ -15,12 +15,13 @@ import type {
 } from "@/lib/api/types";
 
 // Query keys are shared with useLiveEvents, which invalidates them when the server pushes news.
-export const useMapZones = (hazard: Hazard) =>
-  useQuery({
-    queryKey: ["map", "zones", hazard],
-    queryFn: ({ signal }) => apiGet<FeatureCollection<ZoneProps>>("/map/zones", { hazard }, signal),
-    placeholderData: keepPreviousData,
-  });
+export const mapZonesQuery = (hazard: Hazard) => ({
+  queryKey: ["map", "zones", hazard],
+  queryFn: ({ signal }: { signal: AbortSignal }) =>
+    apiGet<FeatureCollection<ZoneProps>>("/map/zones", { hazard }, signal),
+});
+
+export const useMapZones = (hazard: Hazard) => useQuery({ ...mapZonesQuery(hazard), placeholderData: keepPreviousData });
 
 export const useMapDistricts = (hazard: Hazard) =>
   useQuery({

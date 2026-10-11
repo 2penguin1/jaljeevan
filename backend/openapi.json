@@ -205,7 +205,8 @@
               "enum": [
                 "drought",
                 "flood",
-                "heat"
+                "heat",
+                "water"
               ],
               "type": "string",
               "title": "Hazard"
@@ -255,7 +256,8 @@
               "enum": [
                 "drought",
                 "flood",
-                "heat"
+                "heat",
+                "water"
               ],
               "type": "string",
               "title": "Hazard"
@@ -305,7 +307,8 @@
               "enum": [
                 "drought",
                 "flood",
-                "heat"
+                "heat",
+                "water"
               ],
               "type": "string",
               "title": "Hazard"
@@ -431,7 +434,8 @@
                   "enum": [
                     "drought",
                     "flood",
-                    "heat"
+                    "heat",
+                    "water"
                   ],
                   "type": "string"
                 },
@@ -1365,7 +1369,8 @@
             "enum": [
               "drought",
               "flood",
-              "heat"
+              "heat",
+              "water"
             ],
             "title": "Hazard"
           },
@@ -1477,7 +1482,8 @@
             "enum": [
               "drought",
               "flood",
-              "heat"
+              "heat",
+              "water"
             ],
             "title": "Hazard"
           },

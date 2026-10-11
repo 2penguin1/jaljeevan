@@ -18,6 +18,9 @@ test("map: zones load, the hazard switch changes the layer, a zone can be opened
   await expect(page.locator("[data-zone-count]")).toHaveAttribute("data-zone-count", "1");
   await page.getByRole("button", { name: "Heat" }).click();
   await expect(page.getByText("0 active and 1 on watch")).toBeVisible();
+  await page.getByRole("button", { name: "Water supply" }).click();
+  await expect(page).toHaveURL(/hazard=water/);
+  await expect(page.getByText("1 active and 0 on watch")).toBeVisible();
   const feed = page.getByRole("complementary", { name: "Live feed" });
   await expect(feed.getByText("Water entered houses in Danapur, families moving to roofs")).toBeVisible();
   await feed.getByText("No tanker has come for nine days in Mohol").click();
@@ -26,7 +29,7 @@ test("map: zones load, the hazard switch changes the layer, a zone can be opened
 
 test("zones list → zone page shows the evidence and the arithmetic", async ({ page }) => {
   await page.goto("/zones");
-  await expect(page.getByRole("row")).toHaveCount(4); // header + 3 zones
+  await expect(page.getByRole("row")).toHaveCount(5); // header + one zone per hazard
   await page.getByRole("button", { name: "Drought" }).click();
   await expect(page).toHaveURL(/hazard=drought/);
   await page.getByRole("row", { name: /Mohol, Solapur/ }).click();

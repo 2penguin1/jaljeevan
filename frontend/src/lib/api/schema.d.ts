@@ -503,7 +503,7 @@ export interface components {
              * Hazard
              * @enum {string}
              */
-            hazard: "drought" | "flood" | "heat";
+            hazard: "drought" | "flood" | "heat" | "water";
             /** Zone Type */
             zone_type: string;
             /** Status */
@@ -543,7 +543,7 @@ export interface components {
              * Hazard
              * @enum {string}
              */
-            hazard: "drought" | "flood" | "heat";
+            hazard: "drought" | "flood" | "heat" | "water";
             /** Zone Type */
             zone_type: string;
             /** Status */
@@ -689,7 +689,7 @@ export interface operations {
     map_zones_api_v1_map_zones_get: {
         parameters: {
             query: {
-                hazard: "drought" | "flood" | "heat";
+                hazard: "drought" | "flood" | "heat" | "water";
             };
             header?: never;
             path?: never;
@@ -722,7 +722,7 @@ export interface operations {
     map_districts_api_v1_map_districts_get: {
         parameters: {
             query: {
-                hazard: "drought" | "flood" | "heat";
+                hazard: "drought" | "flood" | "heat" | "water";
             };
             header?: never;
             path?: never;
@@ -755,7 +755,7 @@ export interface operations {
     map_signals_api_v1_map_signals_get: {
         parameters: {
             query: {
-                hazard: "drought" | "flood" | "heat";
+                hazard: "drought" | "flood" | "heat" | "water";
                 hours?: number;
             };
             header?: never;
@@ -821,7 +821,7 @@ export interface operations {
     zones_api_v1_zones_get: {
         parameters: {
             query?: {
-                hazard?: ("drought" | "flood" | "heat") | null;
+                hazard?: ("drought" | "flood" | "heat" | "water") | null;
                 status?: ("watch" | "active" | "approved" | "resolving") | null;
             };
             header?: never;

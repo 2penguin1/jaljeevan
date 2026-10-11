@@ -12,7 +12,7 @@ export function Segmented<T extends string>({ label, value, options, onChange, c
   className?: string;
 }) {
   return (
-    <div role="group" aria-label={label} className={cn("inline-flex rounded-[8px] border hairline bg-surface p-1", className)}>
+    <div role="group" aria-label={label} className={cn("inline-flex max-w-full overflow-x-auto rounded-[8px] border hairline bg-surface p-1", className)}>
       {options.map(({ value: v, label: text, icon: Icon, color }) => {
         const active = v === value;
         return (
@@ -22,7 +22,7 @@ export function Segmented<T extends string>({ label, value, options, onChange, c
             aria-pressed={active}
             onClick={() => onChange(v)}
             className={cn(
-              "inline-flex h-7 items-center gap-1.5 rounded-[6px] px-2.5 text-[13px] transition-colors duration-[var(--dur-1)]",
+              "inline-flex h-7 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-[6px] px-2.5 text-[13px] transition-colors duration-[var(--dur-1)]",
               active ? "bg-raised text-text" : "text-text-2 hover:text-text",
             )}
           >

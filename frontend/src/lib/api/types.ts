@@ -2,7 +2,7 @@ import type { components } from "./schema";
 
 type S = components["schemas"];
 
-export type Hazard = "drought" | "flood" | "heat";
+export type Hazard = S["ZoneSummary"]["hazard"]; // generated from the backend: one source of truth
 export type ZoneStatus = "watch" | "active" | "approved" | "resolving";
 
 export type FeedItem = S["FeedItem"];
