@@ -27,6 +27,7 @@ class Settings(BaseSettings):
     chirps_base_url: str = "https://data.chc.ucsb.edu/products/SPI/CHIRPS3"
     gdo_soil_base_url: str = ("https://jeodpp.jrc.ec.europa.eu/ftp/jrc-opendata/DROUGHTOBS/Drought_Observatories_datasets/"
                               "GDO_Soil_Moisture_Anomaly/ver3-0-1/")
+    hf_token: str | None = None  # Hugging Face read token, for the gated IndicTrans2 model
     max_post_age_days: int = 30
     admin_token: str | None = None  # admin API stays locked until ADMIN_TOKEN is configured
 

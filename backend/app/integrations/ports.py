@@ -54,3 +54,9 @@ class PopulationGrid(Protocol):
     """People living inside a polygon (WKT, lon/lat). None when no grid is available."""
 
     def count(self, wkt: str) -> PopulationCount | None: ...
+
+
+class Translator(Protocol):
+    """Indic text -> English (src_lang like "mr" for Marathi)."""
+
+    def translate(self, texts: list[str], src_lang: str = "mr") -> list[str]: ...

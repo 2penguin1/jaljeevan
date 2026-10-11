@@ -26,6 +26,12 @@ class AdminAreaRepository(BaseRepository[AdminArea]):
         return list(self.session.scalars(select(AdminArea.id).where(AdminArea.level == "district",
                                                                     AdminArea.name_norm == name_norm)))
 
+    def talukas(self, state_code: str) -> list[tuple[int, str, str | None]]:
+        """(id, name, district) of every taluka in a state, for matching names in official orders."""
+        rows = self.session.execute(select(AdminArea.id, AdminArea.name, AdminArea.district_name).where(
+            AdminArea.level == "subdistrict", AdminArea.state_code == state_code)).all()
+        return [(r.id, r.name, r.district_name) for r in rows]
+
     def has_level(self, level: str) -> bool:
         return self.session.scalar(select(AdminArea.id).where(AdminArea.level == level).limit(1)) is not None
 

@@ -1,0 +1,40 @@
+import pytest
+
+from app.domain.declarations import (TalukaMatcher, latin_key, looks_garbled, severity_from_text, transliterate)
+
+TALUKAS = [(1, "Mohol", "Solapur"), (2, "Akkalkot", "Solapur"), (3, "Sangola", "Solapur"),
+           (4, "Mohol", "Elsewhere"), (5, "Barshi", "Solapur")]
+
+
+@pytest.mark.parametrize("marathi, english", [
+    ("सोलापूर", "Solapur"),
+    ("मोहोळ", "Mohol"),
+    ("अक्कलकोट", "Akkalkot"),
+    ("बार्शी", "Barshi"),
+])
+def test_marathi_names_transliterate_close_to_their_english_spelling(marathi, english):
+    from rapidfuzz import fuzz
+    assert fuzz.ratio(latin_key(transliterate(marathi)), latin_key(english)) >= 85
+
+
+def test_matcher_prefers_the_named_district_and_scores_confidence():
+    m = TalukaMatcher(TALUKAS)
+    hit = m.match("मोहोळ", district="Solapur")
+    assert hit.area_id == 1 and hit.score >= 85
+    assert m.match("अक्कलकोट").area_id == 2
+    assert m.match("Sangola").area_id == 3                 # English names work too (Karnataka lists)
+    weak = m.match("पुणे")                                  # not in the list
+    assert weak is None or weak.score < m.ACCEPT
+
+
+def test_severity_words_after_translation():
+    assert severity_from_text("Severe drought has been declared in these talukas") == "severe"
+    assert severity_from_text("Serious drought") == "severe"
+    assert severity_from_text("moderate drought") == "moderate"
+    assert severity_from_text("Drought declared") is None
+
+
+def test_garbled_pdf_text_is_detected_so_ocr_can_take_over():
+    assert looks_garbled("ÌÉÉåÉ uÉÑ¹ÉÉ ºÉÉåsÉÉ ´ÉÉ¶É") is True     # legacy-font Marathi extracted as Latin-1 junk
+    assert looks_garbled("सोलापूर जिल्ह्यातील मोहोळ तालुका") is False
+    assert looks_garbled("Drought declared in 265 talukas") is False
