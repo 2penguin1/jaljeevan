@@ -156,3 +156,24 @@ def test_offers_and_messages_are_only_shown_to_the_officer_and_that_bid_s_vendor
     own = service.detail(tender_id, viewer=users["cheap"])["bids"][0]
     assert own["offer"]["price_per_unit"] == 60 and any("58" in m["body"] for m in own["messages"])
     assert service.detail(tender_id, viewer=users["officer"])["bids"][1]["offer"] is not None
+
+
+def _notes(db, user):
+    from app.models import Notification
+    return [n.payload["text"] for n in db.query(Notification).filter_by(user_id=user.id).order_by(Notification.created_at)]
+
+
+def test_invited_vendors_hear_about_a_new_tender_and_each_side_hears_the_other(setup, db):
+    service, zone, users = setup
+    tender_id = publish(service, zone, users)
+    assert any("New tender" in t and "Akkalkot" in t for t in _notes(db, users["cheap"]))
+    assert _notes(db, users["far"]) == []          # not invited, not told
+    assert _notes(db, users["officer"]) == []      # never told about their own action
+    bid = service.detail(tender_id, viewer=users["officer"])["bids"][0]
+    service.act(tender_id, bid["id"], users["cheap"], "counter", expected_version=1, price_per_unit=64, qty_per_day=100)
+    assert any("countered" in t for t in _notes(db, users["officer"]))
+    service.message(tender_id, bid["id"], users["officer"], "Fine by us")
+    assert any("Fine by us" in t for t in _notes(db, users["cheap"]))
+    assert not any("Fine by us" in t for t in _notes(db, users["pricey"]))  # a rival never hears about it
+    service.raise_price(tender_id, users["officer"], 70)
+    assert any("raised the price" in t for t in _notes(db, users["pricey"]))

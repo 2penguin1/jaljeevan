@@ -12,16 +12,20 @@ from app.domain.bids import BidRules
 from app.domain.matching import Vendor, match_vendors, suggested_price
 from app.domain.relief import ReliefNeed, relief_need
 from app.models import Bid, BidMessage, BidOffer, Tender, User
+from app.repositories.notification_repository import NotificationRepository
 from app.repositories.tender_repository import TenderRepository
+from app.services.notification_service import NotificationService
 
 SIDE_NAME = {"gov": "Government", "vendor": "Vendor"}
 OPEN = ("invited", "countered")
 
 
 class TenderService:
-    def __init__(self, repo: TenderRepository, rules: BidRules | None = None):
+    def __init__(self, repo: TenderRepository, rules: BidRules | None = None,
+                 notifications: NotificationService | None = None):
         self.repo = repo
         self.rules = rules or BidRules()
+        self.notifications = notifications or NotificationService(NotificationRepository(repo.session))
 
     # -- reads ----------------------------------------------------------------------------------------------------
     def relief_need(self, zone_id: uuid.UUID, share: float = 0.10) -> ReliefNeed:
@@ -87,6 +91,9 @@ class TenderService:
             self.repo.add(BidMessage(created_at=datetime.now(timezone.utc), bid_id=bid.id, side="system", offer_id=offer.id,
                                      body=f"Invited: {match.reason}. Opening offer {qty:g} kL a day at "
                                           f"₹{price_per_unit:g}/kL for {duration_days} days."))
+            self.notifications.tell_org(vendor.key, "tender_invite",
+                                        f"New tender: {qty:g} kL a day near {zone.name} at ₹{price_per_unit:g}/kL "
+                                        f"for {duration_days} days", tender.id, actor.id)
         return tender.id
 
     def act(self, tender_id: uuid.UUID, bid_id: uuid.UUID, actor: User, action: str, expected_version: int,
@@ -117,6 +124,7 @@ class TenderService:
             body = f"{SIDE_NAME[side]} declined" + (f" ({note})" if note else "")
         bid.status, bid.turn, bid.version = status, turn, bid.version + 1
         self.repo.add(BidMessage(created_at=datetime.now(timezone.utc), bid_id=bid.id, side="system", body=body, offer_id=offer.id))
+        self._tell_other_side(tender, bid, side, body, actor)
 
     def message(self, tender_id: uuid.UUID, bid_id: uuid.UUID, actor: User, body: str) -> None:
         """A note in the bid thread from either party; whose turn it is does not change."""
@@ -126,6 +134,7 @@ class TenderService:
         if not text:
             raise DomainValidationError("a message cannot be empty")
         self.repo.add(BidMessage(created_at=datetime.now(timezone.utc), bid_id=bid.id, side=side, author_id=actor.id, body=text[:1000]))
+        self._tell_other_side(self._tender(tender_id), bid, side, f"{actor.name}: {text[:200]}", actor)
 
     def raise_price(self, tender_id: uuid.UUID, actor: User, price_per_unit: float) -> None:
         """A higher government price for every open bid: a new offer each, and it is the vendors' move again."""
@@ -146,6 +155,7 @@ class TenderService:
             self.repo.add(BidMessage(created_at=datetime.now(timezone.utc), bid_id=bid.id, side="system", offer_id=offer.id,
                                      body=f"Government raised the price to ₹{price_per_unit:g}/kL "
                                           f"for {latest.qty_per_day:g} kL a day"))
+            self._tell_other_side(tender, bid, "gov", f"Government raised the price to ₹{price_per_unit:g}/kL", actor)
         tender.price_per_unit = price_per_unit
         tender.version += 1
 
@@ -154,6 +164,16 @@ class TenderService:
     def _officer(actor: User) -> None:
         if actor.role != "gov_admin":
             raise ForbiddenError("only a relief officer can do this")
+
+    def _tell_other_side(self, tender: Tender, bid: Bid, side: str, text: str, actor: User) -> None:
+        zone = self.repo.zone(tender.zone_id)
+        where = zone.name if zone else "your tender"
+        if side == "vendor":
+            vendor = self.repo.org(bid.vendor_org_id)
+            self.notifications.tell_org(tender.gov_org_id, "bid_update", f"{where}, {vendor.name if vendor else 'vendor'}: "
+                                        f"{text}", tender.id, actor.id)
+        else:
+            self.notifications.tell_org(bid.vendor_org_id, "bid_update", f"{where}: {text}", tender.id, actor.id)
 
     @staticmethod
     def _party(viewer: User | None, bid: Bid) -> bool:
