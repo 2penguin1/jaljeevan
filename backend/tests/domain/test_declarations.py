@@ -142,3 +142,8 @@ def test_a_first_word_alias_must_not_look_like_another_taluka():
     m = TalukaMatcher([(1, "Sindkhede", "Dhule"), (2, "Sindkhed Raja", "Buldana")])
     hit = m.match("ससदखेडा")  # सिंदखेडा = Sindkhede (Dhule); "Sindkhed" alone must not mean Sindkhed Raja
     assert hit.name == "Sindkhede" or hit.score < m.ACCEPT
+
+
+def test_kannada_script_names_transliterate_and_match():
+    m = TalukaMatcher([(1, "Gadag", "Gadag"), (2, "Gokak", "Belgaum")])
+    assert (m.match("ಗದಗ").name, m.match("ಗದಗ").score >= m.ACCEPT) == ("Gadag", True)

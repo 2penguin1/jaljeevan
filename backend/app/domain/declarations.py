@@ -18,9 +18,16 @@ _LATIN1_JUNK = re.compile(r"[À-ÿ]")
 _SPECIAL = str.maketrans({"ś": "sh", "ṣ": "sh", "ḻ": "l", "ḷ": "l", "ṃ": "n", "ṅ": "n", "ñ": "n", "ṇ": "n"})
 
 
+# Indian scripts sit in consecutive 128-letter Unicode blocks from U+0900; official orders of other states use these
+_SCRIPTS = {0x0900: sanscript.DEVANAGARI, 0x0980: sanscript.BENGALI, 0x0A00: sanscript.GURMUKHI,
+            0x0A80: sanscript.GUJARATI, 0x0B00: sanscript.ORIYA, 0x0B80: sanscript.TAMIL, 0x0C00: sanscript.TELUGU,
+            0x0C80: sanscript.KANNADA, 0x0D00: sanscript.MALAYALAM}
+
+
 def transliterate(text: str) -> str:
-    """Devanagari -> IAST Latin; other text is returned unchanged."""
-    return sanscript.transliterate(text, sanscript.DEVANAGARI, sanscript.IAST) if _DEVANAGARI.search(text) else text
+    """Indian-script text (Marathi, Kannada, Telugu, ...) -> IAST Latin; other text is returned unchanged."""
+    block = next((ord(c) & ~0x7F for c in text if 0x0900 <= ord(c) < 0x0D80), None)
+    return sanscript.transliterate(text, _SCRIPTS[block], sanscript.IAST) if block is not None else text
 
 
 # Government PDFs often use fonts whose glyphs map to the wrong Unicode letters when text is extracted. Seen in
