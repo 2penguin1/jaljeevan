@@ -1,6 +1,6 @@
-from datetime import date
+from datetime import date, datetime
 
-from sqlalchemy import BigInteger, Boolean, Date, Float, ForeignKey, Index, Integer, String, Text, UniqueConstraint
+from sqlalchemy import BigInteger, Boolean, Date, DateTime, Float, ForeignKey, Index, Integer, String, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -69,6 +69,37 @@ class DroughtDeclaration(Base):
     order_ref: Mapped[str | None] = mapped_column(Text)
     source_url: Mapped[str | None] = mapped_column(Text)
     __table_args__ = (UniqueConstraint("area_id", "declared_on"),)
+
+
+class DeclarationSource(Base):
+    """One news article or official PDF the declaration watch read (read once; failed ones get one retry)."""
+
+    __tablename__ = "declaration_sources"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    url: Mapped[str] = mapped_column(Text, unique=True)
+    domain: Mapped[str] = mapped_column(String(200))
+    kind: Mapped[str] = mapped_column(String(12))  # news | official
+    state_code: Mapped[str | None] = mapped_column(String(4))  # boundary pool of the talukas it named
+    title: Mapped[str | None] = mapped_column(Text)
+    published_on: Mapped[date] = mapped_column(Date)
+    # listed | no_list | not_declaration | state_unclear | failed | blocked
+    status: Mapped[str] = mapped_column(String(20), index=True)
+    attempts: Mapped[int] = mapped_column(Integer, default=1)
+    checked_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    list_fingerprint: Mapped[int | None] = mapped_column(BigInteger)  # simhash of its list sentences (wire copies)
+
+
+class DeclarationMention(Base):
+    """A taluka named as declared by one source: the 'who said what' record behind every news-based declaration."""
+
+    __tablename__ = "declaration_mentions"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    source_id: Mapped[int] = mapped_column(ForeignKey("declaration_sources.id", ondelete="CASCADE"), index=True)
+    area_id: Mapped[int] = mapped_column(ForeignKey("admin_areas.id"), index=True)
+    score: Mapped[float] = mapped_column(Float)
+    severity: Mapped[str | None] = mapped_column(String(12))  # moderate | severe | None = not stated
+    text: Mapped[str] = mapped_column(Text)  # the name as written
+    __table_args__ = (UniqueConstraint("source_id", "area_id"),)
 
 
 class SourceDomain(Base):

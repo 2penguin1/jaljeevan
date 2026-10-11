@@ -1,0 +1,125 @@
+"""Daily watch for state drought declarations in the news: search -> read each new article (and any official PDF it
+links) -> keep only sentences that declare -> find the state -> store which source named which taluka.
+
+Nothing here declares a taluka; DeclarationPromoter applies the safety rule (1 official order or 2 independent news
+sites) to the stored mentions.
+"""
+import io
+import logging
+import re
+from collections.abc import Callable
+from datetime import date, datetime
+from urllib.parse import urlsplit
+
+import trafilatura
+
+from app.domain.declaration_states import WATCH_STATES, declares, list_sentences, pick_state
+from app.domain.declarations import TalukaMatcher, severity_from_text
+from app.domain.text import TextFingerprinter
+from app.integrations.declaration_news import FetchBlocked, FetchFailed
+from app.integrations.pdf_text import pdf_lines
+from app.models import DeclarationSource
+from app.repositories.admin_area_repository import AdminAreaRepository
+from app.repositories.declaration_source_repository import DeclarationSourceRepository
+from app.services.declaration_extractor import REVIEW_FROM
+
+LOG = logging.getLogger(__name__)
+# links to official orders inside an article: government (.gov.in / .nic.in) PDFs only
+_OFFICIAL_PDF = re.compile(r"""href=["'](https?://[^"'\s]+\.(?:gov|nic)\.in/[^"'\s]*?\.pdf)["']""", re.I)
+
+
+def html_text(body: bytes) -> str:
+    return trafilatura.extract(body.decode("utf-8", "replace")) or ""
+
+
+def pdf_text(body: bytes) -> list[str]:
+    return pdf_lines(io.BytesIO(body), "en")
+
+
+class DeclarationWatchService:
+    def __init__(self, search, fetcher, sources: DeclarationSourceRepository, areas: AdminAreaRepository,
+                 fingerprinter: TextFingerprinter, html_text: Callable[[bytes], str] = html_text,
+                 pdf_text: Callable[[bytes], list[str]] = pdf_text):
+        self.search = search
+        self.fetcher = fetcher
+        self.sources = sources
+        self.areas = areas
+        self.fingerprinter = fingerprinter
+        self.html_text = html_text
+        self.pdf_text = pdf_text
+        self._matchers: dict[str, TalukaMatcher] = {}
+
+    def run(self, now: datetime) -> dict:
+        hits = self.search.search()  # a GDELT failure stops this run only; the stage records it
+        queue: list[tuple[str, str, str | None, date]] = [(h.url, "news", h.title, h.published_on) for h in hits]
+        queue += [(s.url, s.kind, s.title, s.published_on) for s in self.sources.retryable()]
+        stats = {"hits": len(hits), "new": 0, "listed": 0, "mentions": 0, "by_status": {}}
+        done: set[str] = set()
+        while queue:
+            url, kind, title, published_on = queue.pop(0)
+            existing = self.sources.get_by_url(url)
+            if url in done or (existing is not None and not self._retry(existing)):
+                continue
+            done.add(url)
+            stats["new"] += existing is None
+            source, links, mentions = self._read(url, kind, title, published_on, now, existing)
+            queue += [(link, "official", title, published_on) for link in links]
+            stats["by_status"][source.status] = stats["by_status"].get(source.status, 0) + 1
+            stats["listed"] += source.status == "listed"
+            stats["mentions"] += mentions
+        return stats
+
+    def _retry(self, source: DeclarationSource) -> bool:
+        return source.status == "failed" and source.attempts < self.sources.MAX_ATTEMPTS
+
+    def _read(self, url: str, kind: str, title: str | None, published_on: date, now: datetime,
+              existing: DeclarationSource | None) -> tuple[DeclarationSource, list[str], int]:
+        source = existing or DeclarationSource(url=url, domain=urlsplit(url).hostname or "", kind=kind, title=title,
+                                               published_on=published_on, attempts=0)
+        source.attempts = (source.attempts or 0) + 1
+        source.checked_at = now
+        links: list[str] = []
+        rows: list[dict] = []
+        try:
+            fetched = self.fetcher.get(url, expect_pdf=kind == "official")
+        except FetchBlocked:
+            source.status = "blocked"
+        except FetchFailed as exc:
+            LOG.info("declaration source failed: %s", exc)
+            source.status = "failed"
+        else:
+            if kind == "official":
+                text = "\n".join(self.pdf_text(fetched.body))
+            else:
+                text = self.html_text(fetched.body)
+                links = _OFFICIAL_PDF.findall(fetched.body.decode("utf-8", "replace"))
+            source.status, source.state_code, source.list_fingerprint, rows = self._mentions(f"{title or ''}\n{text}")
+        self.sources.save(source)
+        self.sources.add_mentions(source.id, rows)
+        return source, links, len(rows)
+
+    def _mentions(self, text: str) -> tuple[str, str | None, int | None, list[dict]]:
+        sentences = list_sentences(text)
+        if not sentences:
+            return ("no_list" if declares(text) else "not_declaration"), None, None, []
+        items = [(s, name) for s in sentences for name in s.names]
+        counts, hits = {}, {}
+        for pool in {s.pool for s in WATCH_STATES}:
+            matcher = self._matcher(pool)
+            hits[pool] = [(s, name, matcher.match(name)) for s, name in items]
+            accepted = sum(1 for *_, h in hits[pool] if h is not None and h.score >= TalukaMatcher.ACCEPT)
+            if accepted:
+                counts[pool] = (accepted, len(items))
+        state = pick_state(counts, text)
+        if state is None:
+            return "state_unclear", None, None, []
+        rows = [{"area_id": h.area_id, "score": round(h.score, 1), "text": name,
+                 "severity": severity_from_text(s.text)}
+                for s, name, h in hits[state.pool] if h is not None and h.score >= REVIEW_FROM]
+        fingerprint = self.fingerprinter.simhash(" ".join(s.text for s in sentences))
+        return "listed", state.pool, fingerprint, rows
+
+    def _matcher(self, pool: str) -> TalukaMatcher:
+        if pool not in self._matchers:
+            self._matchers[pool] = TalukaMatcher(self.areas.talukas(pool))
+        return self._matchers[pool]

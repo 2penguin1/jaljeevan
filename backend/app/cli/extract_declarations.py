@@ -19,7 +19,8 @@ from pathlib import Path
 from app.core.config import settings
 from app.core.database import init_db, session_scope
 from app.core.exceptions import ExternalServiceError
-from app.domain.declarations import TalukaMatcher, looks_garbled
+from app.domain.declarations import TalukaMatcher
+from app.integrations.pdf_text import pdf_lines
 from app.repositories.admin_area_repository import AdminAreaRepository
 from app.services.declaration_extractor import DeclarationExtractor, Extraction
 
@@ -27,33 +28,6 @@ LOG = logging.getLogger(__name__)
 OUT_DIR = Path(__file__).resolve().parents[1] / "data" / "declarations"
 COLUMNS = ["state_code", "district", "taluka", "area_id", "declared_on", "severity", "order_ref", "source_url",
            "confidence", "source_text"]
-
-
-def pdf_lines(path: Path, lang: str) -> list[str]:
-    """Text lines of a PDF. Pages typed in old fonts (garbled text) are read with local OCR when available."""
-    import pdfplumber
-
-    lines: list[str] = []
-    with pdfplumber.open(path) as pdf:
-        for number, page in enumerate(pdf.pages, start=1):
-            text = page.extract_text() or ""
-            if looks_garbled(text) or not text.strip():
-                text = _ocr(page, lang) or text
-                if looks_garbled(text):
-                    LOG.warning("page %d: text is garbled and OCR is unavailable; skipped", number)
-                    continue
-            lines += text.splitlines()
-    return lines
-
-
-def _ocr(page, lang: str) -> str | None:
-    try:
-        import pytesseract
-        image = page.to_image(resolution=300).original
-        return pytesseract.image_to_string(image, lang={"mr": "mar", "hi": "hin", "kn": "kan"}.get(lang, "eng"))
-    except Exception as exc:  # noqa: BLE001 - OCR is optional (needs the Tesseract program + language data)
-        LOG.warning("OCR unavailable (%s): install Tesseract with the Marathi language pack", type(exc).__name__)
-        return None
 
 
 def write(result: Extraction, out: Path) -> tuple[Path, Path]:
