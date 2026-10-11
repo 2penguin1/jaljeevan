@@ -32,6 +32,7 @@ from app.integrations.imd import ImdDistrictRainfall
 from app.integrations.population import WorldPopGrid
 from app.integrations.soil import GdoSoilMoistureAnomaly
 from app.integrations.article import ArticleExtractor
+from app.integrations.declaration_news import DeclarationNewsSearch, PoliteFetcher
 from app.integrations.ports import LLMClient, RawArchive
 from app.integrations.sources.gdelt import GdeltFetcher
 from app.integrations.sources.registry import FetcherRegistry
@@ -41,6 +42,7 @@ from app.integrations.weather import OpenMeteoProvider
 from app.repositories.admin_area_repository import AdminAreaRepository
 from app.repositories.area_indicator_repository import AreaIndicatorRepository
 from app.repositories.declaration_repository import DeclarationRepository
+from app.repositories.declaration_source_repository import DeclarationSourceRepository
 from app.repositories.geocode_cache_repository import GeocodeCacheRepository
 from app.repositories.indicator_repository import IndicatorRepository
 from app.repositories.map_repository import MapRepository
@@ -50,6 +52,8 @@ from app.repositories.signal_repository import SignalRepository
 from app.repositories.source_domain_repository import SourceDomainRepository
 from app.repositories.zone_repository import ZoneRepository
 from app.services.classification_service import ClassificationService
+from app.services.declaration_promoter import DeclarationPromoter
+from app.services.declaration_watch import DeclarationWatchService
 from app.services.credibility_resolver import CredibilityResolver
 from app.services.event_bus import EventBus
 from app.services.geocoding.geocoding_service import GeocodingService
@@ -59,8 +63,8 @@ from app.services.geocoding.resolvers import GazetteerResolver, LocatorResolver,
 from app.services.ingestion_service import IngestionService
 from app.services.map_query_service import MapQueryService
 from app.services.read_query_service import ReadQueryService
-from app.services.pipeline import (ClassifyStage, GeocodeStage, IndicatorStage, IngestStage, IntelligencePipeline,
-                                   PipelineOutcome, ZoneStage)
+from app.services.pipeline import (ClassifyStage, DeclarationWatchStage, GeocodeStage, IndicatorStage, IngestStage,
+                                   IntelligencePipeline, PipelineOutcome, ZoneStage)
 from app.services.subscribers import AlertLogSubscriber, LiveFeedNotifier
 from app.services.weather_service import WeatherService
 from app.services.zone_detection_service import ZoneDetectionService
@@ -188,6 +192,15 @@ class Container:
                                        GdoSoilMoistureAnomaly(self.http, s.gdo_soil_base_url), self.population,
                                        imd=ImdDistrictRainfall(self.http), indicators=IndicatorRepository(session))
 
+    USER_AGENT = "jal-hackathon/0.1 (drought declarations watch)"
+
+    def declaration_watch_stage(self, session: Session, force: bool = False) -> DeclarationWatchStage:
+        sources = DeclarationSourceRepository(session)
+        watch = DeclarationWatchService(DeclarationNewsSearch(self.http), PoliteFetcher(self.http, self.USER_AGENT),
+                                        sources, AdminAreaRepository(session), self.fingerprinter)
+        promoter = DeclarationPromoter(sources, DeclarationRepository(session), self.fingerprinter)
+        return DeclarationWatchStage(watch, promoter, PipelineRunRepository(session), force=force)
+
     def pipeline(self, session: Session) -> IntelligencePipeline:
         signals = SignalRepository(session)
         ingestion = IngestionService(signals, CredibilityResolver(SourceDomainRepository(session)), self.prefilter,
@@ -195,6 +208,7 @@ class Container:
         weather = WeatherService(IndicatorRepository(session), OpenMeteoProvider(self.http))
         stages = [IngestStage(self.registry, ingestion, ArticleExtractor(self.http), weather),
                   IndicatorStage(self.indicator_refresh_service(session)),
+                  self.declaration_watch_stage(session),
                   ClassifyStage(self.classification_service(session), signals),
                   GeocodeStage(self.geocoding_service(session), signals),
                   ZoneStage(self.zone_detection_service(session))]

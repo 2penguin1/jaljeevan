@@ -202,3 +202,59 @@ def test_the_same_publisher_on_www_and_mobile_hosts_is_one_source(db, areas):
     service.run(NOW)
     promote(db)
     assert declared(db) == {}
+
+
+class CountingWatch:
+    def __init__(self):
+        self.runs = 0
+
+    def run(self, now):
+        self.runs += 1
+        return {"hits": 0}
+
+
+class CountingPromoter:
+    def promote(self, now):
+        return {"declared": {}, "waiting": 0}
+
+
+def test_the_stage_runs_at_most_once_every_20_hours(db):
+    from app.models import PipelineRun
+    from app.repositories.pipeline_run_repository import PipelineRunRepository
+    from app.services.pipeline import DeclarationWatchStage, PipelineContext
+
+    runs = PipelineRunRepository(db)
+    db.add(PipelineRun(kind="local", started_at=NOW - timedelta(hours=5), finished_at=NOW - timedelta(hours=5),
+                       stats={"watch": {"error": "ExternalServiceError: gdelt down"}}))  # a failed watch: not counted
+    db.flush()
+    watch_, stage_args = CountingWatch(), {}
+    stage = DeclarationWatchStage(watch_, CountingPromoter(), runs)
+    ctx = PipelineContext(now=NOW, run_id="r1")
+    stage.run(ctx)
+    assert watch_.runs == 1 and ctx.stats["watch"]["promoted"] == {"declared": {}, "waiting": 0}
+    db.add(PipelineRun(kind="local", started_at=NOW - timedelta(hours=3), finished_at=NOW - timedelta(hours=3),
+                       stats={"watch": {"hits": 12}}))
+    db.flush()
+    ctx = PipelineContext(now=NOW, run_id="r2")
+    stage.run(ctx)
+    assert watch_.runs == 1 and ctx.stats["watch"] == {"skipped": "ran 3h ago"}
+    DeclarationWatchStage(watch_, CountingPromoter(), runs, force=True).run(PipelineContext(now=NOW, run_id="r3"))
+    later = PipelineContext(now=NOW + timedelta(hours=21), run_id="r4")
+    stage.run(later)
+    assert watch_.runs == 3
+
+
+def test_the_review_list_has_what_is_named_but_not_declared(db, areas):
+    from app.cli.declaration_review import review_rows
+    pages = {"https://www.siasat.com/a": html(SIASAT), "https://www.deccanherald.com/b": html(DH)}
+    service, _ = watch(db, [hit("https://www.siasat.com/a", date(2026, 10, 2)),
+                            hit("https://www.deccanherald.com/b", date(2026, 10, 1))], pages)
+    service.run(NOW)
+    promote(db)  # Gadag, Ron, Gokak declared; Mundargi (siasat only) and Indi (DH only) wait
+    rows = review_rows(db, NOW)
+    assert {(r["taluka"], r["source_url"]) for r in rows} == {("Mundargi", "https://www.siasat.com/a"),
+                                                               ("Indi", "https://www.deccanherald.com/b")}
+    mundargi = next(r for r in rows if r["taluka"] == "Mundargi")
+    assert mundargi["state_code"] == "KA" and mundargi["district"] == "Gadag" and mundargi["area_id"] == areas["Mundargi"]
+    assert mundargi["severity"] == "unknown" and mundargi["declared_on"] == "2026-10-02"
+    assert mundargi["order_ref"] == "news: 1 source (check before loading)"

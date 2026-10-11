@@ -117,4 +117,5 @@ def test_drought_data_sources_failing_never_stop_the_run(db, tmp_path):
     outcome = container(tmp_path, [FakeFetcher("gdelt", news())]).pipeline(db).run(NOW)  # all HTTP returns 503
     stats = outcome.run.stats
     assert "error" in stats["indicators"]["chirps-spi"] and "error" in stats["indicators"]["gdo-soil"]
+    assert "error" in stats["watch"]  # declaration news unreachable: recorded, the run goes on
     assert stats["zones"]["created"] == 1

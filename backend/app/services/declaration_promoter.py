@@ -12,6 +12,7 @@ from app.domain.text import TextFingerprinter
 from app.models import DeclarationMention, DeclarationSource
 from app.repositories.declaration_repository import DeclarationRepository
 from app.repositories.declaration_source_repository import DeclarationSourceRepository
+from app.services.declaration_extractor import REVIEW_FROM
 
 SEASON = timedelta(days=120)
 NEWS_SOURCES_NEEDED = 2
@@ -51,6 +52,21 @@ class DeclarationPromoter:
                                      (officials[0] if officials else first).url)
             declared[state] += 1
         return {"declared": dict(declared), "waiting": waiting}
+
+    def pending(self, now: datetime) -> list[tuple[DeclarationMention, DeclarationSource, int]]:
+        """Talukas named this season but not declared (one source only, or a doubtful match), for a person to check:
+        (best mention, its source, number of independent sources)."""
+        since = now.date() - SEASON
+        already = self.declarations.active(since)
+        by_area: dict[int, list[tuple[DeclarationMention, DeclarationSource]]] = defaultdict(list)
+        for mention, source in self.sources.mentions(since, min_score=REVIEW_FROM):
+            if mention.area_id not in already:
+                by_area[mention.area_id].append((mention, source))
+        out = []
+        for rows in by_area.values():
+            mention, source = max(rows, key=lambda r: (r[0].score, -r[1].id))
+            out.append((mention, source, len(self.independent([s for _, s in rows if s.kind == "news"]))))
+        return out
 
     def independent(self, news: list[DeclarationSource]) -> list[DeclarationSource]:
         """Earliest first; a source counts only if its website and its list text are new (wire copies are one)."""

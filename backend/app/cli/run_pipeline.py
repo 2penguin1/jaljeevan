@@ -15,7 +15,7 @@ from app.core.database import init_db
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--skip", nargs="*", default=[], choices=["ingest", "indicators", "classify", "geocode", "zones"])
+    parser.add_argument("--skip", nargs="*", default=[], choices=["ingest", "indicators", "watch", "classify", "geocode", "zones"])
     parser.add_argument("--no-locator", action="store_true", help="disable the Amazon Location fallback")
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
