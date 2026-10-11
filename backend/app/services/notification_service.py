@@ -10,10 +10,10 @@ class NotificationService:
     def __init__(self, repo: NotificationRepository):
         self.repo = repo
 
-    def tell_org(self, org_id: uuid.UUID | None, kind: str, text: str, tender_id: uuid.UUID,
-                 actor_id: uuid.UUID | None) -> None:
+    def tell_org(self, org_id: uuid.UUID | None, kind: str, text: str, subject_id: uuid.UUID,
+                 actor_id: uuid.UUID | None, link: str | None = None) -> None:
         now = datetime.now(timezone.utc)
-        payload = {"tender_id": str(tender_id), "text": text[:300], "link": f"/tenders/{tender_id}"}
+        payload = {"subject_id": str(subject_id), "text": text[:300], "link": link or f"/tenders/{subject_id}"}
         self.repo.add_all([Notification(user_id=uid, kind=kind, payload=payload, created_at=now)
                            for uid in self.repo.org_user_ids(org_id) if uid != actor_id])
 
