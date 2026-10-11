@@ -8,6 +8,7 @@ from app.domain.hazards import HazardPolicies, HazardPolicy
 from app.domain.lifecycle import APPROVED, ACTIVE, WATCH, ZoneStateMachine
 from app.domain.scoring import EvidenceSignal, ZoneScorer
 from app.domain.zones import ZoneTypeClassifier
+from app.integrations.ports import PopulationGrid
 from app.models import Zone
 from app.repositories.admin_area_repository import AdminAreaRepository
 from app.repositories.indicator_repository import IndicatorRepository
@@ -47,7 +48,8 @@ class ZoneDetectionService:
 
     def __init__(self, zones: ZoneRepository, areas: AdminAreaRepository, indicators: IndicatorRepository,
                  scorer: ZoneScorer, policies: HazardPolicies, machine: ZoneStateMachine,
-                 types: ZoneTypeClassifier):
+                 types: ZoneTypeClassifier, population: PopulationGrid | None = None):
+        self.population = population  # people inside a zone's own shape; None -> gazetteer fallback
         self.zones = zones
         self.areas = areas
         self.indicators = indicators
@@ -93,8 +95,9 @@ class ZoneDetectionService:
                                                    "district_urban": p.district_urban} for p in cluster.points])
             zone.district_id = district[0] if district else None
             self.zones.set_shape(zone, cluster.hull_ewkt, cluster.centroid_ewkt)
-            zone.population_est, zone.population_source = self._population(
-                {p.admin_area_id for p in cluster.points if p.admin_area_id}, evidence)
+            zone.population_est, zone.population_urban, zone.population_source = self._population(
+                cluster.hull_ewkt.split(";", 1)[-1], {p.admin_area_id for p in cluster.points if p.admin_area_id},
+                evidence)
             self._persist(zone, created, taken, result)
             self._record_event(self._finalize(zone, evidence, boost, now, created), result)
 
@@ -114,10 +117,10 @@ class ZoneDetectionService:
                             district_id=district_id, first_seen=now)
             zone.name = f"{district.name} district"
             self.zones.set_shape_from_district(zone, district_id)
-            zone.population_est = district.population
-            zone.population_source = "gazetteer" if district.population else None
-            self._persist(zone, created, taken, result)
             evidence = self.zones.evidence(reports.get(district_id, {}))
+            zone.population_est, zone.population_urban, zone.population_source = self._population(
+                self.areas.wkt(district_id), {district_id}, evidence)
+            self._persist(zone, created, taken, result)
             self._record_event(self._finalize(zone, evidence, policy.boost(indicators.get(district_id)), now,
                                               created), result)
 
@@ -161,9 +164,15 @@ class ZoneDetectionService:
         if event is not None:
             result.events.append(event)
 
-    def _population(self, area_ids: set[int], evidence: Evidence) -> tuple[int | None, str | None]:
+    def _population(self, wkt: str | None, area_ids: set[int],
+                    evidence: Evidence) -> tuple[int | None, int | None, str | None]:
+        """(people, of whom urban, source). The population grid counts people inside the zone's own shape;
+        the gazetteer (whole named places) and numbers quoted in posts are fallbacks only."""
+        counted = self.population.count(wkt) if self.population is not None and wkt else None
+        if counted is not None and counted.total > 0:
+            return counted.total, counted.urban, "worldpop"
         total = self.zones.population_of(area_ids)
         if total > 0:
-            return total, "gazetteer"
+            return total, None, "gazetteer"
         reported = max((people or 0 for _, _, people in evidence), default=0)
-        return (min(reported, self.MAX_REPORTED_POP), "reported") if reported else (None, None)
+        return (min(reported, self.MAX_REPORTED_POP), None, "reported") if reported else (None, None, None)

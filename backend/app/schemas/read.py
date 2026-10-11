@@ -41,6 +41,8 @@ class ZoneSummary(BaseModel):
     trend: str
     independent_sources: int
     population_est: int | None
+    population_urban: int | None  # of population_est; rural = the rest (only from the population grid)
+    population_source: str | None  # worldpop (people inside the zone's shape) | gazetteer | reported
     last_seen: datetime
 
 

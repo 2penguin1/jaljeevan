@@ -516,6 +516,10 @@ export interface components {
             independent_sources: number;
             /** Population Est */
             population_est: number | null;
+            /** Population Urban */
+            population_urban: number | null;
+            /** Population Source */
+            population_source: string | null;
             /**
              * Last Seen
              * Format: date-time
@@ -556,6 +560,10 @@ export interface components {
             independent_sources: number;
             /** Population Est */
             population_est: number | null;
+            /** Population Urban */
+            population_urban: number | null;
+            /** Population Source */
+            population_source: string | null;
             /**
              * Last Seen
              * Format: date-time

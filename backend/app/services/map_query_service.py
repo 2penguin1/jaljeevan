@@ -30,7 +30,7 @@ class MapQueryService:
             "type": "Feature", "id": str(z["id"]), "geometry": self.maps.geometry(z["geometry"]),
             "properties": {"name": z["name"], "hazard": z["hazard"], "zone_type": z["zone_type"],
                            "status": z["status"], "score": round(z["score"], 1), "trend": z["trend"],
-                           "population_est": z["population_est"], "independent_sources": z["independent_sources"],
+                           "population_est": z["population_est"], "population_urban": z["population_urban"], "independent_sources": z["independent_sources"],
                            "centroid": [round(z["lon"], 4), round(z["lat"], 4)] if z["lon"] is not None else None},
         } for z in self.maps.zones(hazard)])
 

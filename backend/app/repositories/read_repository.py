@@ -11,7 +11,7 @@ _PLACE = ("(SELECT sl.mention_text FROM signal_locations sl WHERE sl.signal_id =
 _ZONE = ("(SELECT zs.zone_id FROM zone_signals zs JOIN zones z ON z.id = zs.zone_id WHERE zs.signal_id = s.id "
          "AND z.status NOT IN ('dismissed', 'resolved') ORDER BY z.score DESC LIMIT 1)")
 _ZONE_FIELDS = """z.id, z.name, z.hazard, z.zone_type, z.status, z.score, z.trend, z.independent_sources,
-                  z.population_est, z.last_seen, z.district_id"""
+                  z.population_est, z.population_urban, z.population_source, z.last_seen, z.district_id"""
 
 
 class ReadRepository:

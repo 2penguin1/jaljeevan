@@ -9,7 +9,7 @@ import { Skeleton } from "@/components/patterns/Skeleton";
 import { Sparkline } from "@/components/patterns/Sparkline";
 import { ApiError } from "@/lib/api/client";
 import type { Geometry } from "@/lib/api/types";
-import { formatPeople, timeAgo } from "@/lib/format";
+import { formatInt, formatPeople, timeAgo } from "@/lib/format";
 import { HAZARDS } from "@/lib/hazards";
 import { useZone } from "@/lib/hooks/queries";
 import { ScoreBreakdown } from "./ScoreBreakdown";
@@ -80,8 +80,15 @@ export function ZonePage() {
             <dd className="mt-2"><ScoreMeter score={zone.score} hazard={zone.hazard} /></dd>
           </div>
           <div className="bg-canvas p-4">
-            <dt className="text-[12px] text-text-2">People in the zone</dt>
+            <dt className="text-[12px] text-text-2">
+              {zone.population_source === "worldpop" ? "People living in the zone area" : "People in the zone"}
+            </dt>
             <dd className="num mt-2 text-[22px] leading-none text-text">{formatPeople(zone.population_est)}</dd>
+            {zone.population_urban != null && zone.population_est != null && (
+              <dd className="mt-1.5 text-[12px] text-text-3">
+                {formatInt(zone.population_urban)} urban, {formatInt(zone.population_est - zone.population_urban)} rural
+              </dd>
+            )}
           </div>
           <div className="bg-canvas p-4">
             <dt className="text-[12px] text-text-2">Independent sources</dt>

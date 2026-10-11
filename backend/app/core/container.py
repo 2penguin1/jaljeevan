@@ -26,6 +26,7 @@ from app.domain.text import TextFingerprinter
 from app.domain.zones import ZoneTypeClassifier
 from app.integrations.apify import ApifyClient
 from app.integrations.archive import make_archive
+from app.integrations.population import WorldPopGrid
 from app.integrations.article import ArticleExtractor
 from app.integrations.ports import LLMClient, RawArchive
 from app.integrations.sources.gdelt import GdeltFetcher
@@ -111,6 +112,11 @@ class Container:
         return AmazonLocationClient(self.settings.aws_region, self.settings.aws_profile)
 
     @cached_property
+    def population(self) -> WorldPopGrid:
+        """App-scoped: the ~50 MB grid loads once, on first use."""
+        return WorldPopGrid(self.settings.worldpop_path)
+
+    @cached_property
     def archive(self) -> RawArchive:
         return self._archive or make_archive(self.settings.raw_bucket, Path(self.settings.raw_dir),
                                              self.settings.aws_region, self.settings.aws_profile)
@@ -151,7 +157,7 @@ class Container:
     def zone_detection_service(self, session: Session) -> ZoneDetectionService:
         return ZoneDetectionService(ZoneRepository(session), AdminAreaRepository(session),
                                     IndicatorRepository(session), self.scorer, self.policies, self.machine,
-                                    self.zone_types)
+                                    self.zone_types, population=self.population)
 
     def map_query_service(self, session: Session) -> MapQueryService:
         return MapQueryService(MapRepository(session), IndicatorRepository(session), self.policies,

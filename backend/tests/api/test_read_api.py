@@ -26,7 +26,8 @@ def _signal(n: int, domain: str, title: str, created: datetime, **kw) -> Signal:
 def seeded():
     with SessionLocal() as s:
         z = Zone(name="Read Test Zone", hazard="drought", zone_type="rural", status="active", score=81.0,
-                 trend="escalating", independent_sources=2, population_est=12000,
+                 trend="escalating", independent_sources=2, population_est=12000, population_urban=9000,
+                 population_source="worldpop",
                  geom=from_shape(SQUARE, srid=4326), centroid=from_shape(Point(75.9, 17.7), srid=4326))
         a = _signal(1, "a.example", "<script>alert(1)</script> Taps dry", NOW - timedelta(minutes=5))
         b = _signal(2, "b.example", "Tankers late", NOW - timedelta(minutes=10))
@@ -89,6 +90,8 @@ def test_zones_list_sorted_and_filtered(seeded):
     with TestClient(app) as c:
         zones = c.get("/api/v1/zones", params={"hazard": "drought"}).json()
         assert seeded["zone"] in [z["id"] for z in zones]
+        mine = next(z for z in zones if z["id"] == seeded["zone"])
+        assert (mine["population_urban"], mine["population_source"]) == (9000, "worldpop")
         assert [z["score"] for z in zones] == sorted((z["score"] for z in zones), reverse=True)
         assert seeded["zone"] not in [z["id"] for z in c.get("/api/v1/zones", params={"hazard": "heat"}).json()]
         assert c.get("/api/v1/zones", params={"hazard": "volcano"}).status_code == 422

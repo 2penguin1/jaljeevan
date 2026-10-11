@@ -22,6 +22,10 @@ class AdminAreaRepository(BaseRepository[AdminArea]):
     def has_any(self) -> bool:
         return self.session.scalar(select(AdminArea.id).limit(1)) is not None
 
+    def wkt(self, area_id: int) -> str | None:
+        """An area's outline as plain WKT (lon/lat), for counting people inside it."""
+        return self.session.scalar(text("SELECT ST_AsText(geom) FROM admin_areas WHERE id = :id"), {"id": area_id})
+
     def find_district_id(self, state_code: str, name_norm: str) -> int | None:
         return self.session.scalar(select(AdminArea.id).where(
             AdminArea.level == "district", AdminArea.state_code == state_code, AdminArea.name_norm == name_norm))

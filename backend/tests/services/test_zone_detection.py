@@ -8,6 +8,7 @@ from app.domain.hazards import HazardPolicies
 from app.domain.lifecycle import ZoneStateMachine
 from app.domain.scoring import ScoringConfig, ZoneScorer
 from app.domain.zones import ZoneTypeClassifier
+from app.integrations.ports import PopulationCount
 from app.models import (AdminArea, DistrictIndicator, Signal, SignalFeedback, SignalLocation, User, Zone,
                         ZoneSignal, ZoneSnapshot)
 from app.repositories.admin_area_repository import AdminAreaRepository
@@ -20,11 +21,22 @@ BLR = Polygon([(77.4, 12.8), (77.8, 12.8), (77.8, 13.2), (77.4, 13.2)])
 BARMER = Polygon([(70, 24), (72, 24), (72, 26.5), (70, 26.5)])
 
 
-def service(db) -> ZoneDetectionService:
+def service(db, population=None) -> ZoneDetectionService:
     config = ScoringConfig()
     return ZoneDetectionService(ZoneRepository(db), AdminAreaRepository(db), IndicatorRepository(db),
                                 ZoneScorer(config), HazardPolicies.default(), ZoneStateMachine(config),
-                                ZoneTypeClassifier())
+                                ZoneTypeClassifier(), population=population)
+
+
+class FakeGrid:
+    """Stands in for the WorldPop grid: a fixed count, and records which shapes were asked about."""
+
+    def __init__(self, total=4200, urban=3900):
+        self.total, self.urban, self.asked = total, urban, []
+
+    def count(self, wkt):
+        self.asked.append(wkt)
+        return PopulationCount(total=self.total, urban=self.urban)
 
 
 def seed_geo(db):
@@ -172,3 +184,35 @@ def test_city_tap_complaints_make_a_water_zone_not_a_drought_zone(db):
     sig(db, url="https://b/w1", point=(77.695, 12.993), area=g["ward"], domain="ndtv.com", hazards=("water",))
     service(db).detect(NOW)
     assert len(zones(db, "water")) == 1 and zones(db, "drought") == []
+
+
+
+def test_zone_population_comes_from_the_grid_not_the_whole_city(db):
+    """A few colonies reporting dry taps must not count the whole city (the 69.9 lakh Hyderabad bug)."""
+    g = seed_geo(db)
+    g["ward"].population = 6_900_000  # as if the mention resolved to the whole city
+    sig(db, url="https://a/p1", point=(77.690, 12.990), area=g["ward"])
+    sig(db, url="https://b/p1", point=(77.695, 12.993), area=g["ward"], domain="ndtv.com")
+    grid = FakeGrid()
+    service(db, population=grid).detect(NOW, hazards=("drought",))
+    [z] = zones(db)
+    assert (z.population_est, z.population_urban, z.population_source) == (4200, 3900, "worldpop")
+    assert grid.asked and grid.asked[0].startswith("POLYGON")  # the zone's own shape, as plain WKT
+
+
+def test_district_zone_population_comes_from_the_grid(db):
+    g = seed_geo(db)
+    sig(db, url="https://a/p2", point=(71.0, 25.0), area=g["bmr"], precision="district")
+    sig(db, url="https://b/p2", point=(71.0, 25.0), area=g["bmr"], precision="district", domain="ndtv.com")
+    service(db, population=FakeGrid(total=2_100_000, urban=300_000)).detect(NOW, hazards=("drought",))
+    [z] = zones(db)
+    assert z.zone_type == "district_wide" and z.population_est == 2_100_000 and z.population_source == "worldpop"
+
+
+def test_without_a_grid_population_falls_back_to_the_gazetteer(db):
+    g = seed_geo(db)
+    sig(db, url="https://a/p3", point=(77.690, 12.990), area=g["ward"])
+    sig(db, url="https://b/p3", point=(77.695, 12.993), area=g["ward"], domain="ndtv.com")
+    service(db).detect(NOW, hazards=("drought",))
+    [z] = zones(db)
+    assert z.population_est == 60000 and z.population_source == "gazetteer" and z.population_urban is None

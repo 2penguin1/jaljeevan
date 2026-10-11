@@ -13,7 +13,8 @@ import { outlinePath } from "./ZoneMiniMap";
 const ZID = "11111111-1111-1111-1111-111111111111";
 const summary = (id: string, hazard: ZoneSummary["hazard"], score: number): ZoneSummary => ({
   id, name: `${hazard} zone ${score}`, hazard, zone_type: "rural", status: "active", score, trend: "stable",
-  independent_sources: 2, population_est: 50000, last_seen: new Date().toISOString(),
+  independent_sources: 2, population_est: 50000, population_urban: 12000, population_source: "worldpop",
+  last_seen: new Date().toISOString(),
 });
 
 const detail: ZoneDetail = {
@@ -73,6 +74,8 @@ test("zone page shows evidence as text and the score arithmetic", async () => {
   expect(within(breakdown).getByText("67%")).toBeInTheDocument();
   expect(within(breakdown).getByText("33%")).toBeInTheDocument();
   expect(within(breakdown).getByText(/2 independent sources/)).toBeInTheDocument();
+  expect(screen.getByText("People living in the zone area")).toBeInTheDocument();
+  expect(screen.getByText("12,000 urban, 38,000 rural")).toBeInTheDocument();
 });
 
 test("unknown or malformed zone ids say so and link back", async () => {

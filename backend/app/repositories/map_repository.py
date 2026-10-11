@@ -16,7 +16,7 @@ class MapRepository:
 
     def zones(self, hazard: str) -> list[dict]:
         rows = self.session.execute(text("""
-            SELECT id, name, hazard, zone_type, status, score, trend, population_est, independent_sources,
+            SELECT id, name, hazard, zone_type, status, score, trend, population_est, population_urban, independent_sources,
                    ST_AsGeoJSON(ST_SimplifyPreserveTopology(geom, :tol), 4) AS geometry,
                    ST_X(centroid) AS lon, ST_Y(centroid) AS lat
             FROM zones

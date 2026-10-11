@@ -1405,6 +1405,28 @@
             ],
             "title": "Population Est"
           },
+          "population_urban": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Population Urban"
+          },
+          "population_source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Population Source"
+          },
           "last_seen": {
             "type": "string",
             "format": "date-time",
@@ -1459,6 +1481,8 @@
           "trend",
           "independent_sources",
           "population_est",
+          "population_urban",
+          "population_source",
           "last_seen",
           "geometry",
           "centroid",
@@ -1518,6 +1542,28 @@
             ],
             "title": "Population Est"
           },
+          "population_urban": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Population Urban"
+          },
+          "population_source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Population Source"
+          },
           "last_seen": {
             "type": "string",
             "format": "date-time",
@@ -1535,6 +1581,8 @@
           "trend",
           "independent_sources",
           "population_est",
+          "population_urban",
+          "population_source",
           "last_seen"
         ],
         "title": "ZoneSummary"
