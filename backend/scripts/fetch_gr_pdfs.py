@@ -12,6 +12,7 @@ Delete this file once past orders are in; new orders are picked up from the open
 import argparse
 import html
 import re
+import time
 from dataclasses import dataclass
 from datetime import date, datetime
 from pathlib import Path
@@ -50,6 +51,23 @@ def parse_results(page_html: str) -> list[GrRow]:
     return out
 
 
+def read_page(page, attempts: int = 6, sleep=time.sleep) -> str:
+    """The page's HTML once it has stopped loading. The site reloads itself after a search (and after its own
+    pop-up messages), so reading can briefly fail mid-navigation: wait and try again instead of crashing."""
+    last: Exception | None = None
+    for _ in range(attempts):
+        try:
+            page.wait_for_load_state("networkidle", timeout=15_000)
+        except Exception:  # noqa: BLE001 - a slow page is retried below
+            pass
+        try:
+            return page.content()
+        except Exception as exc:  # noqa: BLE001 - "page is navigating": retry
+            last = exc
+            sleep(1.0)
+    raise last if last else RuntimeError("page could not be read")
+
+
 def main() -> None:
     from playwright.sync_api import sync_playwright
 
@@ -62,16 +80,30 @@ def main() -> None:
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=False)
         page = browser.new_page()
+
+        def on_dialog(dialog):  # the site's own pop-ups (e.g. a wrong captcha): show the text here and close it
+            print(f"\n  [site message] {dialog.message}")
+            dialog.accept()
+
+        page.on("dialog", on_dialog)
         page.goto(URL)
         page.select_option("#SitePH_ddlDepartmentType", RELIEF_DEPARTMENT)
         page.wait_for_load_state("networkidle")
         page.fill("#SitePH_txtKeywords", args.keyword)
-        print("\nIn the browser window: type the captcha and click 'शोधा' (Search).")
-        input("When the results are showing, press Enter here... ")
+        rows: list[GrRow] = []
+        while not rows:
+            print("\nIn the browser window: type the captcha and click 'शोधा' (Search).")
+            answer = input("When the results are showing, press Enter here (or type q to quit)... ")
+            if answer.strip().lower() == "q":
+                browser.close()
+                return
+            rows = parse_results(read_page(page))
+            if not rows:
+                print("  No results on the page yet (wrong captcha, or still loading). Try the search again.")
 
         saved, seen = 0, set()
         for page_no in range(1, args.max_pages + 1):
-            rows = [r for r in parse_results(page.content()) if r.code not in seen]
+            rows = [r for r in parse_results(read_page(page)) if r.code not in seen]
             if not rows:
                 break
             for r in rows:
@@ -90,7 +122,7 @@ def main() -> None:
             if next_link.count() == 0:
                 break
             next_link.first.click()
-            page.wait_for_load_state("networkidle")
+            read_page(page)  # let the next page finish loading
         print(f"\n{saved} new PDF(s) in {INBOX}")
         print("Next: uv run python -m app.cli.process_declaration_inbox")
         browser.close()
