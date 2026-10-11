@@ -149,3 +149,12 @@ You asked me to decide the rest myself and build it. My decisions, in simple poi
 - **What you see:** the ops page has a new "Declaration watch" box (articles read, talukas declared per state, talukas waiting). `uv run python -m app.cli.declaration_review` writes the waiting talukas to a CSV for you to check and load.
 - **English only for now.** Hindi, Kannada and Telugu news are noted in reminders.
 - **Small fix on the way:** Kannada, Telugu, Tamil, Gujarati, Punjabi and Malayalam letters can now be read in official orders (same method as Marathi).
+- **An official order is dated by its own text.** A 2026 article that links a 2023 order cannot make it count as this year. An order with no date in it counts only like one news site.
+- **One-taluka news** counts only when the article names a single watched state and the name matches a taluka there (still needs a second site, like everything else).
+- **Same publisher, different sub-site** (kannada.news18.com and news18.com) counts as one website.
+- **If GDELT refuses us** (it rate-limits hard), the watch tries again after 2 hours, not on every pipeline run.
+- **First live run (today):** 75 articles found and read politely.
+  - 1 article had a real list (Siasat: the 40 taluks Karnataka added on 1 Oct). 34 of the 40 match our taluk map; 5 are new taluks our older map does not have.
+  - 53 articles talk about drought but give no names; 7 had lists that were not declarations (for example "left off the list", a demand letter) and were correctly skipped; 10 could not be downloaded (ANI blocks robots, one site rate-limited us). They get one retry tomorrow.
+  - **Nothing declared yet, on purpose:** only one website printed the names, and the rule needs two. 35 Karnataka talukas now wait; they are on your review list (`declaration_review`).
+- **Final check by a fresh reviewer:** it found one serious problem (a single broken PDF could stop the whole watch and make it re-download everything on every run) and five important ones (listed above as fixed). All fixed, each with a test. Left for later (small): names with initials like "H.D. Kote" can cut a list short (missed names, never wrong ones); checking where a link redirects to before we deploy on AWS.
