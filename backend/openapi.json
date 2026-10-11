@@ -736,6 +736,49 @@
         ],
         "title": "DeclarationInfo"
       },
+      "DeclarationWatchInfo": {
+        "properties": {
+          "last_checked": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Checked"
+          },
+          "sources": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Sources"
+          },
+          "declared_by_state": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Declared By State"
+          },
+          "waiting": {
+            "type": "integer",
+            "title": "Waiting"
+          }
+        },
+        "type": "object",
+        "required": [
+          "last_checked",
+          "sources",
+          "declared_by_state",
+          "waiting"
+        ],
+        "title": "DeclarationWatchInfo",
+        "description": "What the news-based declaration watch found this season (other states)."
+      },
       "DroughtPanel": {
         "properties": {
           "label": {
@@ -1372,6 +1415,16 @@
             "type": "array",
             "title": "Indicators",
             "default": []
+          },
+          "declarations": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DeclarationWatchInfo"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",

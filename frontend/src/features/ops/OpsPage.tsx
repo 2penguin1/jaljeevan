@@ -3,7 +3,7 @@ import { EmptyState } from "@/components/patterns/EmptyState";
 import { ErrorState } from "@/components/patterns/ErrorState";
 import { SkeletonRows } from "@/components/patterns/Skeleton";
 import { StatTile } from "@/components/patterns/StatTile";
-import type { OpsRun } from "@/lib/api/types";
+import type { DeclarationWatchInfo, OpsRun } from "@/lib/api/types";
 import { formatInt, formatPeople } from "@/lib/format";
 import { useOps, useStats } from "@/lib/hooks/queries";
 
@@ -38,7 +38,7 @@ function runFacts(run: OpsRun) {
   const ingest = (s.ingest ?? {}) as Record<string, Stage>;
   const sources = Object.entries(ingest).filter(([k]) => k !== "weather");
   const failed = sources.filter(([, v]) => v && "error" in v).length;
-  const stageErrors = ["ingest", "classify", "geocode", "zones"].filter((k) => s[k] && "error" in (s[k] as object));
+  const stageErrors = ["ingest", "watch", "classify", "geocode", "zones"].filter((k) => s[k] && "error" in (s[k] as object));
   const issues = [
     s.skipped ? "Skipped: another run was in progress" : "",
     failed ? `${failed} source${failed > 1 ? "s" : ""} failed` : "",
@@ -97,6 +97,48 @@ function BarList({ rows, label }: { rows: [string, number][]; label: string }) {
   );
 }
 
+// boundary pools: Telangana mandals sit inside the old Andhra Pradesh boundaries
+const STATE_NAME: Record<string, string> = {
+  KA: "Karnataka", AP: "Andhra Pradesh and Telangana", TN: "Tamil Nadu", GJ: "Gujarat", RJ: "Rajasthan",
+  MP: "Madhya Pradesh", CT: "Chhattisgarh", UP: "Uttar Pradesh", KL: "Kerala", HR: "Haryana", PB: "Punjab",
+};
+
+function DeclarationWatch({ info }: { info: DeclarationWatchInfo }) {
+  const read = Object.values(info.sources).reduce((a, n) => a + n, 0);
+  const states = Object.entries(info.declared_by_state).sort((a, b) => b[1] - a[1]);
+  return (
+    <section aria-label="Declaration watch" className="flex flex-col gap-3 rounded-[8px] border hairline bg-surface p-4">
+      <h2 className="text-[13px] font-medium text-text">Declaration watch</h2>
+      {info.last_checked === null ? (
+        <p className="text-[13px] text-text-3">
+          The news watch for state drought declarations has not run yet. It runs with the pipeline, at most once a day.
+        </p>
+      ) : (
+        <>
+          <p className="text-[13px] text-text-2">
+            {formatInt(read)} articles read this season, last checked {when.format(new Date(info.last_checked))}.{" "}
+            {formatInt(info.waiting)} talukas wait for a second news source or a person&rsquo;s check.
+          </p>
+          {states.length === 0 ? (
+            <p className="text-[13px] text-text-3">
+              No taluka declared from the news yet. Each one needs an official order, or two independent news sites.
+            </p>
+          ) : (
+            <dl className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-6 gap-y-2 text-[13px]">
+              {states.map(([code, n]) => (
+                <div key={code} className="contents">
+                  <dt className="text-text-2">{STATE_NAME[code] ?? code}</dt>
+                  <dd className="num text-right text-text">{formatInt(n)}</dd>
+                </div>
+              ))}
+            </dl>
+          )}
+        </>
+      )}
+    </section>
+  );
+}
+
 export function OpsPage() {
   const ops = useOps();
   const stats = useStats();
@@ -140,6 +182,7 @@ export function OpsPage() {
           </dl>
         )}
       </section>
+      {ops.data.declarations && <DeclarationWatch info={ops.data.declarations} />}
       <section aria-labelledby="runs-title" className="flex flex-col gap-3">
         <h2 id="runs-title" className="text-[13px] font-medium text-text">Recent pipeline runs</h2>
         {runs.length === 0 ? (

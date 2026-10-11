@@ -43,3 +43,19 @@ test("ops explains when nothing has run yet", async () => {
   renderOps(ops([]));
   expect(await screen.findByText("No pipeline runs yet")).toBeInTheDocument();
 });
+
+test("ops shows what the declaration watch found", async () => {
+  renderOps({ ...ops([]), declarations: { last_checked: "2026-10-11T06:00:00Z", sources: { listed: 3, no_list: 9, failed: 1 },
+    declared_by_state: { KA: 40 }, waiting: 12 } });
+  const box = await screen.findByRole("region", { name: "Declaration watch" });
+  expect(within(box).getByText("Karnataka")).toBeInTheDocument();
+  expect(within(box).getByText("40")).toBeInTheDocument();
+  expect(within(box).getByText(/12 talukas wait/)).toBeInTheDocument();
+  expect(within(box).getByText(/13 articles read/)).toBeInTheDocument();
+});
+
+test("ops explains the declaration watch before its first run", async () => {
+  renderOps({ ...ops([]), declarations: { last_checked: null, sources: {}, declared_by_state: {}, waiting: 0 } });
+  const box = await screen.findByRole("region", { name: "Declaration watch" });
+  expect(within(box).getByText(/has not run yet/)).toBeInTheDocument();
+});

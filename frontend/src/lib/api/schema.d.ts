@@ -297,6 +297,24 @@ export interface components {
             source_url: string | null;
         };
         /**
+         * DeclarationWatchInfo
+         * @description What the news-based declaration watch found this season (other states).
+         */
+        DeclarationWatchInfo: {
+            /** Last Checked */
+            last_checked: string | null;
+            /** Sources */
+            sources: {
+                [key: string]: number;
+            };
+            /** Declared By State */
+            declared_by_state: {
+                [key: string]: number;
+            };
+            /** Waiting */
+            waiting: number;
+        };
+        /**
          * DroughtPanel
          * @description The measured data behind a drought zone (GoI Drought Manual rules).
          */
@@ -475,6 +493,7 @@ export interface components {
              * @default []
              */
             indicators: components["schemas"]["IndicatorFreshness"][];
+            declarations?: components["schemas"]["DeclarationWatchInfo"] | null;
         };
         /** OpsTotals */
         OpsTotals: {

@@ -15,6 +15,7 @@ export type TrendPoint = S["TrendPoint"];
 export type StatsOverview = S["StatsOverview"];
 export type OpsSummary = S["OpsSummary"];
 export type OpsRun = S["OpsRun"];
+export type DeclarationWatchInfo = S["DeclarationWatchInfo"];
 export type DroughtPanel = S["DroughtPanel"];
 export type IndicatorFreshness = S["IndicatorFreshness"];
 
