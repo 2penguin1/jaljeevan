@@ -11,16 +11,17 @@ Row = tuple[int, date, str, str, float]  # (area_id, period, source, metric, val
 
 class AreaIndicatorRepository(BaseRepository[AreaIndicator]):
     model = AreaIndicator
+    BATCH = 5000
 
     def upsert_many(self, rows: list[Row]) -> int:
         """Insert or overwrite values (re-running a period replaces it). Returns rows written."""
-        if not rows:
-            return 0
-        stmt = insert(AreaIndicator).values([{"area_id": a, "period": p, "source": s, "metric": m, "value": v}
-                                             for a, p, s, m, v in rows])
-        stmt = stmt.on_conflict_do_update(index_elements=["area_id", "period", "source", "metric"],
-                                          set_={"value": stmt.excluded.value})
-        self.session.execute(stmt)
+        for i in range(0, len(rows), self.BATCH):  # 5 parameters per row; Postgres allows 65,535 per statement
+            chunk = rows[i:i + self.BATCH]
+            stmt = insert(AreaIndicator).values([{"area_id": a, "period": p, "source": s, "metric": m, "value": v}
+                                                 for a, p, s, m, v in chunk])
+            stmt = stmt.on_conflict_do_update(index_elements=["area_id", "period", "source", "metric"],
+                                              set_={"value": stmt.excluded.value})
+            self.session.execute(stmt)
         self.session.flush()
         return len(rows)
 
