@@ -65,3 +65,6 @@ export type TenderSummary = S["TenderSummary"];
 export type TenderDetail = S["TenderDetail"];
 export type BidOut = S["BidOut"];
 export type VendorOut = S["VendorOut"];
+export type Me = S["MeOut"];
+export type Inbox = S["InboxOut"];
+export type InboxBid = S["InboxBid"];

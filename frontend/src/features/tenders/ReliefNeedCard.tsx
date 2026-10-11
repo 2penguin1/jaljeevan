@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { useNavigate } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { ApiError } from "@/lib/api/client";
-import { getDemoCode } from "@/lib/demoCode";
+import { useMe } from "@/lib/hooks/session";
 import { useCreateTender, useReliefNeed } from "@/lib/hooks/tenders";
-import { BUTTON, DemoCodeField, Field, INPUT, PRIMARY } from "./ui";
+import { BUTTON, Field, INPUT, PRIMARY } from "./ui";
 
 const SHARES = [0.05, 0.1, 0.2, 0.3];
 
@@ -14,6 +14,8 @@ export function ReliefNeedCard({ zoneId }: { zoneId: string }) {
   const [open, setOpen] = useState(false);
   const need = useReliefNeed(zoneId, share);
   const create = useCreateTender();
+  const me = useMe();
+  const officer = me.data?.role === "gov_admin";
   const navigate = useNavigate();
   const [days, setDays] = useState(30);
   const [radius, setRadius] = useState(100);
@@ -27,7 +29,7 @@ export function ReliefNeedCard({ zoneId }: { zoneId: string }) {
     const draft = { zone_id: zoneId, qty_per_day: qty ?? n.kl_per_day, duration_days: days,
       price_per_unit: price ?? n.suggested_price, radius_km: radius };
     try {
-      const { id } = await create.mutateAsync({ draft, code: getDemoCode() });
+      const { id } = await create.mutateAsync(draft);
       navigate(`/tenders/${id}`);
     } catch {
       // shown below from create.error
@@ -47,7 +49,11 @@ export function ReliefNeedCard({ zoneId }: { zoneId: string }) {
         {n.kl_per_day.toLocaleString("en-IN")} kL <span className="text-[13px] text-text-2">a day</span>
       </p>
       <p className="text-[12px] leading-relaxed text-text-3">{n.formula}</p>
-      {!open ? (
+      {!officer ? (
+        <p className="text-[12px] text-text-2">
+          <Link to="/login" className="underline hover:text-text">Log in as a relief officer</Link> to ask nearby tanker vendors for this water.
+        </p>
+      ) : !open ? (
         <button type="button" className={PRIMARY} onClick={() => setOpen(true)}>Create tanker tender</button>
       ) : (
         <form onSubmit={publish} className="flex flex-col gap-3 border-t hairline pt-3">
@@ -57,7 +63,6 @@ export function ReliefNeedCard({ zoneId }: { zoneId: string }) {
             <Field label="Price ₹/kL (nearby median)"><input type="number" min={1} className={INPUT} value={price ?? n.suggested_price} onChange={(e) => setPrice(Number(e.target.value))} /></Field>
             <Field label="Vendors within km"><input type="number" min={10} max={500} className={INPUT} value={radius} onChange={(e) => setRadius(Number(e.target.value))} /></Field>
           </div>
-          <DemoCodeField />
           {create.error && <p role="alert" className="text-[12px] text-heat">{(create.error as ApiError).detail ?? "Could not publish."}</p>}
           <div className="flex gap-2">
             <button type="submit" className={PRIMARY} disabled={create.isPending}>Publish tender</button>

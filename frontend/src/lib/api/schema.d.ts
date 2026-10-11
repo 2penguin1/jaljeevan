@@ -318,6 +318,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/tenders/{tender_id}/raise-price": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Raise Price */
+        post: operations["raise_price_api_v1_tenders__tender_id__raise_price_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/tenders/{tender_id}/bids/{bid_id}/actions": {
         parameters: {
             query?: never;
@@ -329,6 +346,23 @@ export interface paths {
         put?: never;
         /** Bid Action */
         post: operations["bid_action_api_v1_tenders__tender_id__bids__bid_id__actions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/inbox": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Inbox */
+        get: operations["inbox_api_v1_inbox_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -352,28 +386,98 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Login */
+        post: operations["login_api_v1_auth_login_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Logout */
+        post: operations["logout_api_v1_auth_logout_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Me */
+        get: operations["me_api_v1_auth_me_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/signup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Signup */
+        post: operations["signup_api_v1_auth_signup_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        /** BidActionIn */
+        /**
+         * BidActionIn
+         * @description Who acts (government or vendor) comes from the logged-in account, never from the request.
+         */
         BidActionIn: {
-            /**
-             * Side
-             * @enum {string}
-             */
-            side: "gov" | "vendor";
             /**
              * Action
              * @enum {string}
              */
-            action: "accept" | "counter" | "decline";
+            action: "accept" | "counter" | "decline" | "message";
+            /** Expected Version */
+            expected_version?: number | null;
             /** Price Per Unit */
             price_per_unit?: number | null;
             /** Qty Per Day */
             qty_per_day?: number | null;
             /** Note */
             note?: string | null;
+            /** Body */
+            body?: string | null;
         };
         /** BidOut */
         BidOut: {
@@ -399,6 +503,8 @@ export interface components {
             status: string;
             /** Turn */
             turn: string;
+            /** Version */
+            version: number;
             offer: components["schemas"]["OfferOut"] | null;
             /** Messages */
             messages: components["schemas"]["MessageOut"][];
@@ -574,6 +680,54 @@ export interface components {
             /** Postgis */
             postgis: string;
         };
+        /** InboxBid */
+        InboxBid: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Vendor Id
+             * Format: uuid
+             */
+            vendor_id: string;
+            /** Vendor Name */
+            vendor_name: string;
+            /** Distance Km */
+            distance_km: number;
+            /** Rank Score */
+            rank_score: number;
+            /** Reason */
+            reason: string;
+            /** Status */
+            status: string;
+            /** Turn */
+            turn: string;
+            /** Version */
+            version: number;
+            offer: components["schemas"]["OfferOut"] | null;
+            /** Messages */
+            messages: components["schemas"]["MessageOut"][];
+            /**
+             * Tender Id
+             * Format: uuid
+             */
+            tender_id: string;
+            /** Zone Name */
+            zone_name: string;
+            /** Duration Days */
+            duration_days: number;
+        };
+        /** InboxOut */
+        InboxOut: {
+            /** Needs Action */
+            needs_action: components["schemas"]["InboxBid"][];
+            /** Waiting */
+            waiting: components["schemas"]["InboxBid"][];
+            /** Closed */
+            closed: components["schemas"]["InboxBid"][];
+        };
         /** IndicatorFreshness */
         IndicatorFreshness: {
             /** Source */
@@ -595,6 +749,31 @@ export interface components {
             /** Band */
             band: string;
         };
+        /** LoginIn */
+        LoginIn: {
+            /** Email */
+            email: string;
+            /** Password */
+            password: string;
+        };
+        /** MeOut */
+        MeOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Email */
+            email: string;
+            /** Name */
+            name: string;
+            /** Role */
+            role: string;
+            /** Org Id */
+            org_id: string | null;
+            /** Org Name */
+            org_name: string | null;
+        };
         /** MessageOut */
         MessageOut: {
             /** Side */
@@ -606,6 +785,8 @@ export interface components {
              * Format: date-time
              */
             at: string;
+            /** Author */
+            author?: string | null;
         };
         /** OfferOut */
         OfferOut: {
@@ -692,6 +873,11 @@ export interface components {
                 [key: string]: unknown;
             };
         };
+        /** RaisePriceIn */
+        RaisePriceIn: {
+            /** Price Per Unit */
+            price_per_unit: number;
+        };
         /** ReliefNeedOut */
         ReliefNeedOut: {
             /** People */
@@ -725,6 +911,21 @@ export interface components {
             independent_sources: number;
             /** Rule Met */
             rule_met: boolean;
+        };
+        /**
+         * SignupIn
+         * @description Citizen signup. There is deliberately no role or organisation field: those are never chosen by the user.
+         */
+        SignupIn: {
+            /**
+             * Email
+             * Format: email
+             */
+            email: string;
+            /** Name */
+            name: string;
+            /** Password */
+            password: string;
         };
         /** StatsOverview */
         StatsOverview: {
@@ -775,6 +976,11 @@ export interface components {
             published_at: string | null;
             /** Committed Kl Per Day */
             committed_kl_per_day: number;
+            /**
+             * Waiting For Gov
+             * @default 0
+             */
+            waiting_for_gov: number;
             /** Bids */
             bids: components["schemas"]["BidOut"][];
         };
@@ -822,6 +1028,11 @@ export interface components {
             published_at: string | null;
             /** Committed Kl Per Day */
             committed_kl_per_day: number;
+            /**
+             * Waiting For Gov
+             * @default 0
+             */
+            waiting_for_gov: number;
         };
         /** TokenTotals */
         TokenTotals: {
@@ -1431,11 +1642,11 @@ export interface operations {
     create_tender_api_v1_tenders_post: {
         parameters: {
             query?: never;
-            header?: {
-                "x-admin-token"?: string | null;
-            };
+            header?: never;
             path?: never;
-            cookie?: never;
+            cookie?: {
+                session?: string | null;
+            };
         };
         requestBody: {
             content: {
@@ -1494,17 +1705,54 @@ export interface operations {
             };
         };
     };
+    raise_price_api_v1_tenders__tender_id__raise_price_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tender_id: string;
+            };
+            cookie?: {
+                session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RaisePriceIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TenderDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     bid_action_api_v1_tenders__tender_id__bids__bid_id__actions_post: {
         parameters: {
             query?: never;
-            header?: {
-                "x-admin-token"?: string | null;
-            };
+            header?: never;
             path: {
                 tender_id: string;
                 bid_id: string;
             };
-            cookie?: never;
+            cookie?: {
+                session?: string | null;
+            };
         };
         requestBody: {
             content: {
@@ -1519,6 +1767,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TenderDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    inbox_api_v1_inbox_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: {
+                session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InboxOut"];
                 };
             };
             /** @description Validation Error */
@@ -1548,6 +1827,121 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["VendorOut"][];
+                };
+            };
+        };
+    };
+    login_api_v1_auth_login_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LoginIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    logout_api_v1_auth_logout_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    me_api_v1_auth_me_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: {
+                session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    signup_api_v1_auth_signup_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SignupIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

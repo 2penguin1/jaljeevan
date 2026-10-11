@@ -765,8 +765,8 @@
         "operationId": "create_tender_api_v1_tenders_post",
         "parameters": [
           {
-            "name": "x-admin-token",
-            "in": "header",
+            "name": "session",
+            "in": "cookie",
             "required": false,
             "schema": {
               "anyOf": [
@@ -777,7 +777,7 @@
                   "type": "null"
                 }
               ],
-              "title": "X-Admin-Token"
+              "title": "Session"
             }
           }
         ],
@@ -858,6 +858,75 @@
         }
       }
     },
+    "/api/v1/tenders/{tender_id}/raise-price": {
+      "post": {
+        "tags": [
+          "tenders"
+        ],
+        "summary": "Raise Price",
+        "operationId": "raise_price_api_v1_tenders__tender_id__raise_price_post",
+        "parameters": [
+          {
+            "name": "tender_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Tender Id"
+            }
+          },
+          {
+            "name": "session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RaisePriceIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenderDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/tenders/{tender_id}/bids/{bid_id}/actions": {
       "post": {
         "tags": [
@@ -887,8 +956,8 @@
             }
           },
           {
-            "name": "x-admin-token",
-            "in": "header",
+            "name": "session",
+            "in": "cookie",
             "required": false,
             "schema": {
               "anyOf": [
@@ -899,7 +968,7 @@
                   "type": "null"
                 }
               ],
-              "title": "X-Admin-Token"
+              "title": "Session"
             }
           }
         ],
@@ -920,6 +989,55 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/TenderDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/inbox": {
+      "get": {
+        "tags": [
+          "tenders"
+        ],
+        "summary": "Inbox",
+        "operationId": "inbox_api_v1_inbox_get",
+        "parameters": [
+          {
+            "name": "session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InboxOut"
                 }
               }
             }
@@ -961,28 +1079,178 @@
           }
         }
       }
+    },
+    "/api/v1/auth/login": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Login",
+        "operationId": "login_api_v1_auth_login_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/logout": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Logout",
+        "operationId": "logout_api_v1_auth_logout_post",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          }
+        }
+      }
+    },
+    "/api/v1/auth/me": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Me",
+        "operationId": "me_api_v1_auth_me_get",
+        "parameters": [
+          {
+            "name": "session",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/signup": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Signup",
+        "operationId": "signup_api_v1_auth_signup_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignupIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
       "BidActionIn": {
         "properties": {
-          "side": {
-            "type": "string",
-            "enum": [
-              "gov",
-              "vendor"
-            ],
-            "title": "Side"
-          },
           "action": {
             "type": "string",
             "enum": [
               "accept",
               "counter",
-              "decline"
+              "decline",
+              "message"
             ],
             "title": "Action"
+          },
+          "expected_version": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Version"
           },
           "price_per_unit": {
             "anyOf": [
@@ -1019,14 +1287,26 @@
               }
             ],
             "title": "Note"
+          },
+          "body": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 1000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Body"
           }
         },
         "type": "object",
         "required": [
-          "side",
           "action"
         ],
-        "title": "BidActionIn"
+        "title": "BidActionIn",
+        "description": "Who acts (government or vendor) comes from the logged-in account, never from the request."
       },
       "BidOut": {
         "properties": {
@@ -1064,6 +1344,10 @@
             "type": "string",
             "title": "Turn"
           },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
           "offer": {
             "anyOf": [
               {
@@ -1092,6 +1376,7 @@
           "reason",
           "status",
           "turn",
+          "version",
           "offer",
           "messages"
         ],
@@ -1726,6 +2011,128 @@
         ],
         "title": "HealthResponse"
       },
+      "InboxBid": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "vendor_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Vendor Id"
+          },
+          "vendor_name": {
+            "type": "string",
+            "title": "Vendor Name"
+          },
+          "distance_km": {
+            "type": "number",
+            "title": "Distance Km"
+          },
+          "rank_score": {
+            "type": "number",
+            "title": "Rank Score"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "turn": {
+            "type": "string",
+            "title": "Turn"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
+          "offer": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OfferOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "messages": {
+            "items": {
+              "$ref": "#/components/schemas/MessageOut"
+            },
+            "type": "array",
+            "title": "Messages"
+          },
+          "tender_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Tender Id"
+          },
+          "zone_name": {
+            "type": "string",
+            "title": "Zone Name"
+          },
+          "duration_days": {
+            "type": "integer",
+            "title": "Duration Days"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "vendor_id",
+          "vendor_name",
+          "distance_km",
+          "rank_score",
+          "reason",
+          "status",
+          "turn",
+          "version",
+          "offer",
+          "messages",
+          "tender_id",
+          "zone_name",
+          "duration_days"
+        ],
+        "title": "InboxBid"
+      },
+      "InboxOut": {
+        "properties": {
+          "needs_action": {
+            "items": {
+              "$ref": "#/components/schemas/InboxBid"
+            },
+            "type": "array",
+            "title": "Needs Action"
+          },
+          "waiting": {
+            "items": {
+              "$ref": "#/components/schemas/InboxBid"
+            },
+            "type": "array",
+            "title": "Waiting"
+          },
+          "closed": {
+            "items": {
+              "$ref": "#/components/schemas/InboxBid"
+            },
+            "type": "array",
+            "title": "Closed"
+          }
+        },
+        "type": "object",
+        "required": [
+          "needs_action",
+          "waiting",
+          "closed"
+        ],
+        "title": "InboxOut"
+      },
       "IndicatorFreshness": {
         "properties": {
           "source": {
@@ -1780,6 +2187,82 @@
         ],
         "title": "IndicatorInfo"
       },
+      "LoginIn": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 3,
+            "title": "Email"
+          },
+          "password": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email",
+          "password"
+        ],
+        "title": "LoginIn"
+      },
+      "MeOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "role": {
+            "type": "string",
+            "title": "Role"
+          },
+          "org_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Org Id"
+          },
+          "org_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Org Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "email",
+          "name",
+          "role",
+          "org_id",
+          "org_name"
+        ],
+        "title": "MeOut"
+      },
       "MessageOut": {
         "properties": {
           "side": {
@@ -1794,6 +2277,17 @@
             "type": "string",
             "format": "date-time",
             "title": "At"
+          },
+          "author": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Author"
           }
         },
         "type": "object",
@@ -2013,6 +2507,20 @@
         ],
         "title": "PipelineRunOut"
       },
+      "RaisePriceIn": {
+        "properties": {
+          "price_per_unit": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Price Per Unit"
+          }
+        },
+        "type": "object",
+        "required": [
+          "price_per_unit"
+        ],
+        "title": "RaisePriceIn"
+      },
       "ReliefNeedOut": {
         "properties": {
           "people": {
@@ -2095,6 +2603,35 @@
           "rule_met"
         ],
         "title": "ScoreBreakdown"
+      },
+      "SignupIn": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "password": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 8,
+            "title": "Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email",
+          "name",
+          "password"
+        ],
+        "title": "SignupIn",
+        "description": "Citizen signup. There is deliberately no role or organisation field: those are never chosen by the user."
       },
       "StatsOverview": {
         "properties": {
@@ -2194,6 +2731,11 @@
           "committed_kl_per_day": {
             "type": "number",
             "title": "Committed Kl Per Day"
+          },
+          "waiting_for_gov": {
+            "type": "integer",
+            "title": "Waiting For Gov",
+            "default": 0
           },
           "bids": {
             "items": {
@@ -2310,6 +2852,11 @@
           "committed_kl_per_day": {
             "type": "number",
             "title": "Committed Kl Per Day"
+          },
+          "waiting_for_gov": {
+            "type": "integer",
+            "title": "Waiting For Gov",
+            "default": 0
           }
         },
         "type": "object",

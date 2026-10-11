@@ -40,20 +40,21 @@ export async function apiGet<T>(path: string, params?: Params, signal?: AbortSig
   return body as T;
 }
 
-/** Writes (demo actions) send the demo access code; reads never need it. */
-export async function apiPost<T>(path: string, body: unknown, code: string): Promise<T> {
+/** Writes. The session is an httpOnly cookie the browser sends by itself (same origin); scripts never see it. */
+export async function apiPost<T>(path: string, body: unknown): Promise<T> {
   let res: Response;
   try {
     res = await fetch(`${BASE}${path}`, {
       method: "POST",
-      headers: { Accept: "application/json", "Content-Type": "application/json", "X-Admin-Token": code },
-      body: JSON.stringify(body),
+      credentials: "same-origin",
+      headers: { Accept: "application/json", "Content-Type": "application/json" },
+      body: JSON.stringify(body ?? {}),
     });
   } catch {
     throw new ApiError(0, "Can't reach the server. Check your connection.");
   }
+  if (res.status === 204) return undefined as T;
   const data = await res.json().catch(() => null);
-  if (res.status === 401 || res.status === 403) throw new ApiError(res.status, "That demo access code is not right.");
   if (!res.ok) throw new ApiError(res.status, readableDetail(data, res.status));
   return data as T;
 }

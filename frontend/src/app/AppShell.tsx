@@ -1,8 +1,9 @@
-import { Activity, Globe2, Rows3, Truck, type LucideIcon } from "lucide-react";
-import { Link, NavLink, Outlet, useMatches } from "react-router";
+import { Activity, Globe2, Inbox, Rows3, Truck, type LucideIcon } from "lucide-react";
+import { Link, NavLink, Outlet, useMatches, useNavigate } from "react-router";
 import { LiveDot } from "@/components/patterns/LiveDot";
 import { APP_NAME } from "@/lib/config";
 import { cn } from "@/lib/format";
+import { ROLE_NAME, useLogout, useMe } from "@/lib/hooks/session";
 import { LiveProvider, useLiveStatus } from "@/lib/live/LiveContext";
 
 const NAV: { to: string; label: string; icon: LucideIcon }[] = [
@@ -12,8 +13,12 @@ const NAV: { to: string; label: string; icon: LucideIcon }[] = [
   { to: "/ops", label: "Ops", icon: Activity },
 ];
 
+const INBOX = { to: "/inbox", label: "Inbox", icon: Inbox };
+
 function NavItems({ compact }: { compact?: boolean }) {
-  return NAV.map(({ to, label, icon: Icon }) => (
+  const me = useMe();
+  const items = me.data?.role === "vendor" ? [...NAV.slice(0, 3), INBOX, ...NAV.slice(3)] : NAV;
+  return items.map(({ to, label, icon: Icon }) => (
     <NavLink
       key={to}
       to={to}
@@ -39,8 +44,30 @@ function TopBar() {
   return (
     <header className="flex h-12 shrink-0 items-center justify-between border-b hairline px-4 md:px-6">
       <span className="text-[14px] font-medium text-text">{title?.title ?? APP_NAME}</span>
-      <LiveDot status={status} />
+      <div className="flex items-center gap-4">
+        <Account />
+        <LiveDot status={status} />
+      </div>
     </header>
+  );
+}
+
+function Account() {
+  const me = useMe();
+  const logout = useLogout();
+  const navigate = useNavigate();
+  if (me.isPending) return null;
+  if (!me.data) return <Link to="/login" className="text-[13px] text-text-2 hover:text-text">Log in</Link>;
+  return (
+    <div className="flex items-center gap-3 text-[13px]">
+      <span className="hidden text-text-2 sm:inline">
+        {me.data.name} <span className="text-text-3">· {ROLE_NAME[me.data.role] ?? me.data.role}</span>
+      </span>
+      <button type="button" className="text-text-2 hover:text-text"
+        onClick={() => logout.mutate(undefined, { onSuccess: () => navigate("/map") })}>
+        Log out
+      </button>
+    </div>
   );
 }
 
