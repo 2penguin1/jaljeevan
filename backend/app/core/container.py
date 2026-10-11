@@ -41,6 +41,7 @@ from app.integrations.sources.social import RedditFetcher, XFetcher
 from app.integrations.weather import OpenMeteoProvider
 from app.repositories.admin_area_repository import AdminAreaRepository
 from app.repositories.area_indicator_repository import AreaIndicatorRepository
+from app.repositories.brief_repository import BriefRepository
 from app.repositories.declaration_repository import DeclarationRepository
 from app.repositories.declaration_source_repository import DeclarationSourceRepository
 from app.repositories.geocode_cache_repository import GeocodeCacheRepository
@@ -52,6 +53,7 @@ from app.repositories.signal_repository import SignalRepository
 from app.repositories.source_domain_repository import SourceDomainRepository
 from app.repositories.tender_repository import TenderRepository
 from app.repositories.zone_repository import ZoneRepository
+from app.services.brief_service import BriefService
 from app.services.classification_service import ClassificationService
 from app.services.declaration_promoter import DeclarationPromoter
 from app.services.declaration_watch import DeclarationWatchService
@@ -184,6 +186,10 @@ class Container:
 
     def tender_service(self, session: Session) -> TenderService:
         return TenderService(TenderRepository(session))
+
+    def brief_service(self, session: Session) -> BriefService:
+        return BriefService(BriefRepository(session), TenderRepository(session), self.tender_service(session),
+                            self.llm, evidence=ReadRepository(session).zone_evidence)
 
     def read_query_service(self, session: Session) -> ReadQueryService:
         return ReadQueryService(ReadRepository(session), ZoneRepository(session), IndicatorRepository(session),
