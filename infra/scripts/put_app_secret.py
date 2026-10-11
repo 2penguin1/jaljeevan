@@ -2,7 +2,8 @@
 
   cd infra && uv run python scripts/put_app_secret.py
 
-Keys: GROQ_API_KEY, APIFY_TOKEN, ADMIN_TOKEN (ADMIN_TOKEN is generated and saved to backend/.env if missing).
+Keys: GROQ_API_KEY, APIFY_TOKEN, ADMIN_TOKEN, JWT_SECRET, DEMO_PASSWORD (the last three are generated and saved to
+backend/.env when missing).
 """
 import json
 import secrets
@@ -15,7 +16,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from config import APP_SECRET_NAME, REGION  # noqa: E402
 
 ENV = Path(__file__).resolve().parents[2] / "backend" / ".env"
-KEYS = ("GROQ_API_KEY", "APIFY_TOKEN", "ADMIN_TOKEN")
+KEYS = ("GROQ_API_KEY", "APIFY_TOKEN", "ADMIN_TOKEN", "JWT_SECRET", "DEMO_PASSWORD")
+GENERATED = {"ADMIN_TOKEN": lambda: secrets.token_urlsafe(32), "JWT_SECRET": lambda: secrets.token_urlsafe(48),
+             "DEMO_PASSWORD": lambda: secrets.token_urlsafe(9)}
 
 
 def read_env(path: Path) -> dict[str, str]:
@@ -29,11 +32,12 @@ def read_env(path: Path) -> dict[str, str]:
 
 def main() -> None:
     env = read_env(ENV)
-    if not env.get("ADMIN_TOKEN"):
-        env["ADMIN_TOKEN"] = secrets.token_urlsafe(32)
-        with ENV.open("a", encoding="utf-8") as fh:
-            fh.write(f"\nADMIN_TOKEN={env['ADMIN_TOKEN']}\n")
-        print("generated ADMIN_TOKEN and saved it to backend/.env")
+    for key, make in GENERATED.items():
+        if not env.get(key):
+            env[key] = make()
+            with ENV.open("a", encoding="utf-8") as fh:
+                fh.write(f"\n{key}={env[key]}\n")
+            print(f"generated {key} and saved it to backend/.env")
     missing = [k for k in KEYS if not env.get(k)]
     if missing:
         sys.exit(f"missing in backend/.env: {', '.join(missing)}")

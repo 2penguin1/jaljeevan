@@ -2,15 +2,27 @@
 
 Usage (from backend/): uv run python -m app.cli.seed_crm      (safe to run again: existing names are skipped)
 Every vendor is marked is_demo and named "(demo)": they are not real businesses.
+Login accounts (officer, three vendors, one NGO) get DEMO_PASSWORD; without it they are created unable to log in.
 """
 from geoalchemy2.shape import from_shape
 from shapely.geometry import Point
 from sqlalchemy import select
 
+from app.core.config import settings
 from app.core.database import init_db, session_scope
+from app.core.security import hash_password
 from app.models import Organization, User
 
 GOVERNMENT = "Relief & Rehabilitation Department, Maharashtra"
+NGO = "Jal Seva Foundation (demo)"
+# email -> (name, role, organisation name)
+ACCOUNTS = {
+    "officer@relief.demo": ("Demo relief officer", "gov_admin", GOVERNMENT),
+    "akkalkot@vendor.demo": ("Akkalkot Water Carriers desk", "vendor", "Akkalkot Water Carriers (demo)"),
+    "solapur@vendor.demo": ("Solapur Jal Tankers desk", "vendor", "Solapur Jal Tankers (demo)"),
+    "latur@vendor.demo": ("Latur Neer Logistics desk", "vendor", "Latur Neer Logistics (demo)"),
+    "ngo@relief.demo": ("Jal Seva volunteer lead", "ngo", NGO),
+}
 # name, state, lon, lat, tankers, Rs/kL, reliability
 VENDORS = [
     ("Solapur Jal Tankers (demo)", "MH", 75.91, 17.66, 18, 58, 0.92),
@@ -37,11 +49,9 @@ def main() -> None:
     with session_scope() as s:
         names = set(s.scalars(select(Organization.name)))
         if GOVERNMENT not in names:
-            gov = Organization(kind="government", name=GOVERNMENT, state_code="MH", is_demo=True)
-            s.add(gov)
-            s.flush()
-            s.add(User(email="officer@relief.demo", password_hash="!", name="Demo relief officer", role="gov_admin",
-                       org_id=gov.id))
+            s.add(Organization(kind="government", name=GOVERNMENT, state_code="MH", is_demo=True))
+        if NGO not in names:
+            s.add(Organization(kind="ngo", name=NGO, state_code="MH", is_demo=True))
         added = 0
         for name, state, lon, lat, tankers, price, reliability in VENDORS:
             if name in names:
@@ -50,7 +60,17 @@ def main() -> None:
                                tanker_count=tankers, tanker_capacity_kl=10, base_price_per_kl=price,
                                reliability=reliability, is_demo=True))
             added += 1
-    print(f"government office ready; {added} demo vendors added")
+        s.flush()
+        orgs = {o.name: o for o in s.scalars(select(Organization))}
+        password = hash_password(settings.demo_password) if settings.demo_password else "!"
+        for email, (name, role, org_name) in ACCOUNTS.items():
+            user = s.scalar(select(User).where(User.email == email))
+            if user is None:
+                s.add(User(email=email, name=name, role=role, org_id=orgs[org_name].id, password_hash=password))
+            elif user.password_hash == "!" and password != "!":
+                user.password_hash = password  # accounts made before a demo password existed can now log in
+    print(f"government office ready; {added} demo vendors added; {len(ACCOUNTS)} login accounts ready"
+          + ("" if settings.demo_password else " (no DEMO_PASSWORD: they cannot log in yet)"))
 
 
 if __name__ == "__main__":

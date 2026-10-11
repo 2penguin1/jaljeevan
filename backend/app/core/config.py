@@ -33,6 +33,9 @@ class Settings(BaseSettings):
     hf_token: str | None = None  # Hugging Face read token, for the gated IndicTrans2 model
     max_post_age_days: int = 30
     admin_token: str | None = None  # admin API stays locked until ADMIN_TOKEN is configured
+    jwt_secret: str | None = None  # signs login sessions; required on servers (Secrets Manager)
+    cookie_secure: bool = False  # true on AWS (HTTPS through CloudFront); false for http://localhost
+    demo_password: str | None = None  # password of the seeded demo accounts (Secrets Manager / backend/.env)
     # on AWS the database password arrives as separate values from Secrets Manager; DATABASE_URL is built from them
     db_host: str | None = None
     db_port: int = 5432
