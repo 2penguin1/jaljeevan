@@ -15,3 +15,4 @@ backend/app/data/seed/*
 backend/app/evals/candidates.jsonl
 .superpowers/
 .playwright-mcp/
+backend/app/data/declarations/inbox/

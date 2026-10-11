@@ -13,7 +13,8 @@ from app.domain.declarations import TalukaMatcher, severity_from_text
 from app.integrations.ports import Translator
 
 _SPLIT = re.compile(r"[,|;:\t()\[\]]|\s{2,}|[०-९0-9]+[.)]?")
-_DISTRICT_WORDS = re.compile(r"(जिल्हा|जिल्ह्यातील|जिल्ह्याती|district)", re.I)
+# also the forms broken PDF fonts produce (जिल्हा -> जजल्हा, see app/domain/declarations.pdf_repairs)
+_DISTRICT_WORDS = re.compile(r"(जिल्हा|जजल्हा|जिल्ह्यातील|जजल्ह्यातील|जिल्ह्याती|district)", re.I)
 _DEVANAGARI = re.compile(r"[ऀ-ॿ]")
 REVIEW_FROM = 70.0  # scores between this and TalukaMatcher.ACCEPT go to the "check me" list
 
@@ -40,7 +41,8 @@ class DeclarationExtractor:
         # the whole order, while a severity on a list line covers that line only
         first_heading = next((i for i, (ln, en) in enumerate(zip(lines, english))
                               if _DISTRICT_WORDS.search(ln) or _DISTRICT_WORDS.search(en)), self.TITLE_LINES)
-        title_severity = severity_from_text(" ".join(english[:first_heading]))
+        title_severity = (severity_from_text(" ".join(english[:first_heading]))
+                          or severity_from_text(" ".join(lines[:first_heading])))
         out = Extraction()
         seen: set[int] = set()
         district: str | None = None
@@ -48,7 +50,7 @@ class DeclarationExtractor:
             if _DISTRICT_WORDS.search(line) or _DISTRICT_WORDS.search(line_en):
                 district = self._district_in(line) or district
                 continue
-            severity = severity_from_text(line_en) or title_severity or "unknown"
+            severity = severity_from_text(line_en) or severity_from_text(line) or title_severity or "unknown"
             for piece in (p.strip(" .-–") for p in _SPLIT.split(line)):
                 if len(piece) < 3:
                     continue

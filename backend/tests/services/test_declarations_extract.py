@@ -49,10 +49,11 @@ def test_extracts_talukas_under_their_district_with_severity_from_translation():
     assert all(r["district"] == "Solapur" and r["confidence"] >= 85 for r in result.accepted)
 
 
-def test_without_a_translator_names_still_match_and_severity_needs_checking():
+def test_without_a_translator_names_match_and_marathi_severity_words_still_count():
     result = extract(None)
-    assert {r["taluka"] for r in result.accepted} == {"Mohol", "Akkalkot", "Barshi"}
-    assert all(r["severity"] == "unknown" for r in result.accepted)
+    got = {r["taluka"]: r["severity"] for r in result.accepted}
+    # "गंभीर दुष्काळ : बार्शी" is read directly; the title's "moderate" exists only in the English translation
+    assert got == {"Mohol": "unknown", "Akkalkot": "unknown", "Barshi": "severe"}
 
 
 def test_loader_writes_declarations_and_reports_unmatched_rows(db, tmp_path):
@@ -91,3 +92,23 @@ def test_english_press_list_goes_straight_to_csv_files(tmp_path):
     assert {r["taluka"] for r in result.accepted} == {"Mohol", "Barshi", "Akkalkot"}
     rows = list(csv.DictReader(out.open(encoding="utf-8")))
     assert len(rows) == 3 and (tmp_path / "KA_2026-10-02_check.csv").exists()
+
+
+def test_a_declaration_without_a_stated_severity_loads_as_moderate(db, tmp_path):
+    mohol = AdminArea(level="subdistrict", name="Mohol", name_norm="mohol", state_code="MH", district_name="Solapur",
+                      geom=from_shape(box(75.4, 17.6, 76.0, 18.0), srid=4326))
+    db.add(mohol)
+    db.flush()
+    path = tmp_path / "d.csv"
+    path.write_text("state_code,district,taluka,area_id,declared_on,severity,order_ref,source_url\n"
+                    "MH,Solapur,Mohol,,2026-09-25,unknown,GR 1,\n", encoding="utf-8")
+    loaded, skipped = load_csv(db, path)
+    row = db.query(DroughtDeclaration).one()
+    assert loaded == 1 and row.severity == "moderate" and "severity not stated" in row.order_ref
+
+
+def test_district_headings_are_found_even_when_the_pdf_font_breaks_them():
+    lines = ["दुष्काळ जाहीर करण्याबाबत", "जजल्हा : सोलापूर", "मोहोळ"]  # जिल्हा extracted as जजल्हा
+    result = DeclarationExtractor(TalukaMatcher(TALUKAS), None).extract(
+        lines, state_code="MH", declared_on=date(2026, 9, 25), order_ref="GR", source_url=None)
+    assert [(r["taluka"], r["area_id"]) for r in result.accepted] == [("Mohol", 1)]  # Solapur's, not Elsewhere's

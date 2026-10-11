@@ -25,8 +25,11 @@ def load_csv(session: Session, path: Path) -> tuple[int, list[dict]]:
     loaded, skipped = 0, []
     with path.open(encoding="utf-8") as fh:
         for row in csv.DictReader(fh):
-            if row["severity"] not in ("moderate", "severe"):
-                skipped.append({**row, "reason": "severity must be moderate or severe"})
+            severity, order_ref = row["severity"], row.get("order_ref") or None
+            if severity == "unknown":  # declared, severity not read: the lowest declared level, said so openly
+                severity, order_ref = "moderate", f"{order_ref or 'order'} (severity not stated)"
+            if severity not in ("moderate", "severe"):
+                skipped.append({**row, "reason": "severity must be moderate, severe or unknown"})
                 continue
             area_id = int(row["area_id"]) if (row.get("area_id") or "").strip() else None
             if area_id is not None and session.get(AdminArea, area_id) is None:
@@ -39,8 +42,8 @@ def load_csv(session: Session, path: Path) -> tuple[int, list[dict]]:
             if area_id is None:
                 skipped.append({**row, "reason": "taluka not found"})
                 continue
-            declarations.upsert(area_id, row["state_code"], date.fromisoformat(row["declared_on"]), row["severity"],
-                                row.get("order_ref") or None, row.get("source_url") or None)
+            declarations.upsert(area_id, row["state_code"], date.fromisoformat(row["declared_on"]), severity,
+                                order_ref, row.get("source_url") or None)
             loaded += 1
     return loaded, skipped
 

@@ -21,6 +21,20 @@ def transliterate(text: str) -> str:
     return sanscript.transliterate(text, sanscript.DEVANAGARI, sanscript.IAST) if _DEVANAGARI.search(text) else text
 
 
+# Government PDFs often use fonts whose glyphs map to the wrong Unicode letters when text is extracted:
+#   ग + vowel sign / anusvara / word end  ->  र्   (सांगोला -> सांर्ोला)
+#   the vowel sign ि (drawn before its letter) ->  a stray ज in front  (शिरूर -> जशरूर)
+_BROKEN_GA = re.compile(r"र्(?=[\u093E-\u094C\u0902\u0901]|$|\s)")
+_BROKEN_I = re.compile(r"ज([\u0915-\u0939])")
+
+
+def pdf_repairs(text: str) -> list[str]:
+    """The text plus its repaired spelling. Callers match both and keep the better score, so a genuine ज
+    (e.g. Jath taluka, जत) is never damaged."""
+    repaired = _BROKEN_I.sub("\\1\u093F", _BROKEN_GA.sub("ग", text))
+    return [text] if repaired == text else [text, repaired]
+
+
 def latin_key(name: str) -> str:
     """Spelling-insensitive key: lowercase, no accents, common sound-alikes merged, final schwa dropped."""
     s = name.lower().translate(_SPECIAL)
@@ -32,11 +46,11 @@ def latin_key(name: str) -> str:
 
 
 def severity_from_text(english: str) -> str | None:
-    """Severity words in (translated) order text: severe / moderate, or None if the text doesn't say."""
+    """Severity words in order text (English, or Marathi: गंभीर = severe, मध्यम = moderate), or None."""
     t = english.lower()
-    if re.search(r"\b(severe|serious|grave|acute)\b", t):
+    if re.search(r"\b(severe|serious|grave|acute)\b", t) or re.search(r"गंभीर|तीव्र", english):
         return "severe"
-    if re.search(r"\b(moderate|medium)\b", t):
+    if re.search(r"\b(moderate|medium)\b", t) or "मध्यम" in english:
         return "moderate"
     return None
 
@@ -69,6 +83,10 @@ class TalukaMatcher:
         self.talukas = [(i, name, district, latin_key(name), latin_key(district or "")) for i, name, district in talukas]
 
     def match(self, text: str, district: str | None = None) -> TalukaMatch | None:
+        hits = [self._match_one(v, district) for v in pdf_repairs(text)]
+        return max((h for h in hits if h is not None), key=lambda h: h.score, default=None)
+
+    def _match_one(self, text: str, district: str | None) -> TalukaMatch | None:
         key = latin_key(transliterate(text))
         if not key:
             return None

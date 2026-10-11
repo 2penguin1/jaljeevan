@@ -113,3 +113,12 @@ Simple notes on decisions Claude made for you, especially overnight. Newest at t
   - a few tiny edge cases. All are listed in the notes.
 - **Live result now:** 19 active and 15 watch drought zones, plus 22 water supply zones.
 - **Branch:** all of this is on `feat/drought-footprint` (nothing pushed or deployed).
+
+## Past drought orders (2026-10-11)
+- **We don't solve the government site's captcha automatically.** It's the site's way of blocking bots; getting around it breaks their rules and could get us blocked. Instead:
+  - **New orders:** the site's open "latest orders" page has direct PDF links with no captcha. A watcher can pick them up (not built yet; ask when you want it).
+  - **Past orders:** a temporary helper opens a normal browser and fills in the search, then **you** type the captcha (about 10 seconds) and it downloads every drought order PDF.
+- **Drop folder:** any order PDF put in `backend/app/data/declarations/inbox/` is read and loaded by one command, then moved to `processed/`. Orders that aren't about drought go to `skipped/`.
+- **Severity:** read straight from the Marathi words (गंभीर = severe, मध्यम = moderate), no translator needed. If an order doesn't say, the taluka is loaded as "moderate", the lowest declared level, and the order note says "severity not stated".
+- **Broken PDF letters:** Maharashtra's PDFs often come out with wrong letters (शिरूर becomes जशरूर, सांगोला becomes सांर्ोला). The matcher repairs these two patterns automatically, and keeps the original spelling too, so real names aren't damaged.
+
