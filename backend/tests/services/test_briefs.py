@@ -96,3 +96,12 @@ def test_drafts_are_private_to_officers_and_a_rejected_brief_keeps_the_reason(wo
     svc.reject(first["id"], officer, "Need village names")
     assert svc.get(first["id"], viewer=officer)["review_notes"] == "Need village names"
     assert svc.draft(zone.id, officer)["version"] == 2
+
+
+def test_a_zone_without_a_population_estimate_gets_no_brief_instead_of_a_zero_one(world):
+    from app.core.exceptions import DomainValidationError
+    db, zone, officer, _ = world
+    zone.population_est, zone.population_urban = None, None
+    db.flush()
+    with pytest.raises(DomainValidationError, match="population"):
+        service(db, FakeLLM(None)).draft(zone.id, officer)

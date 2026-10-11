@@ -13,7 +13,7 @@ from datetime import datetime, timezone
 
 from pydantic import BaseModel, Field
 
-from app.core.exceptions import ConflictError, ForbiddenError, NotFoundError
+from app.core.exceptions import ConflictError, DomainValidationError, ForbiddenError, NotFoundError
 from app.domain.playbook import PLAYBOOK, keep_actions, without_numbers
 from app.integrations.ports import LLMClient
 from app.models import ReliefBrief, User
@@ -73,6 +73,8 @@ class BriefService:
         if zone is None:
             raise NotFoundError(f"zone {zone_id} not found")
         need = self.tenders.relief_need(zone_id, TANKER_SHARE)
+        if need.kl_per_day <= 0:
+            raise DomainValidationError("this zone has no population estimate yet, so its water need cannot be sized")
         price = self.tenders.suggested_price(zone_id, RADIUS_KM)
         budget = round(need.kl_per_day * DURATION_DAYS * price)
         evidence = self.evidence(zone_id)[:MAX_EVIDENCE]
