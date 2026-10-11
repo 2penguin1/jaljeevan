@@ -27,11 +27,17 @@ class TenderCreated(BaseModel):
 
 
 class BidActionIn(BaseModel):
-    side: Literal["gov", "vendor"]
-    action: Literal["accept", "counter", "decline"]
+    """Who acts (government or vendor) comes from the logged-in account, never from the request."""
+    action: Literal["accept", "counter", "decline", "message"]
+    expected_version: int | None = Field(default=None, ge=1)  # required for accept / counter / decline
     price_per_unit: float | None = Field(default=None, gt=0)
     qty_per_day: float | None = Field(default=None, gt=0)
     note: str | None = Field(default=None, max_length=300)
+    body: str | None = Field(default=None, max_length=1000)  # the message text
+
+
+class RaisePriceIn(BaseModel):
+    price_per_unit: float = Field(gt=0)
 
 
 class OfferOut(BaseModel):
@@ -47,6 +53,7 @@ class MessageOut(BaseModel):
     side: str
     body: str
     at: datetime
+    author: str | None = None
 
 
 class BidOut(BaseModel):
@@ -58,6 +65,7 @@ class BidOut(BaseModel):
     reason: str
     status: str
     turn: str
+    version: int
     offer: OfferOut | None
     messages: list[MessageOut]
 
@@ -73,6 +81,7 @@ class TenderSummary(BaseModel):
     radius_km: float
     published_at: datetime | None
     committed_kl_per_day: float
+    waiting_for_gov: int = 0
 
 
 class TenderDetail(TenderSummary):
@@ -86,3 +95,15 @@ class VendorOut(BaseModel):
     tanker_count: int
     price_per_kl: float | None
     reliability: float
+
+
+class InboxBid(BidOut):
+    tender_id: uuid.UUID
+    zone_name: str
+    duration_days: int
+
+
+class InboxOut(BaseModel):
+    needs_action: list[InboxBid]
+    waiting: list[InboxBid]
+    closed: list[InboxBid]

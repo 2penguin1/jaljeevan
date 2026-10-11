@@ -51,3 +51,12 @@ class TenderRepository(BaseRepository[Tender]):
     def messages(self, bid_id: uuid.UUID) -> list[BidMessage]:
         return list(self.session.scalars(select(BidMessage).where(BidMessage.bid_id == bid_id)
                                          .order_by(BidMessage.created_at, BidMessage.id)))
+
+    def bids_for_vendor(self, org_id: uuid.UUID) -> list[Bid]:
+        return list(self.session.scalars(select(Bid).where(Bid.vendor_org_id == org_id)
+                                         .order_by(Bid.updated_at.desc())))
+
+    def user_names(self, user_ids: set) -> dict:
+        if not user_ids:
+            return {}
+        return {u.id: u.name for u in self.session.scalars(select(User).where(User.id.in_(user_ids)))}

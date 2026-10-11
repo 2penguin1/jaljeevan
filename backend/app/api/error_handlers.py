@@ -1,10 +1,10 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
-from app.core.exceptions import (AppError, ConflictError, DomainValidationError, ExternalServiceError,
+from app.core.exceptions import (AppError, ConflictError, DomainValidationError, ExternalServiceError, ForbiddenError,
                                  NotFoundError)
 
-_STATUS = {NotFoundError: 404, ConflictError: 409, DomainValidationError: 422, ExternalServiceError: 502}
+_STATUS = {NotFoundError: 404, ForbiddenError: 403, ConflictError: 409, DomainValidationError: 422, ExternalServiceError: 502}
 
 
 def register_error_handlers(app: FastAPI) -> None:

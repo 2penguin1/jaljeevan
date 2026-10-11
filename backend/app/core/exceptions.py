@@ -13,6 +13,10 @@ class ConflictError(AppError):
     """An illegal state transition or a stale update (HTTP 409)."""
 
 
+class ForbiddenError(AppError):
+    """The logged-in account may not do this (HTTP 403)."""
+
+
 class DomainValidationError(AppError):
     """Input violates a business rule (HTTP 422)."""
 
