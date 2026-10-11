@@ -151,7 +151,9 @@ class ZoneDetectionService:
             confidence = support.get(area_id, {})
             zone = self.zones.area_zone(policy.hazard, area_id)
             declared = drought is not None and drought.assessment.declared is not None
-            if level == "none" and not declared:
+            stale = drought is None or drought.assessment.stale
+            cleared = level == "none" and not declared and not stale  # fresh data says the trigger is no longer met
+            if cleared:
                 confidence = {}  # once the data clears, old posts can't keep a drought zone alive
             if zone is None and not (confidence or declared):
                 continue  # dry but unreported talukas are shown by the map's footprint layer, not as zones
@@ -166,8 +168,10 @@ class ZoneDetectionService:
             self._persist(zone, created, taken, result)
             evidence = self.zones.evidence(confidence)
             boost = drought.assessment.boost if drought else 0.0
-            self._record_event(self._finalize(zone, evidence, boost, now, created, data_cleared=level == "none"),
-                               result)
+            self._record_event(self._finalize(zone, evidence, boost, now, created, data_cleared=cleared), result)
+            if (zone.status == ACTIVE and not cleared and not evidence and not declared
+                    and zone.score < self.scorer.config.activate):
+                zone.status = WATCH  # data alone caps at watch, also for zones whose reports have aged out
 
     @staticmethod
     def _mostly_urban(drought: AreaDrought | None) -> bool:
@@ -178,7 +182,7 @@ class ZoneDetectionService:
     def _dry_population(self, drought: AreaDrought | None, area_id: int) -> tuple[int | None, int | None, str | None]:
         """People living in the taluka's grid cells that meet the rainfall trigger, not the whole taluka."""
         metrics = drought.metrics if drought else {}
-        if metrics.get("pop_stressed") is not None:
+        if metrics.get("pop_stressed"):  # 0 = no dry cells (e.g. declared despite normal rain): count the taluka
             urban = metrics.get("pop_stressed_urban")
             return int(metrics["pop_stressed"]), int(urban) if urban is not None else None, "worldpop_dry_areas"
         return self._population(self.areas.wkt(area_id), {area_id}, [])

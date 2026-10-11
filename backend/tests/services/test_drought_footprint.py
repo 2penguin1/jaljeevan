@@ -196,3 +196,66 @@ def test_city_supply_complaints_in_an_urban_dry_taluka_stay_water_supply(db):
     post(db, "https://hindu/city-crops", (75.72, 17.82), hazards=("drought",))  # an explicit drought report counts
     service(db).detect(NOW, hazards=("drought",))
     assert len(zones(db)) == 1
+
+
+def test_a_stale_data_source_does_not_resolve_zones_or_wipe_their_evidence(db):
+    """CHIRPS down for weeks = unknown, not 'the rain came back'."""
+    from app.models import ZoneSignal
+    g = geo(db)
+    dry(db, g["mohol"])
+    post(db, "https://hindu/mohol-stale", (75.7, 17.8))
+    svc = service(db)
+    svc.detect(NOW, hazards=("drought",))
+    [z] = zones(db)
+    assert z.status == "active"
+    later = NOW + timedelta(days=25)  # no newer data arrived: the stored period is now older than 20 days
+    svc.detect(later, hazards=("drought",))
+    svc.detect(later + timedelta(hours=73), hazards=("drought",))
+    db.refresh(z)
+    assert z.status != "resolving"
+    assert db.query(ZoneSignal).filter(ZoneSignal.zone_id == z.id).count() == 1
+
+
+def test_a_declared_taluka_with_normal_rain_counts_its_people_not_zero(db):
+    g = geo(db)
+    AreaIndicatorRepository(db).upsert_many([
+        (g["akkalkot"].id, FRESH, "chirps-spi", "spi_18p", 0.4), (g["akkalkot"].id, FRESH, "chirps-spi", "spi_6p", 0.2),
+        (g["akkalkot"].id, FRESH, "chirps-spi", "pop_stressed", 0.0), (g["akkalkot"].id, FRESH, "chirps-spi", "pop_stressed_urban", 0.0)])
+    DeclarationRepository(db).upsert(g["akkalkot"].id, "MH", FRESH, "severe", "GR", None)
+    config = ScoringConfig()
+    grid = type("G", (), {"count": lambda self, wkt: __import__("app.integrations.ports", fromlist=["x"]).PopulationCount(450_000, 60_000)})()
+    svc = ZoneDetectionService(ZoneRepository(db), AdminAreaRepository(db), IndicatorRepository(db), ZoneScorer(config),
+                               HazardPolicies.default(), ZoneStateMachine(config), ZoneTypeClassifier(), population=grid,
+                               drought=DroughtAssessor(AreaIndicatorRepository(db), IndicatorRepository(db),
+                                                       DeclarationRepository(db), AdminAreaRepository(db), DroughtRules()))
+    svc.detect(NOW, hazards=("drought",))
+    [z] = zones(db)
+    assert (z.population_est, z.population_source) == (450_000, "worldpop")
+
+
+def test_a_confirmed_zone_returns_to_watch_once_its_reports_age_out(db):
+    """Data alone caps at watch, also for zones that were confirmed earlier."""
+    g = geo(db)
+    dry(db, g["mohol"], spi_18p=-1.2, spi_6p=-1.1)  # watch-level data
+    post(db, "https://hindu/mohol-once", (75.7, 17.8))
+    post(db, "https://ndtv/mohol-once", (75.71, 17.81), domain="ndtv.com")
+    svc = service(db)
+    svc.detect(NOW, hazards=("drought",))
+    [z] = zones(db)
+    assert z.status == "active"
+    later = NOW + timedelta(days=31)  # posts are outside the 30-day window; keep the data fresh
+    dry(db, g["mohol"], spi_18p=-1.2, spi_6p=-1.1, period=(later - timedelta(days=2)).date())
+    svc.detect(later, hazards=("drought",))
+    db.refresh(z)
+    assert z.status == "watch"
+
+
+def test_cleanup_of_old_drought_zones_never_touches_approved_ones(db):
+    g = geo(db)
+    approved = Zone(name="Solapur district", hazard="drought", zone_type="district_wide", status="approved", score=70,
+                    district_id=g["solapur"].id, geom=g["solapur"].geom)
+    db.add(approved)
+    db.flush()
+    service(db).detect(NOW, hazards=("drought",))
+    db.refresh(approved)
+    assert approved.status == "approved"

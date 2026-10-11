@@ -39,12 +39,18 @@ export function DroughtPanel({ panel }: { panel: Panel }) {
         <h3 className="text-[13px] font-medium text-text">Measured drought data</h3>
         <span className="text-[12px] text-text-2">Level: <span className="text-text">{LEVEL[panel.level] ?? panel.level}</span></span>
       </div>
+      {panel.stale && (
+        <p role="note" className="rounded-[6px] border border-drought/40 px-3 py-2 text-[12.5px] text-text">
+          Rainfall data is out of date{panel.spi_period ? ` (last update covers to ${day.format(new Date(`${panel.spi_period}T00:00:00`))})` : ""}.
+          The level below is held until fresh data arrives.
+        </p>
+      )}
       <dl className="grid grid-cols-2 gap-4">
         <Measure label="Rain, last 3 months (SPI)" value={panel.spi_18p} words={dryness(panel.spi_18p)}
-          note={panel.spi_period ? `to ${day.format(new Date(panel.spi_period))}` : undefined} />
+          note={panel.spi_period ? `to ${day.format(new Date(`${panel.spi_period}T00:00:00`))}` : undefined} />
         <Measure label="Rain, last month (SPI)" value={panel.spi_6p} words={dryness(panel.spi_6p)} />
         <Measure label="Soil moisture anomaly" value={panel.soil_anomaly} words={dryness(panel.soil_anomaly)}
-          note={panel.soil_period ? `to ${day.format(new Date(panel.soil_period))}` : undefined} />
+          note={panel.soil_period ? `to ${day.format(new Date(`${panel.soil_period}T00:00:00`))}` : undefined} />
         <div className="flex flex-col gap-1">
           <dt className="text-[12px] text-text-2">People in the dry parts</dt>
           <dd className="num text-[18px] text-text">{formatPeople(panel.people_in_dry_areas)}</dd>
@@ -57,7 +63,7 @@ export function DroughtPanel({ panel }: { panel: Panel }) {
       </dl>
       {panel.declared && (
         <p className="text-[13px] text-text">
-          Declared {panel.declared.severity} drought by the state on {day.format(new Date(panel.declared.declared_on))}
+          Declared {panel.declared.severity} drought by the state on {day.format(new Date(`${panel.declared.declared_on}T00:00:00`))}
           {panel.declared.order_ref ? ` (${panel.declared.order_ref})` : ""}
           {href && (
             <a href={href} target="_blank" rel="noreferrer noopener" className="ml-2 inline-flex items-center gap-1 text-text-2 hover:text-text">

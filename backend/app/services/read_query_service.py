@@ -98,7 +98,7 @@ class ReadQueryService:
             spi_period=m.get("spi_period"), soil_anomaly=m.get("soil_anomaly"), soil_period=m.get("soil_period"),
             people_in_dry_areas=as_int(m.get("pop_stressed")), people_in_dry_areas_urban=as_int(m.get("pop_stressed_urban")),
             imd_district_departure_pct=m.get("imd_departure_pct"), imd_deficient=a.imd_deficient,
-            reasons=list(a.reasons),
+            reasons=list(a.reasons), stale=a.stale,
             declared=DeclarationInfo(severity=decl.severity, declared_on=decl.declared_on, order_ref=decl.order_ref,
                                      source_url=decl.source_url) if decl else None)
 

@@ -334,6 +334,11 @@ export interface components {
             /** Reasons */
             reasons: string[];
             declared: components["schemas"]["DeclarationInfo"] | null;
+            /**
+             * Stale
+             * @default false
+             */
+            stale: boolean;
         };
         /** EvidenceItem */
         EvidenceItem: {

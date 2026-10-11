@@ -66,6 +66,7 @@ class DroughtAssessment:
     reasons: tuple[str, ...] = field(default_factory=tuple)
     declared: str | None = None
     imd_deficient: bool | None = None
+    stale: bool = False              # rainfall data missing or too old: "unknown", never "the rain came back"
 
 
 class DroughtRules:
@@ -110,7 +111,7 @@ class DroughtRules:
         boost = max(self.BOOST[level], self.DECLARED_BOOST) if x.declared_severity else self.BOOST[level]
         return DroughtAssessment(level=level, trigger1=trigger1, t1_class=t1_class, soil_class=soil_class,
                                  boost=boost, reasons=tuple(reasons) if level != "none" else (),
-                                 declared=x.declared_severity, imd_deficient=imd)
+                                 declared=x.declared_severity, imd_deficient=imd, stale=not spi_ok)
 
     @staticmethod
     def _level(trigger1: bool, t1_class: str | None, soil_class: str | None) -> str:

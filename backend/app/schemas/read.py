@@ -118,6 +118,7 @@ class DroughtPanel(BaseModel):
     imd_deficient: bool | None
     reasons: list[str]
     declared: DeclarationInfo | None
+    stale: bool = False  # rainfall data missing or older than the rules accept: shown as "out of date"
 
 
 class ZoneDetail(BaseModel):

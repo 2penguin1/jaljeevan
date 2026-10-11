@@ -110,7 +110,7 @@ test("a drought zone shows the measured data behind it, labelled as indicative",
       rules_version: "v1", level: "severe", trigger1: true, t1_class: "severe", soil_class: "severe",
       spi_6p: -1.3, spi_18p: -2.7, spi_period: "2026-10-05", soil_anomaly: -1.6, soil_period: "2026-09-30",
       people_in_dry_areas: 210000, people_in_dry_areas_urban: 30000, imd_district_departure_pct: -45,
-      imd_deficient: true, reasons: ["Rainfall over the last 3 months is severely below normal (SPI -2.7)"],
+      imd_deficient: true, reasons: ["Rainfall over the last 3 months is severely below normal (SPI -2.7)"], stale: true,
       declared: { severity: "severe", declared_on: "2026-09-25", order_ref: "GR 25 Sep 2026",
         source_url: "javascript:alert(1)" },
     },
@@ -119,6 +119,7 @@ test("a drought zone shows the measured data behind it, labelled as indicative",
   renderAt(`/zones/${ZID}`);
   const panel = await screen.findByRole("region", { name: "Measured drought data" });
   expect(within(panel).getByText(/Indicative drought footprint/)).toBeInTheDocument();
+  expect(within(panel).getByText(/Rainfall data is out of date/)).toBeInTheDocument();
   expect(within(panel).getByText("−2.7")).toBeInTheDocument();
   expect(within(panel).getByText("Extremely dry")).toBeInTheDocument();
   expect(within(panel).getByText("2.1 lakh")).toBeInTheDocument();

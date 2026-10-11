@@ -151,7 +151,7 @@ class ZoneRepository(BaseRepository[Zone]):
         """Zones of a footprint hazard that were drawn from posts before data decided them (no area_id)."""
         count = self.session.execute(text("""
             UPDATE zones SET status = 'dismissed' WHERE hazard = :hz AND area_id IS NULL
-              AND status NOT IN ('dismissed', 'resolved')"""), {"hz": hazard}).rowcount
+              AND status NOT IN ('dismissed', 'resolved', 'approved')"""), {"hz": hazard}).rowcount
         self.session.flush()
         return count
 

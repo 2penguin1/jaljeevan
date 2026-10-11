@@ -893,6 +893,11 @@
                 "type": "null"
               }
             ]
+          },
+          "stale": {
+            "type": "boolean",
+            "title": "Stale",
+            "default": false
           }
         },
         "type": "object",

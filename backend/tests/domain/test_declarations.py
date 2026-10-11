@@ -38,3 +38,12 @@ def test_garbled_pdf_text_is_detected_so_ocr_can_take_over():
     assert looks_garbled("ÌÉÉåÉ uÉÑ¹ÉÉ ºÉÉåsÉÉ ´ÉÉ¶É") is True     # legacy-font Marathi extracted as Latin-1 junk
     assert looks_garbled("सोलापूर जिल्ह्यातील मोहोळ तालुका") is False
     assert looks_garbled("Drought declared in 265 talukas") is False
+
+
+def test_same_named_talukas_without_a_clear_district_go_to_review():
+    m = TalukaMatcher(TALUKAS)  # two "Mohol": Solapur and Elsewhere
+    assert m.match("मोहोळ").score < m.ACCEPT                       # no district given: ambiguous
+    assert m.match("Mohol", district="ÌÉÉåÉ").score < m.ACCEPT      # district garbled: ambiguous
+    assert m.match("मोहोळ", district="Puneeee").score < m.ACCEPT    # district matches nothing
+    assert m.match("मोहोळ", district="Solapur").score >= m.ACCEPT   # the district settles it
+    assert m.match("अक्कलकोट").score >= m.ACCEPT                    # a unique name is still fine

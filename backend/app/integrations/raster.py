@@ -104,13 +104,16 @@ def coverage_sum(grid: Grid, geom: BaseGeometry, mask: np.ndarray | None = None)
 
 def resample_nearest(grid: Grid, transform: Affine, shape: tuple[int, int]) -> np.ndarray:
     """Values of `grid` at the pixel centres of another grid (nearest neighbour); NaN outside."""
-    rows, cols = np.indices(shape)
-    xs, ys = transform @ (cols + 0.5, rows + 0.5)
-    src_cols, src_rows = ~grid.transform @ (xs, ys)
-    src_rows, src_cols = np.floor(src_rows).astype(int), np.floor(src_cols).astype(int)
-    inside = (src_rows >= 0) & (src_rows < grid.shape[0]) & (src_cols >= 0) & (src_cols < grid.shape[1])
+    # both grids are north-up and axis-aligned: map row and column centres separately (1-D), then gather once
+    # (a full 2-D coordinate mesh of the 1 km India grid would cost ~1 GB)
+    xs = transform.c + (np.arange(shape[1]) + 0.5) * transform.a
+    ys = transform.f + (np.arange(shape[0]) + 0.5) * transform.e
+    src_cols = np.floor((xs - grid.transform.c) / grid.transform.a).astype(int)
+    src_rows = np.floor((ys - grid.transform.f) / grid.transform.e).astype(int)
+    ok_r = (src_rows >= 0) & (src_rows < grid.shape[0])
+    ok_c = (src_cols >= 0) & (src_cols < grid.shape[1])
     out = np.full(shape, np.nan)
-    out[inside] = grid.values[src_rows[inside], src_cols[inside]]
+    out[np.ix_(ok_r, ok_c)] = grid.values[np.ix_(src_rows[ok_r], src_cols[ok_c])]
     return out
 
 

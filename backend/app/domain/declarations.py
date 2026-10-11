@@ -62,6 +62,7 @@ class TalukaMatcher:
 
     ACCEPT = 85.0          # at or above: accepted automatically
     DISTRICT_SAME = 85.0   # how close a district name must be to count as "the same district"
+    TIE = 5.0              # two candidates in different districts this close = ambiguous
 
     def __init__(self, talukas: list[tuple[int, str, str | None]]):
         self.talukas_raw = list(talukas)
@@ -71,12 +72,17 @@ class TalukaMatcher:
         key = latin_key(transliterate(text))
         if not key:
             return None
-        pool = self.talukas
+        pool, district_unmatched = self.talukas, False
         if district:
             dkey = latin_key(transliterate(district))
             in_district = [t for t in pool if fuzz.ratio(t[4], dkey) >= self.DISTRICT_SAME]
-            pool = in_district or pool
-        best = max(pool, key=lambda t: fuzz.ratio(t[3], key), default=None)
-        if best is None:
+            pool, district_unmatched = (in_district, False) if in_district else (pool, True)
+        ranked = sorted(pool, key=lambda t: fuzz.ratio(t[3], key), reverse=True)
+        if not ranked:
             return None
-        return TalukaMatch(best[0], best[1], best[2], fuzz.ratio(best[3], key))
+        best, score = ranked[0], fuzz.ratio(ranked[0][3], key)
+        rival = next((t for t in ranked[1:] if t[2] != best[2]), None)
+        tied = rival is not None and score - fuzz.ratio(rival[3], key) < self.TIE
+        if tied or district_unmatched:
+            score = min(score, self.ACCEPT - 1)  # same name in another district, or an unreadable district: a person checks
+        return TalukaMatch(best[0], best[1], best[2], score)
