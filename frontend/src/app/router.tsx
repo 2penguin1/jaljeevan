@@ -22,6 +22,8 @@ export const routes: RouteObject[] = [
         handle: { title: "Zone" },
         lazy: () => import("@/features/zones/ZonePage").then((m) => ({ Component: m.ZonePage })),
       },
+      { path: "/tenders", handle: { title: "Tenders" }, lazy: () => import("@/features/tenders/TendersPage").then((m) => ({ Component: m.TendersPage })) },
+      { path: "/tenders/:tenderId", handle: { title: "Tender" }, lazy: () => import("@/features/tenders/TenderPage").then((m) => ({ Component: m.TenderPage })) },
       { path: "/ops", handle: { title: "Pipeline health" }, lazy: () => import("@/features/ops/OpsPage").then((m) => ({ Component: m.OpsPage })) },
       { path: "*", lazy: () => import("./NotFound").then((m) => ({ Component: m.NotFound })) },
     ],

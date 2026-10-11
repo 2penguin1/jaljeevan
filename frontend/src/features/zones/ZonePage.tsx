@@ -12,6 +12,7 @@ import type { Geometry } from "@/lib/api/types";
 import { formatInt, formatPeople, timeAgo } from "@/lib/format";
 import { HAZARDS } from "@/lib/hazards";
 import { useZone } from "@/lib/hooks/queries";
+import { ReliefNeedCard } from "@/features/tenders/ReliefNeedCard";
 import { DroughtPanel } from "./DroughtPanel";
 import { ScoreBreakdown } from "./ScoreBreakdown";
 import { TrendChart } from "./TrendChart";
@@ -125,6 +126,7 @@ export function ZonePage() {
             )}
           </div>
           <aside className="flex flex-col gap-8">
+            {(zone.hazard === "drought" || zone.hazard === "water") && <ReliefNeedCard zoneId={zone.id} />}
             {query.data.drought && <DroughtPanel panel={query.data.drought} />}
             <ScoreBreakdown breakdown={score_breakdown} evidence={evidence} indicators={indicators} hazard={zone.hazard} />
             <section aria-label="Score over time" className="flex flex-col gap-3">

@@ -1,4 +1,4 @@
-import { Activity, Globe2, Rows3, type LucideIcon } from "lucide-react";
+import { Activity, Globe2, Rows3, Truck, type LucideIcon } from "lucide-react";
 import { Link, NavLink, Outlet, useMatches } from "react-router";
 import { LiveDot } from "@/components/patterns/LiveDot";
 import { APP_NAME } from "@/lib/config";
@@ -8,6 +8,7 @@ import { LiveProvider, useLiveStatus } from "@/lib/live/LiveContext";
 const NAV: { to: string; label: string; icon: LucideIcon }[] = [
   { to: "/map", label: "Map", icon: Globe2 },
   { to: "/zones", label: "Zones", icon: Rows3 },
+  { to: "/tenders", label: "Tenders", icon: Truck },
   { to: "/ops", label: "Ops", icon: Activity },
 ];
 

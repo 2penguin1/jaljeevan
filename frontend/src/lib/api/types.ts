@@ -60,3 +60,8 @@ export type FootprintProps = {
   people: number | null;
   declared: boolean;
 };
+export type ReliefNeed = S["ReliefNeedOut"];
+export type TenderSummary = S["TenderSummary"];
+export type TenderDetail = S["TenderDetail"];
+export type BidOut = S["BidOut"];
+export type VendorOut = S["VendorOut"];

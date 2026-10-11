@@ -266,10 +266,143 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/zones/{zone_id}/relief-need": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Relief Need */
+        get: operations["relief_need_api_v1_zones__zone_id__relief_need_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tenders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Tenders */
+        get: operations["list_tenders_api_v1_tenders_get"];
+        put?: never;
+        /** Create Tender */
+        post: operations["create_tender_api_v1_tenders_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tenders/{tender_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Tender Detail */
+        get: operations["tender_detail_api_v1_tenders__tender_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tenders/{tender_id}/bids/{bid_id}/actions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Bid Action */
+        post: operations["bid_action_api_v1_tenders__tender_id__bids__bid_id__actions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/vendors": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Vendors */
+        get: operations["vendors_api_v1_vendors_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** BidActionIn */
+        BidActionIn: {
+            /**
+             * Side
+             * @enum {string}
+             */
+            side: "gov" | "vendor";
+            /**
+             * Action
+             * @enum {string}
+             */
+            action: "accept" | "counter" | "decline";
+            /** Price Per Unit */
+            price_per_unit?: number | null;
+            /** Qty Per Day */
+            qty_per_day?: number | null;
+            /** Note */
+            note?: string | null;
+        };
+        /** BidOut */
+        BidOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Vendor Id
+             * Format: uuid
+             */
+            vendor_id: string;
+            /** Vendor Name */
+            vendor_name: string;
+            /** Distance Km */
+            distance_km: number;
+            /** Rank Score */
+            rank_score: number;
+            /** Reason */
+            reason: string;
+            /** Status */
+            status: string;
+            /** Turn */
+            turn: string;
+            offer: components["schemas"]["OfferOut"] | null;
+            /** Messages */
+            messages: components["schemas"]["MessageOut"][];
+        };
         /** Contribution */
         Contribution: {
             /**
@@ -462,6 +595,33 @@ export interface components {
             /** Band */
             band: string;
         };
+        /** MessageOut */
+        MessageOut: {
+            /** Side */
+            side: string;
+            /** Body */
+            body: string;
+            /**
+             * At
+             * Format: date-time
+             */
+            at: string;
+        };
+        /** OfferOut */
+        OfferOut: {
+            /** Version */
+            version: number;
+            /** Price Per Unit */
+            price_per_unit: number;
+            /** Qty Per Day */
+            qty_per_day: number;
+            /** Proposed By Side */
+            proposed_by_side: string;
+            /** Status */
+            status: string;
+            /** Note */
+            note: string | null;
+        };
         /** OpsRun */
         OpsRun: {
             /**
@@ -532,6 +692,21 @@ export interface components {
                 [key: string]: unknown;
             };
         };
+        /** ReliefNeedOut */
+        ReliefNeedOut: {
+            /** People */
+            people: number;
+            /** Kl Per Day */
+            kl_per_day: number;
+            /** Tanker Trips Per Day */
+            tanker_trips_per_day: number;
+            /** Share */
+            share: number;
+            /** Formula */
+            formula: string;
+            /** Suggested Price */
+            suggested_price: number;
+        };
         /** RunStarted */
         RunStarted: {
             /**
@@ -564,6 +739,90 @@ export interface components {
             /** Sources */
             sources: number;
         };
+        /** TenderCreated */
+        TenderCreated: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+        };
+        /** TenderDetail */
+        TenderDetail: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Zone Id
+             * Format: uuid
+             */
+            zone_id: string;
+            /** Zone Name */
+            zone_name: string;
+            /** Status */
+            status: string;
+            /** Qty Per Day */
+            qty_per_day: number;
+            /** Duration Days */
+            duration_days: number;
+            /** Price Per Unit */
+            price_per_unit: number;
+            /** Radius Km */
+            radius_km: number;
+            /** Published At */
+            published_at: string | null;
+            /** Committed Kl Per Day */
+            committed_kl_per_day: number;
+            /** Bids */
+            bids: components["schemas"]["BidOut"][];
+        };
+        /** TenderIn */
+        TenderIn: {
+            /**
+             * Zone Id
+             * Format: uuid
+             */
+            zone_id: string;
+            /** Qty Per Day */
+            qty_per_day: number;
+            /** Duration Days */
+            duration_days: number;
+            /** Price Per Unit */
+            price_per_unit: number;
+            /** Radius Km */
+            radius_km: number;
+        };
+        /** TenderSummary */
+        TenderSummary: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Zone Id
+             * Format: uuid
+             */
+            zone_id: string;
+            /** Zone Name */
+            zone_name: string;
+            /** Status */
+            status: string;
+            /** Qty Per Day */
+            qty_per_day: number;
+            /** Duration Days */
+            duration_days: number;
+            /** Price Per Unit */
+            price_per_unit: number;
+            /** Radius Km */
+            radius_km: number;
+            /** Published At */
+            published_at: string | null;
+            /** Committed Kl Per Day */
+            committed_kl_per_day: number;
+        };
         /** TokenTotals */
         TokenTotals: {
             /** Input Tokens */
@@ -593,6 +852,24 @@ export interface components {
             input?: unknown;
             /** Context */
             ctx?: Record<string, never>;
+        };
+        /** VendorOut */
+        VendorOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** State Code */
+            state_code: string;
+            /** Tanker Count */
+            tanker_count: number;
+            /** Price Per Kl */
+            price_per_kl: number | null;
+            /** Reliability */
+            reliability: number;
         };
         /** ZoneDetail */
         ZoneDetail: {
@@ -1093,6 +1370,184 @@ export interface operations {
                 };
                 content: {
                     "text/event-stream": unknown;
+                };
+            };
+        };
+    };
+    relief_need_api_v1_zones__zone_id__relief_need_get: {
+        parameters: {
+            query?: {
+                share?: number;
+                radius_km?: number;
+            };
+            header?: never;
+            path: {
+                zone_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReliefNeedOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_tenders_api_v1_tenders_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TenderSummary"][];
+                };
+            };
+        };
+    };
+    create_tender_api_v1_tenders_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-admin-token"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TenderIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TenderCreated"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    tender_detail_api_v1_tenders__tender_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tender_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TenderDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    bid_action_api_v1_tenders__tender_id__bids__bid_id__actions_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-admin-token"?: string | null;
+            };
+            path: {
+                tender_id: string;
+                bid_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BidActionIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TenderDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    vendors_api_v1_vendors_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VendorOut"][];
                 };
             };
         };

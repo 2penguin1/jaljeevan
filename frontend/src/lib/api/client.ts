@@ -39,3 +39,21 @@ export async function apiGet<T>(path: string, params?: Params, signal?: AbortSig
   if (!res.ok) throw new ApiError(res.status, readableDetail(body, res.status));
   return body as T;
 }
+
+/** Writes (demo actions) send the demo access code; reads never need it. */
+export async function apiPost<T>(path: string, body: unknown, code: string): Promise<T> {
+  let res: Response;
+  try {
+    res = await fetch(`${BASE}${path}`, {
+      method: "POST",
+      headers: { Accept: "application/json", "Content-Type": "application/json", "X-Admin-Token": code },
+      body: JSON.stringify(body),
+    });
+  } catch {
+    throw new ApiError(0, "Can't reach the server. Check your connection.");
+  }
+  const data = await res.json().catch(() => null);
+  if (res.status === 401 || res.status === 403) throw new ApiError(res.status, "That demo access code is not right.");
+  if (!res.ok) throw new ApiError(res.status, readableDetail(data, res.status));
+  return data as T;
+}

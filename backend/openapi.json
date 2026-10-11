@@ -665,10 +665,438 @@
           }
         }
       }
+    },
+    "/api/v1/zones/{zone_id}/relief-need": {
+      "get": {
+        "tags": [
+          "tenders"
+        ],
+        "summary": "Relief Need",
+        "operationId": "relief_need_api_v1_zones__zone_id__relief_need_get",
+        "parameters": [
+          {
+            "name": "zone_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Zone Id"
+            }
+          },
+          {
+            "name": "share",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "maximum": 1,
+              "exclusiveMinimum": 0,
+              "default": 0.1,
+              "title": "Share"
+            }
+          },
+          {
+            "name": "radius_km",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "maximum": 500,
+              "exclusiveMinimum": 0,
+              "default": 100,
+              "title": "Radius Km"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReliefNeedOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tenders": {
+      "get": {
+        "tags": [
+          "tenders"
+        ],
+        "summary": "List Tenders",
+        "operationId": "list_tenders_api_v1_tenders_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TenderSummary"
+                  },
+                  "title": "Response List Tenders Api V1 Tenders Get"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "tenders"
+        ],
+        "summary": "Create Tender",
+        "operationId": "create_tender_api_v1_tenders_post",
+        "parameters": [
+          {
+            "name": "x-admin-token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Admin-Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TenderIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenderCreated"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tenders/{tender_id}": {
+      "get": {
+        "tags": [
+          "tenders"
+        ],
+        "summary": "Tender Detail",
+        "operationId": "tender_detail_api_v1_tenders__tender_id__get",
+        "parameters": [
+          {
+            "name": "tender_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Tender Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenderDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tenders/{tender_id}/bids/{bid_id}/actions": {
+      "post": {
+        "tags": [
+          "tenders"
+        ],
+        "summary": "Bid Action",
+        "operationId": "bid_action_api_v1_tenders__tender_id__bids__bid_id__actions_post",
+        "parameters": [
+          {
+            "name": "tender_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Tender Id"
+            }
+          },
+          {
+            "name": "bid_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Bid Id"
+            }
+          },
+          {
+            "name": "x-admin-token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Admin-Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BidActionIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenderDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/vendors": {
+      "get": {
+        "tags": [
+          "tenders"
+        ],
+        "summary": "Vendors",
+        "operationId": "vendors_api_v1_vendors_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/VendorOut"
+                  },
+                  "type": "array",
+                  "title": "Response Vendors Api V1 Vendors Get"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
+      "BidActionIn": {
+        "properties": {
+          "side": {
+            "type": "string",
+            "enum": [
+              "gov",
+              "vendor"
+            ],
+            "title": "Side"
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "accept",
+              "counter",
+              "decline"
+            ],
+            "title": "Action"
+          },
+          "price_per_unit": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Per Unit"
+          },
+          "qty_per_day": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Qty Per Day"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 300
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "type": "object",
+        "required": [
+          "side",
+          "action"
+        ],
+        "title": "BidActionIn"
+      },
+      "BidOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "vendor_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Vendor Id"
+          },
+          "vendor_name": {
+            "type": "string",
+            "title": "Vendor Name"
+          },
+          "distance_km": {
+            "type": "number",
+            "title": "Distance Km"
+          },
+          "rank_score": {
+            "type": "number",
+            "title": "Rank Score"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "turn": {
+            "type": "string",
+            "title": "Turn"
+          },
+          "offer": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OfferOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "messages": {
+            "items": {
+              "$ref": "#/components/schemas/MessageOut"
+            },
+            "type": "array",
+            "title": "Messages"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "vendor_id",
+          "vendor_name",
+          "distance_km",
+          "rank_score",
+          "reason",
+          "status",
+          "turn",
+          "offer",
+          "messages"
+        ],
+        "title": "BidOut"
+      },
       "Contribution": {
         "properties": {
           "signal_id": {
@@ -1352,6 +1780,75 @@
         ],
         "title": "IndicatorInfo"
       },
+      "MessageOut": {
+        "properties": {
+          "side": {
+            "type": "string",
+            "title": "Side"
+          },
+          "body": {
+            "type": "string",
+            "title": "Body"
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "side",
+          "body",
+          "at"
+        ],
+        "title": "MessageOut"
+      },
+      "OfferOut": {
+        "properties": {
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
+          "price_per_unit": {
+            "type": "number",
+            "title": "Price Per Unit"
+          },
+          "qty_per_day": {
+            "type": "number",
+            "title": "Qty Per Day"
+          },
+          "proposed_by_side": {
+            "type": "string",
+            "title": "Proposed By Side"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "type": "object",
+        "required": [
+          "version",
+          "price_per_unit",
+          "qty_per_day",
+          "proposed_by_side",
+          "status",
+          "note"
+        ],
+        "title": "OfferOut"
+      },
       "OpsRun": {
         "properties": {
           "id": {
@@ -1516,6 +2013,44 @@
         ],
         "title": "PipelineRunOut"
       },
+      "ReliefNeedOut": {
+        "properties": {
+          "people": {
+            "type": "integer",
+            "title": "People"
+          },
+          "kl_per_day": {
+            "type": "number",
+            "title": "Kl Per Day"
+          },
+          "tanker_trips_per_day": {
+            "type": "integer",
+            "title": "Tanker Trips Per Day"
+          },
+          "share": {
+            "type": "number",
+            "title": "Share"
+          },
+          "formula": {
+            "type": "string",
+            "title": "Formula"
+          },
+          "suggested_price": {
+            "type": "number",
+            "title": "Suggested Price"
+          }
+        },
+        "type": "object",
+        "required": [
+          "people",
+          "kl_per_day",
+          "tanker_trips_per_day",
+          "share",
+          "formula",
+          "suggested_price"
+        ],
+        "title": "ReliefNeedOut"
+      },
       "RunStarted": {
         "properties": {
           "run_id": {
@@ -1594,6 +2129,204 @@
         ],
         "title": "StatsOverview"
       },
+      "TenderCreated": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "title": "TenderCreated"
+      },
+      "TenderDetail": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "zone_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Zone Id"
+          },
+          "zone_name": {
+            "type": "string",
+            "title": "Zone Name"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "qty_per_day": {
+            "type": "number",
+            "title": "Qty Per Day"
+          },
+          "duration_days": {
+            "type": "integer",
+            "title": "Duration Days"
+          },
+          "price_per_unit": {
+            "type": "number",
+            "title": "Price Per Unit"
+          },
+          "radius_km": {
+            "type": "number",
+            "title": "Radius Km"
+          },
+          "published_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published At"
+          },
+          "committed_kl_per_day": {
+            "type": "number",
+            "title": "Committed Kl Per Day"
+          },
+          "bids": {
+            "items": {
+              "$ref": "#/components/schemas/BidOut"
+            },
+            "type": "array",
+            "title": "Bids"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "zone_id",
+          "zone_name",
+          "status",
+          "qty_per_day",
+          "duration_days",
+          "price_per_unit",
+          "radius_km",
+          "published_at",
+          "committed_kl_per_day",
+          "bids"
+        ],
+        "title": "TenderDetail"
+      },
+      "TenderIn": {
+        "properties": {
+          "zone_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Zone Id"
+          },
+          "qty_per_day": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Qty Per Day"
+          },
+          "duration_days": {
+            "type": "integer",
+            "maximum": 180.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Duration Days"
+          },
+          "price_per_unit": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Price Per Unit"
+          },
+          "radius_km": {
+            "type": "number",
+            "maximum": 500.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Radius Km"
+          }
+        },
+        "type": "object",
+        "required": [
+          "zone_id",
+          "qty_per_day",
+          "duration_days",
+          "price_per_unit",
+          "radius_km"
+        ],
+        "title": "TenderIn"
+      },
+      "TenderSummary": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "zone_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Zone Id"
+          },
+          "zone_name": {
+            "type": "string",
+            "title": "Zone Name"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "qty_per_day": {
+            "type": "number",
+            "title": "Qty Per Day"
+          },
+          "duration_days": {
+            "type": "integer",
+            "title": "Duration Days"
+          },
+          "price_per_unit": {
+            "type": "number",
+            "title": "Price Per Unit"
+          },
+          "radius_km": {
+            "type": "number",
+            "title": "Radius Km"
+          },
+          "published_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published At"
+          },
+          "committed_kl_per_day": {
+            "type": "number",
+            "title": "Committed Kl Per Day"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "zone_id",
+          "zone_name",
+          "status",
+          "qty_per_day",
+          "duration_days",
+          "price_per_unit",
+          "radius_km",
+          "published_at",
+          "committed_kl_per_day"
+        ],
+        "title": "TenderSummary"
+      },
       "TokenTotals": {
         "properties": {
           "input_tokens": {
@@ -1670,6 +2403,52 @@
           "type"
         ],
         "title": "ValidationError"
+      },
+      "VendorOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "state_code": {
+            "type": "string",
+            "title": "State Code"
+          },
+          "tanker_count": {
+            "type": "integer",
+            "title": "Tanker Count"
+          },
+          "price_per_kl": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Per Kl"
+          },
+          "reliability": {
+            "type": "number",
+            "title": "Reliability"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "state_code",
+          "tanker_count",
+          "price_per_kl",
+          "reliability"
+        ],
+        "title": "VendorOut"
       },
       "ZoneDetail": {
         "properties": {
