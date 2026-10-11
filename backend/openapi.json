@@ -290,6 +290,52 @@
         }
       }
     },
+    "/api/v1/map/footprint": {
+      "get": {
+        "tags": [
+          "map"
+        ],
+        "summary": "Map Footprint",
+        "description": "Talukas flagged by measured drought data (or an official declaration), as GeoJSON with their level.",
+        "operationId": "map_footprint_api_v1_map_footprint_get",
+        "parameters": [
+          {
+            "name": "hazard",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "const": "drought",
+              "type": "string",
+              "title": "Hazard"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Map Footprint Api V1 Map Footprint Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/map/signals": {
       "get": {
         "tags": [
@@ -647,6 +693,231 @@
         ],
         "title": "Contribution"
       },
+      "DeclarationInfo": {
+        "properties": {
+          "severity": {
+            "type": "string",
+            "title": "Severity"
+          },
+          "declared_on": {
+            "type": "string",
+            "format": "date",
+            "title": "Declared On"
+          },
+          "order_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Order Ref"
+          },
+          "source_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "severity",
+          "declared_on",
+          "order_ref",
+          "source_url"
+        ],
+        "title": "DeclarationInfo"
+      },
+      "DroughtPanel": {
+        "properties": {
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "rules_version": {
+            "type": "string",
+            "title": "Rules Version"
+          },
+          "level": {
+            "type": "string",
+            "title": "Level"
+          },
+          "trigger1": {
+            "type": "boolean",
+            "title": "Trigger1"
+          },
+          "t1_class": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "T1 Class"
+          },
+          "soil_class": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Soil Class"
+          },
+          "spi_6p": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Spi 6P"
+          },
+          "spi_18p": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Spi 18P"
+          },
+          "spi_period": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Spi Period"
+          },
+          "soil_anomaly": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Soil Anomaly"
+          },
+          "soil_period": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Soil Period"
+          },
+          "people_in_dry_areas": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "People In Dry Areas"
+          },
+          "people_in_dry_areas_urban": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "People In Dry Areas Urban"
+          },
+          "imd_district_departure_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Imd District Departure Pct"
+          },
+          "imd_deficient": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Imd Deficient"
+          },
+          "reasons": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Reasons"
+          },
+          "declared": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DeclarationInfo"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "label",
+          "rules_version",
+          "level",
+          "trigger1",
+          "t1_class",
+          "soil_class",
+          "spi_6p",
+          "spi_18p",
+          "spi_period",
+          "soil_anomaly",
+          "soil_period",
+          "people_in_dry_areas",
+          "people_in_dry_areas_urban",
+          "imd_district_departure_pct",
+          "imd_deficient",
+          "reasons",
+          "declared"
+        ],
+        "title": "DroughtPanel",
+        "description": "The measured data behind a drought zone (GoI Drought Manual rules)."
+      },
       "EvidenceItem": {
         "properties": {
           "signal_id": {
@@ -979,6 +1250,30 @@
         ],
         "title": "HealthResponse"
       },
+      "IndicatorFreshness": {
+        "properties": {
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "period": {
+            "type": "string",
+            "format": "date",
+            "title": "Period"
+          },
+          "areas": {
+            "type": "integer",
+            "title": "Areas"
+          }
+        },
+        "type": "object",
+        "required": [
+          "source",
+          "period",
+          "areas"
+        ],
+        "title": "IndicatorFreshness"
+      },
       "IndicatorInfo": {
         "properties": {
           "label": {
@@ -1064,6 +1359,14 @@
           },
           "totals": {
             "$ref": "#/components/schemas/OpsTotals"
+          },
+          "indicators": {
+            "items": {
+              "$ref": "#/components/schemas/IndicatorFreshness"
+            },
+            "type": "array",
+            "title": "Indicators",
+            "default": []
           }
         },
         "type": "object",
@@ -1336,6 +1639,16 @@
             "anyOf": [
               {
                 "$ref": "#/components/schemas/IndicatorInfo"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "drought": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DroughtPanel"
               },
               {
                 "type": "null"

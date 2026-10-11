@@ -3,13 +3,16 @@ import uuid
 from datetime import datetime, timedelta, timezone
 
 from app.core.exceptions import DomainValidationError, NotFoundError
+from app.domain.drought import FOOTPRINT_LABEL, RULES_VERSION
+from app.repositories.area_indicator_repository import AreaIndicatorRepository
+from app.services.drought_assessor import AreaDrought, DroughtAssessor
 from app.domain.hazards import HazardPolicies, band
 from app.domain.scoring import ZoneScorer
 from app.repositories.indicator_repository import IndicatorRepository
 from app.repositories.pipeline_run_repository import PipelineRunRepository
 from app.repositories.read_repository import ReadRepository
 from app.repositories.zone_repository import ZoneRepository
-from app.schemas.read import (Contribution, EvidenceItem, FeedItem, FeedPage, IndicatorInfo, OpsRun, OpsSummary,
+from app.schemas.read import (Contribution, DeclarationInfo, DroughtPanel, IndicatorFreshness, EvidenceItem, FeedItem, FeedPage, IndicatorInfo, OpsRun, OpsSummary,
                               OpsTotals, ScoreBreakdown, StatsOverview, TrendPoint, ZoneDetail, ZoneInfo,
                               ZoneSummary)
 
@@ -31,7 +34,10 @@ class ReadQueryService:
     """Assembles the public read models. Numbers (shares, rule checks) come from code, never from text."""
 
     def __init__(self, reads: ReadRepository, zones: ZoneRepository, indicators: IndicatorRepository,
-                 runs: PipelineRunRepository, scorer: ZoneScorer, policies: HazardPolicies):
+                 runs: PipelineRunRepository, scorer: ZoneScorer, policies: HazardPolicies,
+                 drought: DroughtAssessor | None = None, area_indicators: AreaIndicatorRepository | None = None):
+        self.drought = drought
+        self.area_indicators = area_indicators
         self.reads = reads
         self.zones = zones
         self.indicators = indicators
@@ -54,9 +60,15 @@ class ReadQueryService:
             raise NotFoundError(f"zone {zone_id} not found")
         evidence = self.reads.zone_evidence(zone_id)
         policy = self.policies.get(row["hazard"])
-        indicator = (self.indicators.latest_by_district(policy.indicator_source).get(row["district_id"])
-                     if row["district_id"] else None)
-        boost = policy.boost(indicator)
+        drought = None
+        if policy.zoning == "footprint" and row.get("area_id") and self.drought is not None:
+            drought = self.drought.assess(datetime.now(timezone.utc), [row["area_id"]]).get(row["area_id"])
+            indicator = None  # the drought panel replaces the district indicator
+            boost = drought.assessment.boost if drought else 0.0
+        else:
+            indicator = (self.indicators.latest_by_district(policy.indicator_source).get(row["district_id"])
+                         if row["district_id"] else None)
+            boost = policy.boost(indicator)
         scoring_evidence = [ev for _, ev, _ in self.zones.evidence({e["signal_id"]: 1.0 for e in evidence})]
         total = sum(e["weight"] for e in evidence)
         zone = ZoneInfo.model_validate({**row, "geometry": json.loads(row["geometry"]) if row["geometry"] else None,
@@ -72,12 +84,30 @@ class ReadQueryService:
                 rule_met=self.scorer.evidence_ok(scoring_evidence, boost)),
             trend=[TrendPoint.model_validate(t) for t in self.reads.zone_trend(zone_id)],
             indicators=IndicatorInfo(label=policy.indicator_label, value=indicator.get(policy.indicator_field),
-                                     band=band(boost)) if indicator else None)
+                                     band=band(boost)) if indicator else None,
+            drought=self._drought_panel(drought) if drought else None)
+
+    @staticmethod
+    def _drought_panel(d: AreaDrought) -> DroughtPanel:
+        a, m = d.assessment, d.metrics
+        decl = m.get("declaration")
+        as_int = lambda v: int(v) if v is not None else None  # noqa: E731
+        return DroughtPanel(
+            label=FOOTPRINT_LABEL, rules_version=RULES_VERSION, level=a.level, trigger1=a.trigger1,
+            t1_class=a.t1_class, soil_class=a.soil_class, spi_6p=m.get("spi_6p"), spi_18p=m.get("spi_18p"),
+            spi_period=m.get("spi_period"), soil_anomaly=m.get("soil_anomaly"), soil_period=m.get("soil_period"),
+            people_in_dry_areas=as_int(m.get("pop_stressed")), people_in_dry_areas_urban=as_int(m.get("pop_stressed_urban")),
+            imd_district_departure_pct=m.get("imd_departure_pct"), imd_deficient=a.imd_deficient,
+            reasons=list(a.reasons),
+            declared=DeclarationInfo(severity=decl.severity, declared_on=decl.declared_on, order_ref=decl.order_ref,
+                                     source_url=decl.source_url) if decl else None)
 
     def overview(self, now: datetime | None = None) -> StatsOverview:
         since = (now or datetime.now(timezone.utc)) - timedelta(days=7)
         return StatsOverview.model_validate(self.reads.overview(since))
 
     def ops(self) -> OpsSummary:
+        freshness = self.area_indicators.freshness() if self.area_indicators is not None else []
         return OpsSummary(runs=[OpsRun.model_validate(r, from_attributes=True) for r in self.runs.latest(20)],
-                          totals=OpsTotals.model_validate(self.reads.totals()))
+                          totals=OpsTotals.model_validate(self.reads.totals()),
+                          indicators=[IndicatorFreshness(source=s, period=p, areas=n) for s, p, n in freshness])

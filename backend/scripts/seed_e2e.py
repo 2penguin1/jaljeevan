@@ -13,7 +13,7 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session
 
 from app.core.database import Base, init_db
-from app.models import (AdminArea, DistrictIndicator, PipelineRun, Signal, SignalLabel, SignalLocation, Zone,
+from app.models import (AdminArea, AreaIndicator, DistrictIndicator, DroughtDeclaration, PipelineRun, Signal, SignalLabel, SignalLocation, Zone,
                         ZoneSignal, ZoneSnapshot)
 
 URL = os.environ.get("E2E_DATABASE_URL", "postgresql+psycopg://jal:jal@localhost:5433/jal_e2e")
@@ -38,7 +38,7 @@ def wipe(engine) -> None:
 
 ZONES = [
     # name, hazard, type, status, score, centroid, district (name, state, bbox), posts
-    ("Mohol, Solapur", "drought", "rural", "active", 78.0, (75.65, 17.81), ("Solapur", "MH", (75.2, 17.3, 76.4, 18.4)), [
+    ("Mohol taluka, Solapur", "drought", "taluka", "active", 78.0, (75.65, 17.81), ("Solapur", "MH", (75.2, 17.3, 76.4, 18.4)), [
         ("thehindu.com", "rss", "Mohol villages wait 9 days for tankers", "No tanker has come for nine days in Mohol",
          "No tanker has come for nine days", "Mohol", 4, 0.8),
         ("timesofindia.indiatimes.com", "rss", "Solapur borewells run dry", "Borewells in Mohol taluka have run dry",
@@ -73,14 +73,30 @@ def seed(session: Session) -> None:
                              geom=from_shape(box(*bbox), srid=4326), population=4_000_000)
         session.add(district)
         session.flush()
-        if hazard == "drought":
+        area_id = None
+        if hazard == "drought":  # drought zones are talukas backed by measured data (see app/domain/drought.py)
             session.add(DistrictIndicator(district_id=district.id, period=NOW.date(), rainfall_departure_pct=-48,
                                           source="imd"))
-        zone = Zone(name=name, hazard=hazard, zone_type=ztype, status=status, score=score, trend="escalating",
+            taluka = AdminArea(level="subdistrict", name="Mohol", name_norm="mohol", state_code=state,
+                               parent_id=district.id, district_name=dname,
+                               geom=from_shape(box(lon - 0.25, lat - 0.2, lon + 0.25, lat + 0.2), srid=4326))
+            session.add(taluka)
+            session.flush()
+            area_id, period = taluka.id, (NOW - timedelta(days=3)).date()
+            for metric, value in (("spi_18p", -2.4), ("spi_6p", -1.3), ("pop_stressed", 186_000),
+                                  ("pop_stressed_urban", 24_000)):
+                session.add(AreaIndicator(area_id=area_id, period=period, source="chirps-spi", metric=metric, value=value))
+            session.add(AreaIndicator(area_id=area_id, period=period, source="gdo-soil", metric="soil_anomaly", value=-1.6))
+            session.add(DroughtDeclaration(area_id=area_id, state_code=state, declared_on=(NOW - timedelta(days=16)).date(),
+                                           severity="severe", order_ref="GR 25 Sep 2026", source_url=None))
+        zone = Zone(area_id=area_id, name=name, hazard=hazard, zone_type=ztype, status=status, score=score, trend="escalating",
                     independent_sources=len({p[0] for p in posts}), population_est=120_000 if ztype != "district_wide"
                     else 5_838_465, district_id=district.id, first_seen=NOW - timedelta(days=3), last_seen=NOW,
                     geom=from_shape(Point(lon, lat).buffer(0.12 if ztype != "district_wide" else 0.4), srid=4326),
                     centroid=from_shape(Point(lon, lat), srid=4326))
+        if area_id is not None:  # as zone detection stores it: the taluka's shape, people in its dry parts
+            zone.geom, zone.population_est, zone.population_urban = taluka.geom, 186_000, 24_000
+            zone.population_source = "worldpop_dry_areas"
         session.add(zone)
         session.flush()
         weights = []

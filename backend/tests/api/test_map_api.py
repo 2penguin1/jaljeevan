@@ -46,7 +46,8 @@ def test_map_endpoints_return_geojson():
             assert f["properties"]["centroid"] == [77.6, 13.0]
             districts = c.get("/api/v1/map/districts", params={"hazard": "drought"}).json()
             blr = next(f for f in districts["features"] if f["properties"]["id"] == district_id)
-            assert blr["properties"]["band"] == "severe" and blr["properties"]["indicator_value"] == -55
+            # drought is decided per taluka (the footprint layer); districts only show IMD as a cross-check value
+            assert blr["properties"]["band"] == "none" and blr["properties"]["indicator_value"] == -55
             signals = c.get("/api/v1/map/signals", params={"hazard": "drought", "hours": 48}).json()
             s = next(f for f in signals["features"] if f["properties"]["title"] == "<b>Taps dry</b>")
             assert s["geometry"]["coordinates"] == [77.69, 12.99] and s["properties"]["severity"] == 4

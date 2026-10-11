@@ -1,7 +1,7 @@
 import { PathStyleExtension } from "@deck.gl/extensions";
 import { GeoJsonLayer, ScatterplotLayer } from "@deck.gl/layers";
 import type { PickingInfo } from "@deck.gl/core";
-import type { DistrictProps, Feature, FeatureCollection, Hazard, SignalProps, ZoneProps } from "@/lib/api/types";
+import type { DistrictProps, Feature, FeatureCollection, FootprintProps, Hazard, SignalProps, ZoneProps } from "@/lib/api/types";
 import { HAZARDS } from "@/lib/hazards";
 
 export type LayerInput = {
@@ -12,7 +12,10 @@ export type LayerInput = {
   time: number; // seconds; drives the "breathing" of active zones (held at 0 for reduced motion)
   pulseIds: Set<string>;
   onZoneClick?: (zone: Feature<ZoneProps>) => void;
+  footprint?: FeatureCollection<FootprintProps>; // drought only: talukas flagged by measured data
 };
+
+const LEVEL_ALPHA = { watch: 40, moderate: 75, severe: 115 } as const;
 
 type RGBA = [number, number, number, number];
 const BAND_ALPHA = { none: 0, moderate: 46, severe: 82 } as const; // 0.18 / 0.32 of 255
@@ -22,7 +25,7 @@ const DASH = [new PathStyleExtension({ dash: true })];
 export const markerRadius = (score: number) => 4 + Math.max(0, Math.min(100, score)) * 0.08;
 
 /** Pure: same input, same layers. Unit-tested without WebGL; MapPage only feeds it data and time. */
-export function buildLayers({ districts, zones, signals, hazard, time, pulseIds, onZoneClick }: LayerInput) {
+export function buildLayers({ districts, zones, signals, hazard, time, pulseIds, onZoneClick, footprint }: LayerInput) {
   const [r, g, b] = HAZARDS[hazard].rgb;
   const live = zones.features.filter((f) => f.properties.status !== "watch");
   const watch = zones.features.filter((f) => f.properties.status === "watch");
@@ -30,6 +33,31 @@ export function buildLayers({ districts, zones, signals, hazard, time, pulseIds,
   const pick = (info: PickingInfo<Feature<ZoneProps>>) => {
     if (info.object && onZoneClick) onZoneClick(info.object);
   };
+
+  const footprintLayers = footprint
+    ? [
+        new GeoJsonLayer<FootprintProps>({
+          id: "footprint",
+          data: footprint.features as never,
+          filled: true,
+          stroked: true,
+          getFillColor: (f: { properties: FootprintProps }): RGBA => [r, g, b, LEVEL_ALPHA[f.properties.level] ?? 0],
+          getLineColor: [r, g, b, 120],
+          lineWidthMinPixels: 0.75,
+          updateTriggers: { getFillColor: hazard },
+        }),
+        new GeoJsonLayer<FootprintProps>({
+          id: "footprint-declared",
+          data: footprint.features.filter((f) => f.properties.declared) as never,
+          filled: false,
+          getLineColor: [237, 232, 225, 200],
+          lineWidthMinPixels: 1.25,
+          getDashArray: [3, 2],
+          dashJustified: true,
+          extensions: DASH,
+        } as never),
+      ]
+    : [];
 
   return [
     new GeoJsonLayer<DistrictProps>({
@@ -42,6 +70,7 @@ export function buildLayers({ districts, zones, signals, hazard, time, pulseIds,
       lineWidthMinPixels: 0.5,
       updateTriggers: { getFillColor: hazard },
     }),
+    ...footprintLayers, // above the district tint, below the zones
     new GeoJsonLayer<ZoneProps>({
       id: "zones-watch",
       data: watch as never,

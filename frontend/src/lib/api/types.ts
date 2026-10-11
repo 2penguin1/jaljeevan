@@ -15,6 +15,8 @@ export type TrendPoint = S["TrendPoint"];
 export type StatsOverview = S["StatsOverview"];
 export type OpsSummary = S["OpsSummary"];
 export type OpsRun = S["OpsRun"];
+export type DroughtPanel = S["DroughtPanel"];
+export type IndicatorFreshness = S["IndicatorFreshness"];
 
 // Map endpoints return GeoJSON passthrough (typed here, not in OpenAPI).
 export type Geometry = { type: string; coordinates: unknown };
@@ -47,4 +49,13 @@ export type SignalProps = {
   title: string;
   published_at: string;
   zone_id: string | null;
+};
+export type FootprintProps = {
+  id: number;
+  name: string;
+  district: string | null;
+  level: "watch" | "moderate" | "severe";
+  spi_18p: number | null;
+  people: number | null;
+  declared: boolean;
 };

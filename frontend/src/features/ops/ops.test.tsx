@@ -8,6 +8,7 @@ import { OpsPage } from "./OpsPage";
 
 const ops = (runs: OpsSummary["runs"]): OpsSummary => ({
   runs,
+  indicators: [{ source: "chirps-spi", period: "2026-10-05", areas: 6822 }],
   totals: { signals: 353, classified: 257, rejected_by_reason: { too_old: 62, no_keyword: 21 },
     tokens: { input_tokens: 120000, output_tokens: 30000 }, batches_by_provider: { "groq:openai/gpt-oss-120b": 12, "bedrock:apac.amazon.nova-lite-v1:0": 15 } },
 });
@@ -33,6 +34,9 @@ test("ops shows totals, rejection reasons and provider usage", async () => {
   expect(screen.getByText("Amazon Nova Lite")).toBeInTheDocument();
   expect(screen.getByText("3m 20s")).toBeInTheDocument();
   expect(screen.getByText("1 source failed")).toBeInTheDocument();
+  const data = screen.getByRole("region", { name: "Drought data" });
+  expect(within(data).getByText("Rainfall (CHIRPS SPI)")).toBeInTheDocument();
+  expect(within(data).getByText("6,822")).toBeInTheDocument();
 });
 
 test("ops explains when nothing has run yet", async () => {

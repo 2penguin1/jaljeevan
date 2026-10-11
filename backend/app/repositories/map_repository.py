@@ -31,6 +31,14 @@ class MapRepository:
             {"tol": DISTRICT_TOLERANCE}).mappings()
         return [dict(r) for r in rows]
 
+    def areas(self, area_ids: list[int]) -> list[dict]:
+        if not area_ids:
+            return []
+        rows = self.session.execute(text("""
+            SELECT id, name, district_name, ST_AsGeoJSON(ST_SimplifyPreserveTopology(geom, :tol), 4) AS geometry
+            FROM admin_areas WHERE id = ANY(:ids)"""), {"ids": area_ids, "tol": ZONE_TOLERANCE}).mappings()
+        return [dict(r) for r in rows]
+
     def signals(self, hazard: str, since: datetime, limit: int = 1000) -> list[dict]:
         """One point per signal (its most confident location), newest first."""
         rows = self.session.execute(text("""

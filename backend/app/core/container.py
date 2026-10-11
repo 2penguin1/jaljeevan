@@ -90,7 +90,7 @@ class Container:
         self.policies = HazardPolicies.default()
         self.zone_types = ZoneTypeClassifier()
         self.events = self._build_event_bus()
-        self.district_cache: TTLCache = TTLCache(maxsize=8, ttl=600)  # map districts, per hazard
+        self.district_cache: TTLCache = TTLCache(maxsize=16, ttl=600)  # map districts, per hazard
 
     # -- app-scoped adapters (lazy, so tests and offline runs never touch AWS) -------------------
     @cached_property
@@ -174,11 +174,12 @@ class Container:
 
     def map_query_service(self, session: Session) -> MapQueryService:
         return MapQueryService(MapRepository(session), IndicatorRepository(session), self.policies,
-                               self.district_cache)
+                               self.district_cache, drought=self.drought_assessor(session))
 
     def read_query_service(self, session: Session) -> ReadQueryService:
         return ReadQueryService(ReadRepository(session), ZoneRepository(session), IndicatorRepository(session),
-                                PipelineRunRepository(session), self.scorer, self.policies)
+                                PipelineRunRepository(session), self.scorer, self.policies,
+                                drought=self.drought_assessor(session), area_indicators=AreaIndicatorRepository(session))
 
     def indicator_refresh_service(self, session: Session) -> IndicatorRefreshService:
         s = self.settings

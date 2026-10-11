@@ -15,6 +15,11 @@ const REASONS: Record<string, string> = {
   unclear: "AI could not tell",
   irrelevant: "Not about a crisis",
 };
+const SOURCE_LABEL: Record<string, string> = {
+  "chirps-spi": "Rainfall (CHIRPS SPI)",
+  "gdo-soil": "Soil moisture (Copernicus GDO)",
+};
+
 const reasonLabel = (r: string) => REASONS[r] ?? r.replaceAll("_", " ").replace(/^\w/, (c) => c.toUpperCase());
 
 export function providerName(key: string): string {
@@ -119,6 +124,22 @@ export function OpsPage() {
         <BarList label="Why posts were set aside" rows={reasons} />
         <BarList label="Batches answered per AI model" rows={providers} />
       </div>
+      <section aria-label="Drought data" className="flex flex-col gap-3 rounded-[8px] border hairline bg-surface p-4">
+        <h2 className="text-[13px] font-medium text-text">Drought data</h2>
+        {(ops.data.indicators ?? []).length === 0 ? (
+          <p className="text-[13px] text-text-3">No rainfall or soil data yet. It downloads on the next pipeline run once talukas are loaded.</p>
+        ) : (
+          <dl className="grid grid-cols-[minmax(0,1fr)_auto_auto] gap-x-6 gap-y-2 text-[13px]">
+            {(ops.data.indicators ?? []).map((i) => (
+              <div key={i.source} className="contents">
+                <dt className="text-text-2">{SOURCE_LABEL[i.source] ?? i.source}</dt>
+                <dd className="text-text">to {when.format(new Date(i.period)).split(",")[0]}</dd>
+                <dd className="num text-right text-text">{formatInt(i.areas)}</dd>
+              </div>
+            ))}
+          </dl>
+        )}
+      </section>
       <section aria-labelledby="runs-title" className="flex flex-col gap-3">
         <h2 id="runs-title" className="text-[13px] font-medium text-text">Recent pipeline runs</h2>
         {runs.length === 0 ? (

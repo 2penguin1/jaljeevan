@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 from typing import Literal
 
 from pydantic import BaseModel
@@ -91,12 +91,42 @@ class IndicatorInfo(BaseModel):
     band: str
 
 
+class DeclarationInfo(BaseModel):
+    severity: str
+    declared_on: date
+    order_ref: str | None
+    source_url: str | None
+
+
+class DroughtPanel(BaseModel):
+    """The measured data behind a drought zone (GoI Drought Manual rules)."""
+
+    label: str
+    rules_version: str
+    level: str  # none | watch | moderate | severe
+    trigger1: bool
+    t1_class: str | None
+    soil_class: str | None
+    spi_6p: float | None
+    spi_18p: float | None
+    spi_period: date | None
+    soil_anomaly: float | None
+    soil_period: date | None
+    people_in_dry_areas: int | None
+    people_in_dry_areas_urban: int | None
+    imd_district_departure_pct: float | None
+    imd_deficient: bool | None
+    reasons: list[str]
+    declared: DeclarationInfo | None
+
+
 class ZoneDetail(BaseModel):
     zone: ZoneInfo
     evidence: list[EvidenceItem]
     score_breakdown: ScoreBreakdown
     trend: list[TrendPoint]
     indicators: IndicatorInfo | None
+    drought: DroughtPanel | None = None
 
 
 class StatsOverview(BaseModel):
@@ -128,6 +158,13 @@ class OpsTotals(BaseModel):
     batches_by_provider: dict[str, int]
 
 
+class IndicatorFreshness(BaseModel):
+    source: str
+    period: date
+    areas: int
+
+
 class OpsSummary(BaseModel):
     runs: list[OpsRun]
     totals: OpsTotals
+    indicators: list[IndicatorFreshness] = []

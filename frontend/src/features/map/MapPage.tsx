@@ -6,7 +6,7 @@ import { ErrorState } from "@/components/patterns/ErrorState";
 import type { DistrictProps, Feature, FeatureCollection, Hazard, SignalProps, ZoneProps } from "@/lib/api/types";
 import { cn } from "@/lib/format";
 import { HAZARDS, isHazard } from "@/lib/hazards";
-import { useMapDistricts, useMapSignals, useMapZones } from "@/lib/hooks/queries";
+import { useMapDistricts, useMapFootprint, useMapSignals, useMapZones } from "@/lib/hooks/queries";
 import { useLiveSubscription } from "@/lib/live/LiveContext";
 import { HazardSwitch } from "./HazardSwitch";
 import { Legend } from "./Legend";
@@ -41,6 +41,7 @@ export function MapPage() {
   const zones = useMapZones(hazard);
   const districts = useMapDistricts(hazard);
   const signals = useMapSignals(hazard);
+  const footprint = useMapFootprint(hazard === "drought");
   const fresh = useFreshSignals();
   const [selected, setSelected] = useState<Feature<ZoneProps> | null>(null);
   const [panelOpen, setPanelOpen] = useState(() => window.matchMedia("(min-width: 768px)").matches);
@@ -58,8 +59,9 @@ export function MapPage() {
       hazard,
       pulseIds: fresh,
       onZoneClick: selectZone,
+      footprint: hazard === "drought" ? footprint.data : undefined,
     }),
-    [districts.data, zoneData, signals.data, hazard, fresh, selectZone],
+    [districts.data, zoneData, signals.data, hazard, fresh, selectZone, footprint.data],
   );
 
   const active = zoneData.features.filter((f) => f.properties.status !== "watch").length;
@@ -124,7 +126,8 @@ export function MapPage() {
         </button>
       )}
       <div className="absolute bottom-6 left-4 hidden md:left-6 md:block">
-        <Legend hazard={hazard} indicatorLabel={districts.data?.features[0]?.properties.indicator_label} />
+        <Legend hazard={hazard} footprint={hazard === "drought"}
+          indicatorLabel={districts.data?.features[0]?.properties.indicator_label} />
       </div>
     </div>
   );

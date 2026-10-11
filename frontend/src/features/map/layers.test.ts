@@ -1,4 +1,4 @@
-import type { DistrictProps, Feature, FeatureCollection, SignalProps, ZoneProps } from "@/lib/api/types";
+import type { DistrictProps, Feature, FeatureCollection, FootprintProps, SignalProps, ZoneProps } from "@/lib/api/types";
 import { buildLayers, type LayerInput } from "./layers";
 
 const empty = <P>(): FeatureCollection<P> => ({ type: "FeatureCollection", features: [] });
@@ -60,4 +60,18 @@ test("district tint follows the indicator band", () => {
   const fill = byId(buildLayers(base)).districts.props.getFillColor as (f: Feature<DistrictProps>) => number[];
   expect(fill(d("none"))[3]).toBe(0);
   expect(fill(d("severe"))[3]).toBeGreaterThan(fill(d("moderate"))[3]);
+});
+
+
+test("the drought footprint shades talukas by level and dashes declared ones", () => {
+  const taluka = (id: number, level: FootprintProps["level"], declared: boolean) => ({
+    type: "Feature" as const, id, geometry: square,
+    properties: { id, name: "t", district: "d", level, spi_18p: -2, people: 1, declared },
+  });
+  const footprint = { type: "FeatureCollection" as const, features: [taluka(1, "severe", false), taluka(2, "moderate", true)] };
+  const layers = byId(buildLayers({ ...base, footprint }));
+  const fill = layers["footprint"].props.getFillColor as (f: unknown) => number[];
+  expect(fill(taluka(1, "severe", false))[3]).toBeGreaterThan(fill(taluka(2, "moderate", true))[3]);
+  expect(layers["footprint-declared"].props.data).toHaveLength(1);
+  expect(byId(buildLayers(base))["footprint"]).toBeUndefined();
 });

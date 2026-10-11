@@ -94,3 +94,10 @@ test("water supply is a fourth hazard everywhere hazards are listed", async () =
   expect(screen.getByRole("button", { name: "Water supply" })).toHaveAttribute("aria-pressed", "true");
   expect(screen.getAllByRole("button", { pressed: false })).toHaveLength(3);
 });
+
+test("the drought legend explains taluka shading instead of a district tint", async () => {
+  const { Legend } = await import("@/features/map/Legend");
+  render(<Legend hazard="drought" footprint indicatorLabel="Rainfall vs normal (%)" />);
+  expect(screen.getByText("Taluka shading: measured dryness, dashed if officially declared")).toBeInTheDocument();
+  expect(screen.queryByText(/District tint/)).toBeNull();
+});

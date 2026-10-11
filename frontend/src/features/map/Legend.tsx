@@ -1,7 +1,7 @@
 import type { Hazard } from "@/lib/api/types";
 import { HAZARDS } from "@/lib/hazards";
 
-export function Legend({ hazard, indicatorLabel }: { hazard: Hazard; indicatorLabel?: string }) {
+export function Legend({ hazard, indicatorLabel, footprint }: { hazard: Hazard; indicatorLabel?: string; footprint?: boolean }) {
   const c = HAZARDS[hazard].color;
   const mix = (pct: number) => `color-mix(in srgb, ${c} ${pct}%, transparent)`;
   return (
@@ -12,7 +12,16 @@ export function Legend({ hazard, indicatorLabel }: { hazard: Hazard; indicatorLa
       <dd>Watch: not confirmed yet</dd>
       <dt className="size-2 justify-self-center rounded-full" style={{ background: c }} />
       <dd>Located post, last 48 hours</dd>
-      {indicatorLabel && (
+      {footprint && (
+        <>
+          <dt className="flex h-2.5 w-3.5 overflow-hidden rounded-[2px] border border-dashed border-text-2">
+            <span className="flex-1" style={{ background: mix(30) }} />
+            <span className="flex-1" style={{ background: mix(55) }} />
+          </dt>
+          <dd>Taluka shading: measured dryness, dashed if officially declared</dd>
+        </>
+      )}
+      {indicatorLabel && !footprint && (
         <>
           <dt className="flex h-2.5 w-3.5 overflow-hidden rounded-[2px]">
             <span className="flex-1" style={{ background: mix(18) }} />

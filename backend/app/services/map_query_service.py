@@ -5,6 +5,7 @@ from cachetools import TTLCache
 from app.domain.hazards import HazardPolicies, band
 from app.repositories.indicator_repository import IndicatorRepository
 from app.repositories.map_repository import MapRepository
+from app.services.drought_assessor import DroughtAssessor
 
 
 def _collection(features: list[dict]) -> dict:
@@ -19,7 +20,8 @@ class MapQueryService:
     """
 
     def __init__(self, maps: MapRepository, indicators: IndicatorRepository, policies: HazardPolicies,
-                 district_cache: TTLCache):
+                 district_cache: TTLCache, drought: DroughtAssessor | None = None):
+        self.drought = drought
         self.maps = maps
         self.indicators = indicators
         self.policies = policies
@@ -49,8 +51,26 @@ class MapQueryService:
                              "properties": {"id": d["id"], "name": d["name"], "state_code": d["state_code"],
                                             "indicator_value": (indicator or {}).get(policy.indicator_field),
                                             "indicator_label": policy.indicator_label,
-                                            "band": band(policy.boost(indicator))}})
+                                            # footprint hazards are decided per taluka, not by a district tint
+                                            "band": "none" if policy.zoning == "footprint"
+                                            else band(policy.boost(indicator))}})
         return _collection(features)
+
+    def footprint(self, now: datetime | None = None) -> dict:
+        """Talukas the drought data flags (or the state declared), with their level, cached like districts."""
+        key = ("footprint", "drought")
+        if key not in self.district_cache:
+            assessed = self.drought.assess(now or datetime.now(timezone.utc)) if self.drought else {}
+            flagged = {a: d for a, d in assessed.items() if d.assessment.level != "none"}
+            self.district_cache[key] = _collection([{
+                "type": "Feature", "id": a["id"], "geometry": self.maps.geometry(a["geometry"]),
+                "properties": {"id": a["id"], "name": a["name"], "district": a["district_name"],
+                               "level": flagged[a["id"]].assessment.level,
+                               "spi_18p": flagged[a["id"]].metrics.get("spi_18p"),
+                               "people": flagged[a["id"]].metrics.get("pop_stressed"),
+                               "declared": flagged[a["id"]].assessment.declared is not None},
+            } for a in self.maps.areas(sorted(flagged))])
+        return self.district_cache[key]
 
     def signals(self, hazard: str, hours: int, now: datetime | None = None) -> dict:
         since = (now or datetime.now(timezone.utc)) - timedelta(hours=hours)

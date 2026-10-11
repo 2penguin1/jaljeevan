@@ -19,7 +19,7 @@ for (const size of SIZES) {
       test.skip(!process.env.SCREENS, "set SCREENS=1 to capture screenshots");
       await page.setViewportSize(size);
       await page.goto(p.path);
-      if (p.open) await page.getByRole("row", { name: /Mohol, Solapur/ }).click();
+      if (p.open) await page.getByRole("row", { name: /Mohol taluka, Solapur/ }).click();
       await page.waitForTimeout(p.wait);
       await page.screenshot({ path: `e2e/screens/${p.name}-${size.width}.png`, fullPage: p.name !== "map" && p.name !== "landing" });
     });

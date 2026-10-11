@@ -12,10 +12,16 @@ import type { Geometry } from "@/lib/api/types";
 import { formatInt, formatPeople, timeAgo } from "@/lib/format";
 import { HAZARDS } from "@/lib/hazards";
 import { useZone } from "@/lib/hooks/queries";
+import { DroughtPanel } from "./DroughtPanel";
 import { ScoreBreakdown } from "./ScoreBreakdown";
 import { TrendChart } from "./TrendChart";
 import { TREND, ZONE_TYPE } from "./labels";
 import { ZoneMiniMap } from "./ZoneMiniMap";
+
+const POPULATION_LABEL: Record<string, string> = {
+  worldpop: "People living in the zone area",
+  worldpop_dry_areas: "People in the dry parts",
+};
 
 const backLink = (
   <Link to="/zones" className="inline-flex items-center gap-1.5 text-[13px] text-text-2 hover:text-text">
@@ -81,7 +87,7 @@ export function ZonePage() {
           </div>
           <div className="bg-canvas p-4">
             <dt className="text-[12px] text-text-2">
-              {zone.population_source === "worldpop" ? "People living in the zone area" : "People in the zone"}
+              {POPULATION_LABEL[zone.population_source ?? ""] ?? "People in the zone"}
             </dt>
             <dd className="num mt-2 text-[22px] leading-none text-text">{formatPeople(zone.population_est)}</dd>
             {zone.population_urban != null && zone.population_est != null && (
@@ -109,7 +115,7 @@ export function ZonePage() {
         <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
           <div className="flex flex-col gap-3">
             {evidence.length === 0 ? (
-              <EmptyState className="py-4" title="No posts linked yet" body="This zone rests on weather indicators so far." />
+              <EmptyState className="py-4" title="No posts linked yet" body="This zone rests on measured data so far; posts from the area will appear here." />
             ) : (
               evidence.map((e) => (
                 <EvidenceQuote key={e.signal_id} quote={e.quote} title={e.title} summary={e.summary} domain={e.domain}
@@ -119,6 +125,7 @@ export function ZonePage() {
             )}
           </div>
           <aside className="flex flex-col gap-8">
+            {query.data.drought && <DroughtPanel panel={query.data.drought} />}
             <ScoreBreakdown breakdown={score_breakdown} evidence={evidence} indicators={indicators} hazard={zone.hazard} />
             <section aria-label="Score over time" className="flex flex-col gap-3">
               <h3 className="text-[13px] font-medium text-text">Score over time</h3>

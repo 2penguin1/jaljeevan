@@ -4,6 +4,7 @@ import type {
   DistrictProps,
   FeatureCollection,
   FeedPage,
+  FootprintProps,
   Hazard,
   OpsSummary,
   SignalProps,
@@ -29,6 +30,14 @@ export const useMapDistricts = (hazard: Hazard) =>
     queryFn: ({ signal }) => apiGet<FeatureCollection<DistrictProps>>("/map/districts", { hazard }, signal),
     staleTime: 10 * 60_000,
     placeholderData: keepPreviousData,
+  });
+
+export const useMapFootprint = (enabled: boolean) =>
+  useQuery({
+    queryKey: ["map", "footprint"],
+    queryFn: ({ signal }) => apiGet<FeatureCollection<FootprintProps>>("/map/footprint", { hazard: "drought" }, signal),
+    enabled,
+    staleTime: 10 * 60_000,
   });
 
 export const useMapSignals = (hazard: Hazard, hours = 48) =>

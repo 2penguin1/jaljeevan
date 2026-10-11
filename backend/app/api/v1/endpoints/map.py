@@ -1,4 +1,4 @@
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Query
 
@@ -20,6 +20,12 @@ def map_zones(hazard: HazardQuery, db: SessionDep, container: ContainerDep) -> d
 def map_districts(hazard: HazardQuery, db: SessionDep, container: ContainerDep) -> dict:
     """Every district with its latest indicator band for the hazard (cached for 10 minutes)."""
     return container.map_query_service(db).districts(hazard)
+
+
+@router.get("/footprint")
+def map_footprint(hazard: Annotated[Literal["drought"], Query()], db: SessionDep, container: ContainerDep) -> dict:
+    """Talukas flagged by measured drought data (or an official declaration), as GeoJSON with their level."""
+    return container.map_query_service(db).footprint()
 
 
 @router.get("/signals")

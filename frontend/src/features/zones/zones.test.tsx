@@ -99,3 +99,30 @@ test("mini map draws polygons and multipolygons inside its box", () => {
   const multi = outlinePath({ type: "MultiPolygon", coordinates: [[[[0, 0], [1, 0], [1, 1], [0, 0]]], [[[5, 5], [6, 5], [6, 6], [5, 5]]]] }, 100, 100);
   expect(multi.match(/M/g)).toHaveLength(2);
 });
+
+test("a drought zone shows the measured data behind it, labelled as indicative", async () => {
+  const drought: ZoneDetail = {
+    ...detail,
+    zone: { ...detail.zone, zone_type: "taluka", name: "Mohol taluka, Solapur" },
+    indicators: null,
+    drought: {
+      label: "Indicative drought footprint (GoI Drought Manual, rainfall trigger + soil moisture anomaly)",
+      rules_version: "v1", level: "severe", trigger1: true, t1_class: "severe", soil_class: "severe",
+      spi_6p: -1.3, spi_18p: -2.7, spi_period: "2026-10-05", soil_anomaly: -1.6, soil_period: "2026-09-30",
+      people_in_dry_areas: 210000, people_in_dry_areas_urban: 30000, imd_district_departure_pct: -45,
+      imd_deficient: true, reasons: ["Rainfall over the last 3 months is severely below normal (SPI -2.7)"],
+      declared: { severity: "severe", declared_on: "2026-09-25", order_ref: "GR 25 Sep 2026",
+        source_url: "javascript:alert(1)" },
+    },
+  };
+  server.use(http.get(`/api/v1/zones/${ZID}`, () => HttpResponse.json(drought)));
+  renderAt(`/zones/${ZID}`);
+  const panel = await screen.findByRole("region", { name: "Measured drought data" });
+  expect(within(panel).getByText(/Indicative drought footprint/)).toBeInTheDocument();
+  expect(within(panel).getByText("−2.7")).toBeInTheDocument();
+  expect(within(panel).getByText("Extremely dry")).toBeInTheDocument();
+  expect(within(panel).getByText("2.1 lakh")).toBeInTheDocument();
+  expect(within(panel).getByText(/Declared severe drought/)).toBeInTheDocument();
+  expect(panel.querySelector('a[href^="javascript"]')).toBeNull();
+  expect(screen.getByText("Taluka")).toBeInTheDocument();
+});

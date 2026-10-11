@@ -115,6 +115,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/map/footprint": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Map Footprint
+         * @description Talukas flagged by measured drought data (or an official declaration), as GeoJSON with their level.
+         */
+        get: operations["map_footprint_api_v1_map_footprint_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/map/signals": {
         parameters: {
             query?: never;
@@ -262,6 +282,59 @@ export interface components {
             /** Share */
             share: number;
         };
+        /** DeclarationInfo */
+        DeclarationInfo: {
+            /** Severity */
+            severity: string;
+            /**
+             * Declared On
+             * Format: date
+             */
+            declared_on: string;
+            /** Order Ref */
+            order_ref: string | null;
+            /** Source Url */
+            source_url: string | null;
+        };
+        /**
+         * DroughtPanel
+         * @description The measured data behind a drought zone (GoI Drought Manual rules).
+         */
+        DroughtPanel: {
+            /** Label */
+            label: string;
+            /** Rules Version */
+            rules_version: string;
+            /** Level */
+            level: string;
+            /** Trigger1 */
+            trigger1: boolean;
+            /** T1 Class */
+            t1_class: string | null;
+            /** Soil Class */
+            soil_class: string | null;
+            /** Spi 6P */
+            spi_6p: number | null;
+            /** Spi 18P */
+            spi_18p: number | null;
+            /** Spi Period */
+            spi_period: string | null;
+            /** Soil Anomaly */
+            soil_anomaly: number | null;
+            /** Soil Period */
+            soil_period: string | null;
+            /** People In Dry Areas */
+            people_in_dry_areas: number | null;
+            /** People In Dry Areas Urban */
+            people_in_dry_areas_urban: number | null;
+            /** Imd District Departure Pct */
+            imd_district_departure_pct: number | null;
+            /** Imd Deficient */
+            imd_deficient: boolean | null;
+            /** Reasons */
+            reasons: string[];
+            declared: components["schemas"]["DeclarationInfo"] | null;
+        };
         /** EvidenceItem */
         EvidenceItem: {
             /**
@@ -345,6 +418,18 @@ export interface components {
             /** Postgis */
             postgis: string;
         };
+        /** IndicatorFreshness */
+        IndicatorFreshness: {
+            /** Source */
+            source: string;
+            /**
+             * Period
+             * Format: date
+             */
+            period: string;
+            /** Areas */
+            areas: number;
+        };
         /** IndicatorInfo */
         IndicatorInfo: {
             /** Label */
@@ -380,6 +465,11 @@ export interface components {
             /** Runs */
             runs: components["schemas"]["OpsRun"][];
             totals: components["schemas"]["OpsTotals"];
+            /**
+             * Indicators
+             * @default []
+             */
+            indicators: components["schemas"]["IndicatorFreshness"][];
         };
         /** OpsTotals */
         OpsTotals: {
@@ -489,6 +579,7 @@ export interface components {
             /** Trend */
             trend: components["schemas"]["TrendPoint"][];
             indicators: components["schemas"]["IndicatorInfo"] | null;
+            drought?: components["schemas"]["DroughtPanel"] | null;
         };
         /** ZoneInfo */
         ZoneInfo: {
@@ -731,6 +822,39 @@ export interface operations {
         parameters: {
             query: {
                 hazard: "drought" | "flood" | "heat" | "water";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    map_footprint_api_v1_map_footprint_get: {
+        parameters: {
+            query: {
+                hazard: "drought";
             };
             header?: never;
             path?: never;

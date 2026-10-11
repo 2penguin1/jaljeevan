@@ -24,7 +24,7 @@ test("map: zones load, the hazard switch changes the layer, a zone can be opened
   const feed = page.getByRole("complementary", { name: "Live feed" });
   await expect(feed.getByText("Water entered houses in Danapur, families moving to roofs")).toBeVisible();
   await feed.getByText("No tanker has come for nine days in Mohol").click();
-  await expect(page.getByRole("heading", { level: 1, name: "Mohol, Solapur" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Mohol taluka, Solapur" })).toBeVisible();
 });
 
 test("zones list → zone page shows the evidence and the arithmetic", async ({ page }) => {
@@ -32,11 +32,15 @@ test("zones list → zone page shows the evidence and the arithmetic", async ({ 
   await expect(page.getByRole("row")).toHaveCount(5); // header + one zone per hazard
   await page.getByRole("button", { name: "Drought" }).click();
   await expect(page).toHaveURL(/hazard=drought/);
-  await page.getByRole("row", { name: /Mohol, Solapur/ }).click();
-  await expect(page.getByRole("heading", { level: 1, name: "Mohol, Solapur" })).toBeVisible();
+  await page.getByRole("row", { name: /Mohol taluka, Solapur/ }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Mohol taluka, Solapur" })).toBeVisible();
   await expect(page.getByText("“Our taps are dry since last week”")).toBeVisible();
   await expect(page.getByText("<b>Our taps are dry</b> in Mohol", { exact: false })).toHaveCount(0); // title not shown as HTML
   await expect(page.getByRole("region", { name: "How the score adds up" })).toContainText("Confirmed by 3 independent sources.");
+  const data = page.getByRole("region", { name: "Measured drought data" });
+  await expect(data).toContainText("Indicative drought footprint");
+  await expect(data).toContainText("Extremely dry");
+  await expect(data).toContainText("Declared severe drought");
 });
 
 test("a zone that does not exist says so and links back", async ({ page }) => {
