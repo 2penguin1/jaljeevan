@@ -17,7 +17,11 @@ from app.integrations.ports import Translator
 from app.services.declaration_extractor import DeclarationExtractor
 
 _GR_CODE = re.compile(r"^(\d{8})\d{6,}$")
-_DROUGHT_WORDS = re.compile(r"दुष्काळ|दुष्काल|टंचाई|सूखा|drought|scarcity", re.I)
+# a declaration says so: "दुष्काळ जाहीर" / "declared drought-hit"; orders that only discuss drought (a review
+# committee, relief funds) must never load talukas
+_DROUGHT = r"(?:दुष्काळ|दुष्काल|सूखा|drought|scarcity)"
+_DECLARED = r"(?:जाहीर|घोषित|declar\w*)"
+_DECLARATION = re.compile(f"{_DROUGHT}.{{0,60}}?{_DECLARED}|{_DECLARED}.{{0,60}}?{_DROUGHT}", re.I | re.S)
 COLUMNS = ["state_code", "district", "taluka", "area_id", "declared_on", "severity", "order_ref", "source_url",
            "confidence", "source_text"]
 
@@ -37,7 +41,7 @@ def order_from_filename(name: str) -> tuple[date, str] | None:
 @dataclass
 class InboxResult:
     file: str
-    status: str            # extracted | not a drought order | unreadable
+    status: str            # extracted | not a drought declaration | unreadable
     declared_on: date | None = None
     order_ref: str | None = None
     accepted: int = 0
@@ -72,9 +76,9 @@ class DeclarationInbox:
         except Exception:  # noqa: BLE001 - a broken PDF is set aside, never stops the other files
             self._move(pdf, "skipped")
             return InboxResult(pdf.name, "unreadable", declared_on, ref)
-        if not any(_DROUGHT_WORDS.search(line) for line in lines):
+        if not _DECLARATION.search(" ".join(lines)):
             self._move(pdf, "skipped")
-            return InboxResult(pdf.name, "not a drought order", declared_on, ref)
+            return InboxResult(pdf.name, "not a drought declaration", declared_on, ref)
         extraction = DeclarationExtractor(TalukaMatcher(self.talukas_for(state)), self.translator).extract(
             lines, state_code=state, declared_on=declared_on, order_ref=ref, source_url=None)
         out = self.out_dir / f"{state}_{Path(pdf.name).stem}.csv"

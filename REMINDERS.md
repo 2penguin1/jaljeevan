@@ -22,6 +22,7 @@ Claude keeps this list up to date. Tick items off as you finish them.
 - [ ] **Rotate the Groq API key** (console.groq.com → API Keys). It was pasted in chat.
 
 ## Quality
+- [ ] **Look at 20 doubtful taluka names** from the 26 Sep drought order: `backend/app/data/declarations/MH_202609261117494941_check.csv`. Delete rows that are wrong; to correct one, type the right taluka name and empty its `area_id`. Then, from `backend/`: `uv run python -m app.cli.load_declarations app/data/declarations/MH_202609261117494941_check.csv`.
 - [ ] **Label about 60 posts** for the accuracy check. Claude exports them with `uv run python -m app.evals.export --n 60`; you fill in the `expected` fields.
 
 ## Code

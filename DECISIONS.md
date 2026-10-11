@@ -122,3 +122,14 @@ Simple notes on decisions Claude made for you, especially overnight. Newest at t
 - **Severity:** read straight from the Marathi words (गंभीर = severe, मध्यम = moderate), no translator needed. If an order doesn't say, the taluka is loaded as "moderate", the lowest declared level, and the order note says "severity not stated".
 - **Broken PDF letters:** Maharashtra's PDFs often come out with wrong letters (शिरूर becomes जशरूर, सांगोला becomes सांर्ोला). The matcher repairs these two patterns automatically, and keeps the original spelling too, so real names aren't damaged.
 
+- **First real order loaded (26 Sep 2026, 265 talukas):** 230 matched automatically and loaded; 20 doubtful names are in `backend/app/data/declarations/MH_202609261117494941_check.csv` for you to look at. The rest were too badly broken by the PDF to read safely.
+- **How I checked that the 230 are right:** the order lists how many talukas each district has. No district got more matches than the order lists, so no wrong taluka slipped in at the district level. I also read every match with a low score by hand.
+- **What made matching accurate on this order:**
+  - more broken-letter repairs seen in this order: ध written as र्, श written as ि, हिं written as सह;
+  - the district and division columns of the table ("6 नाशिक 10", a lone "ठाणे") are no longer read as talukas;
+  - a name that exists in two districts (Malegaon, Ashti, Kalamb) is settled by the names around it in the same row; otherwise it goes to your check list;
+  - renamed places are known: Dharashiv = Osmanabad, Chhatrapati Sambhajinagar = Aurangabad, Ahilyanagar = Ahmednagar;
+  - the order's way of writing suffixes is known: "उ. सोलापूर" = Solapur North, "नागपूर शहर" = Nagpur (Urban);
+  - two different talukas that read equally well are never guessed; they go to the check list.
+- **Only real declarations load talukas.** An order now has to *declare* drought ("दुष्काळ जाहीर" / "declared drought"). The 22 Sep order that only set up a ministers' committee had loaded 3 wrong talukas; I removed them and that order is now skipped.
+- **Live result now:** all 230 declared talukas are active drought zones (245 active in total), plus 22 water supply zones.

@@ -63,3 +63,82 @@ def test_names_broken_by_government_pdf_fonts_still_match():
         assert hit.area_id == area and hit.score >= m.ACCEPT, (broken, hit)
     assert m.match("जत").area_id == 14 and m.match("जत").score >= m.ACCEPT   # a real ज name is not "repaired" away
     assert m.match("मोहोळ").area_id == 15
+
+
+def test_the_real_maharashtra_order_spellings_match():
+    """Words exactly as they come out of the 26 Sep 2026 GR PDF (a font that mixes up न/ि and र्/ध)."""
+    names = ["Jamner", "Nandgaon", "Sinnar", "Nashik", "Karjat", "Dodamarg", "Malegaon", "Jalgaon", "Chalisgaon",
+             "Nevasa", "Parner", "Bhadgaon"]
+    m = TalukaMatcher([(i, n, f"D{i}") for i, n in enumerate(names)])
+    broken = {"जामिेर": "Jamner", "िांदगाव": "Nandgaon", "नसन्नर": "Sinnar", "नानशक": "Nashik", "कजधत": "Karjat",
+              "दोडामागध": "Dodamarg", "मालेगाव": "Malegaon", "जळगाव": "Jalgaon", "चाळीसगाव": "Chalisgaon",
+              "िेवासा": "Nevasa", "पारिेर": "Parner", "भडगाव": "Bhadgaon"}
+    for text, name in broken.items():
+        hit = m.match(text)
+        assert hit.name == name and hit.score >= m.ACCEPT, (text, hit)
+
+
+def test_more_real_order_spellings_and_english_sound_alikes():
+    names = ["Thane", "Shirpur", "Malshiras", "Georai", "Shevgaon", "Mangaon"]
+    m = TalukaMatcher([(i, n, f"D{i}") for i, n in enumerate(names)])
+    broken = {"ठार्े": "Thane",          # ण extracted as र्
+              "निरपूर": "Shirpur",       # शि extracted as नि
+              "माळनिरस": "Malshiras",
+              "गेवराई": "Georai",        # official English drops the v
+              "शेवगाव": "Shevgaon"}      # ...but keeps it here: the alternative must not hurt
+    for text, name in broken.items():
+        hit = m.match(text)
+        assert hit.name == name and hit.score >= m.ACCEPT, (text, hit)
+
+
+def test_repairs_never_auto_accept_a_coincidental_near_miss():
+    """Real errors from the 26 Sep GR: जालिा (=Jalna) tied Jaoli; र्ामणगाव (=Dhamangaon) looked like Mangaon."""
+    m = TalukaMatcher([(1, "Jalna", "Jalna"), (2, "Jaoli", "Satara"), (3, "Mangaon", "Raigarh"),
+                       (4, "Dhamangaon Railway", "Amravati")])
+    jalna = m.match("जालिा")                      # the raw spelling is impossible Devanagari: only repairs compete
+    assert (jalna.name, jalna.score >= m.ACCEPT) == ("Jalna", True)
+    dhamangaon = m.match("र्ामणगाव")              # broken र् = ध; official name has a suffix ("Railway")
+    assert (dhamangaon.name, dhamangaon.score >= m.ACCEPT) == ("Dhamangaon Railway", True)
+
+
+def test_a_first_word_alias_never_collides_with_another_taluka_or_district():
+    m = TalukaMatcher([(1, "Jalgaon", "Jalgaon"), (2, "Jalgaon (Jamod)", "Buldana"), (3, "Shirur", "Pune"),
+                       (4, "Shirur (Kasar)", "Bid")])
+    assert (m.match("जळगाव").name, m.match("जळगाव").score >= m.ACCEPT) == ("Jalgaon", True)
+    assert (m.match("शिरूर").name, m.match("शिरूर").score >= m.ACCEPT) == ("Shirur", True)
+
+
+def test_more_broken_glyphs_from_the_real_gr():
+    m = TalukaMatcher([(1, "Shevgaon", "Ahmednagar"), (2, "Hingoli", "Hingoli"), (3, "Sindewahi", "Chandrapur"),
+                       (4, "Nevasa", "Ahmednagar")])
+    for broken, name in (("िेवगाव", "Shevgaon"), ("सहगोली", "Hingoli"), ("ससदेवाही", "Sindewahi"),
+                         ("िेवासा", "Nevasa")):
+        hit = m.match(broken)
+        assert (hit.name, hit.score >= m.ACCEPT) == (name, True), broken
+
+
+def test_official_suffixes_rural_urban_north_south():
+    m = TalukaMatcher([(1, "Nagpur (Rural)", "Nagpur"), (2, "Nagpur (Urban)", "Nagpur"), (3, "Shahapur", "Thane"),
+                       (4, "Solapur North", "Solapur"), (5, "Solapur South", "Solapur"), (6, "Kamptee", "Nagpur")])
+    for text, name in (("िागपूर", "Nagpur (Rural)"), ("िागपूर िहर", "Nagpur (Urban)"),
+                       ("उ. सोलापूर", "Solapur North"), ("द. सोलापूर", "Solapur South")):
+        hit = m.match(text)
+        assert (hit.name, hit.score >= m.ACCEPT) == (name, True), text
+
+
+def test_a_broken_i_inside_a_word_can_be_sha_too():
+    m = TalukaMatcher([(1, "Washim", "Washim"), (2, "Wani", "Yavatmal"), (3, "Washi", "Osmanabad")])
+    assert (m.match("वािीम").name, m.match("वािीम").score >= m.ACCEPT) == ("Washim", True)
+    assert m.match("वािी").score < m.ACCEPT  # वाशी (Washi) or वानी (Wani): equally good, a neighbour or person decides
+
+
+def test_two_talukas_of_one_district_read_equally_well_are_not_guessed():
+    m = TalukaMatcher([(1, "Wani", "Yavatmal"), (2, "Arni", "Yavatmal")])
+    assert m.match("आणी").score < m.ACCEPT  # आर्णी with its reph lost: Arni and Wani are equally close
+    assert m.match("वणी").name == "Wani" and m.match("वणी").score >= m.ACCEPT
+
+
+def test_a_first_word_alias_must_not_look_like_another_taluka():
+    m = TalukaMatcher([(1, "Sindkhede", "Dhule"), (2, "Sindkhed Raja", "Buldana")])
+    hit = m.match("ससदखेडा")  # सिंदखेडा = Sindkhede (Dhule); "Sindkhed" alone must not mean Sindkhed Raja
+    assert hit.name == "Sindkhede" or hit.score < m.ACCEPT

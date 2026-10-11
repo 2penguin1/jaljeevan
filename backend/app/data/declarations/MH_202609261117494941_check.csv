@@ -1,0 +1,21 @@
+state_code,district,taluka,area_id,declared_on,severity,order_ref,source_url,confidence,source_text
+MH,Dhule,Sindkhede,1120909,2026-09-26,unknown,GR 202609261117494941,,82.4,ससदखेडा
+MH,Raigarh,Mangaon,1120982,2026-09-26,unknown,GR 202609261117494941,,76.9,र्रणगाव
+MH,Aurangabad,Soegaon,1121002,2026-09-26,unknown,GR 202609261117494941,,83.3,सोयगाव
+MH,Aurangabad,Khuldabad,1120926,2026-09-26,unknown,GR 202609261117494941,,84.2,खुलताबाद
+MH,Jalna,Jafferabad,1121069,2026-09-26,unknown,GR 202609261117494941,,73.7,जाफ्राबाद
+MH,Latur,Chakur,1120840,2026-09-26,unknown,GR 202609261117494941,,80.0,चाकू
+MH,Nanded,Kinwat,1121062,2026-09-26,unknown,GR 202609261117494941,,83.3,नकिवट
+MH,Nanded,Dharmabad,1120985,2026-09-26,unknown,GR 202609261117494941,,80.0,र्माबाद
+MH,Nanded,Naigaon (Khairgaon),1121063,2026-09-26,unknown,GR 202609261117494941,,83.3,िायगाव
+MH,Parbhani,Manwath,1121065,2026-09-26,unknown,GR 202609261117494941,,76.9,मािवत
+MH,Hingoli,Sengaon,1120817,2026-09-26,unknown,GR 202609261117494941,,83.3,सेिगाव
+MH,Satara,Wai,1120925,2026-09-26,unknown,GR 202609261117494941,,75.0,वसमत
+MH,Buldana,Jalgaon (Jamod),1120796,2026-09-26,unknown,GR 202609261117494941,,80.0,जळगावजामोद
+MH,Amravati,Chandur Railway,1120992,2026-09-26,unknown,GR 202609261117494941,,71.4,चांदरू
+MH,Amravati,Chandur Railway,1120992,2026-09-26,unknown,GR 202609261117494941,,71.4,चांदरु
+MH,Washim,Mangrulpir,1120799,2026-09-26,unknown,GR 202609261117494941,,76.2,मंगळूरपीर
+MH,Nagpur,Kamptee,1120899,2026-09-26,unknown,GR 202609261117494941,,76.9,कामठी
+MH,Bhandara,Lakhandur,1120736,2026-09-26,unknown,GR 202609261117494941,,84.2,लाखंदरू
+MH,Gondiya,Tirora,1121042,2026-09-26,unknown,GR 202609261117494941,,80.0,नतरोडा
+MH,Chandrapur,Nagbhir,1121020,2026-09-26,unknown,GR 202609261117494941,,80.0,िागनभड

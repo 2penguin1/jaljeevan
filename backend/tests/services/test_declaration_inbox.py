@@ -7,6 +7,9 @@ TALUKAS = [(1, "Mohol", "Solapur"), (2, "Akkalkot", "Solapur"), (3, "Barshi", "S
 DROUGHT_GR = ["महाराष्ट्र शासन, मदत व पुनर्वसन विभाग", "राज्यातील तालुक्यांमध्ये दुष्काळ जाहीर करण्याबाबत",
               "जिल्हा : सोलापूर", "१. मोहोळ   २. अक्कलकोट   ३. बार्शी"]
 OTHER_GR = ["कौशल्य विकास विभाग", "स्टार्टअप धोरण-२०२५ बाबत"]
+# mentions drought but declares nothing (the 22 Sep 2026 order forming a ministers' sub-committee)
+SUB_COMMITTEE_GR = ["दुष्काळजन्य परिस्थितीचा आढावा घेऊन उपाययोजना सुचविण्याबाबत मंत्रिमंडळ उपसमिती गठीत करणेबाबत.",
+                    "महाराष्ट्र शासन", "पाणी टंचाई व चारा टंचाई इत्यादी उपाय योजना सुचविण्यासाठी"]
 
 
 def make_inbox(tmp_path, texts: dict[str, list[str]]):
@@ -23,12 +26,14 @@ def test_official_file_names_give_the_order_date_and_number():
 
 
 def test_drought_orders_become_csv_files_and_move_to_processed(tmp_path):
-    box = make_inbox(tmp_path, {"202609251512341234.pdf": DROUGHT_GR, "202610091708267603.pdf": OTHER_GR})
+    box = make_inbox(tmp_path, {"202609251512341234.pdf": DROUGHT_GR, "202610091708267603.pdf": OTHER_GR,
+                                "202609231200288641.pdf": SUB_COMMITTEE_GR})
     results = {r.file: r for r in box.process(state="MH")}
     drought = results["202609251512341234.pdf"]
     assert drought.status == "extracted" and drought.accepted == 3 and drought.csv.exists()
     assert drought.declared_on == date(2026, 9, 25)
-    assert results["202610091708267603.pdf"].status == "not a drought order"
+    assert results["202610091708267603.pdf"].status == "not a drought declaration"
+    assert results["202609231200288641.pdf"].status == "not a drought declaration"
     assert (tmp_path / "inbox" / "processed" / "202609251512341234.pdf").exists()
     assert (tmp_path / "inbox" / "skipped" / "202610091708267603.pdf").exists()
     assert box.process(state="MH") == []  # nothing left to do: files are never read twice

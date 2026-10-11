@@ -112,3 +112,78 @@ def test_district_headings_are_found_even_when_the_pdf_font_breaks_them():
     result = DeclarationExtractor(TalukaMatcher(TALUKAS), None).extract(
         lines, state_code="MH", declared_on=date(2026, 9, 25), order_ref="GR", source_url=None)
     assert [(r["taluka"], r["area_id"]) for r in result.accepted] == [("Mohol", 1)]  # Solapur's, not Elsewhere's
+
+
+GR_TABLE = [
+    "मंत्रालय, मुंबई ४०० ०३२",                          # letterhead: must never become a taluka
+    "सन २०२6 च्या खरीप हंगामातील 265 तालुकयांमध्ये दुष्काळ जाहीर करुन",
+    "दिनांक : २५ सप्टेंबर, २०२6",
+    "महसलू निभाग अ.क्र. निल्ह ा",                        # table header (serial-number column)
+    "तालकु याांची नािे तालकु याांची सांख्या",
+    "बीड ,गेवराई, माजलगाव,",
+    "18 बीड परळी, आष्टी, पाटोदा, 6",                     # row number + district + first name, no comma
+    "एकूर् तालकु े 265",                                 # total line ends the table
+    "मुंबई येथे दिनांक",                                  # after the table: ignored
+]
+TABLE_TALUKAS = [(21, "Beed", "Beed"), (22, "Georai", "Beed"), (23, "Majalgaon", "Beed"), (24, "Parli", "Beed"),
+                 (25, "Ashti", "Beed"), (26, "Patoda", "Beed"), (27, "Mumbai", "Mumbai City"),
+                 (28, "Satara", "Satara"), (29, "Baramati", "Pune")]
+
+
+def test_only_the_annex_table_is_read_and_row_lines_are_split_into_names():
+    result = DeclarationExtractor(TalukaMatcher(TABLE_TALUKAS), None).extract(
+        GR_TABLE, state_code="MH", declared_on=date(2026, 9, 26), order_ref="GR", source_url=None)
+    assert {r["taluka"] for r in result.accepted} == {"Beed", "Georai", "Majalgaon", "Parli", "Ashti", "Patoda"}
+    assert result.check == []  # no prose words ("सप्टेंबर", the letterhead) reach the check list
+
+
+GR_DIVISIONS = [
+    "महसलू निभाग अ.क्र. निल्ह ा",
+    "1 ठाणे निरंक 0",                                   # district cell of a row with no talukas
+    "ठाणे",                                             # revenue-division label in the first column
+    "मालेगाव, िांदगाव,",
+    "6 िानिक 2",                                        # district cell (Nashik): Nashik taluka is NOT declared
+    "नानशक चाळीसगाव, सातारा",                           # division label joined to the first name
+    "धाराशिव, कळंब",                                    # Dharashiv is the new official name of Osmanabad
+    "शासन ननर्णय, क्रमाांक:- सनमती-2026/प्र.क्र.82/मदत-2",   # page header repeated on every annex page
+    "खिीप हांगाम-2026 -प्रथम कळ (Trigger-1) लाग ु झालेल्या तालकु याांची माहीती",
+    "4 रत्िानगरी रत्िानगरी,संगमेश्वर 2",                  # district cell, then the same name as a taluka
+    "घिसावंगी अंबड , जालिा परतूर,मंठा",                   # a namesake later in the list (missing comma)
+    "एकूर् तालकु े 5",
+]
+DIVISION_TALUKAS = [(31, "Thane", "Thane"), (32, "Malegaon", "Nashik"), (33, "Nandgaon", "Nashik"),
+                    (34, "Nashik", "Nashik"), (35, "Chalisgaon", "Jalgaon"), (36, "Satara", "Satara"),
+                    (37, "Osmanabad", "Osmanabad"), (38, "Kalamb", "Osmanabad"), (39, "Ratnagiri", "Ratnagiri"),
+                    (40, "Sangameshwar", "Ratnagiri"), (41, "Jalna", "Jalna"), (42, "Partur", "Jalna"),
+                    (43, "Ghansawangi", "Jalna"), (44, "Ambad", "Jalna"), (45, "Mantha", "Jalna"),
+                    (46, "Kagal", "Kolhapur"), (47, "Tala", "Raigarh")]
+
+
+def test_district_and_division_cells_never_auto_accept_their_namesake_taluka():
+    result = DeclarationExtractor(TalukaMatcher(DIVISION_TALUKAS), None).extract(
+        GR_DIVISIONS, state_code="MH", declared_on=date(2026, 9, 26), order_ref="GR", source_url=None)
+    assert {r["taluka"] for r in result.accepted} == {"Malegaon", "Nandgaon", "Chalisgaon", "Satara",
+                                                       "Osmanabad", "Kalamb", "Ratnagiri", "Sangameshwar", "Jalna",
+                                                       "Partur", "Ghansawangi", "Ambad", "Mantha"}
+    assert result.check == []  # district columns and page headers are not talukas: nothing for a person to check
+
+
+GR_SAME_NAMES = [
+    "महसलू निभाग अ.क्र. निल्ह ा",
+    "मालेगाव, बागलाण, कळवण,",                           # Malegaon exists in Nashik and Washim: neighbours say Nashik
+    "6 नाशिक 3",
+    "वर्धा, सेलू, देवळी,",
+    "29 वर्धा 4",
+    "आष्टी",                                            # Ashti exists in Beed and Wardha: lines around say Wardha
+    "एकूर् तालकु े 7",
+]
+SAME_NAME_TALUKAS = [(51, "Malegaon", "Nashik"), (52, "Malegaon", "Washim"), (53, "Baglan", "Nashik"),
+                     (54, "Kalwan", "Nashik"), (55, "Wardha", "Wardha"), (56, "Selu", "Wardha"),
+                     (57, "Selu", "Parbhani"), (58, "Deoli", "Wardha"), (59, "Ashti", "Bid"), (60, "Ashti", "Wardha")]
+
+
+def test_a_name_found_in_two_districts_is_settled_by_its_neighbours():
+    result = DeclarationExtractor(TalukaMatcher(SAME_NAME_TALUKAS), None).extract(
+        GR_SAME_NAMES, state_code="MH", declared_on=date(2026, 9, 26), order_ref="GR", source_url=None)
+    assert sorted(r["area_id"] for r in result.accepted) == [51, 53, 54, 55, 56, 58, 60]
+    assert result.check == []
