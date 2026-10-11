@@ -64,3 +64,10 @@ Claude keeps this list up to date. Tick items off as you finish them.
 - [ ] Real logins and roles (government, vendor, NGO) instead of the "Viewing as" switch and the shared demo code.
 - [ ] Notify invited vendors (SNS email or in-app) and real vendor onboarding; the 16 vendors are demo data.
 - [ ] Delivery tracking (trips done vs promised) and vendor reliability updated from it.
+
+## Full CRM — left for later
+- [ ] **Email alerts through AWS SNS** for vendors and officers (each address must confirm once). Ask before sending to real addresses.
+- [ ] **Change the demo password** after judging: edit `DEMO_PASSWORD` in `backend/.env`, run `put_app_secret.py`, then re-run the seed task (it rotates existing accounts).
+- [ ] **Real unit costs** for long-term plans (state schedule of rates) instead of the indicative demo numbers in `backend/app/domain/plan_menu.py`.
+- [ ] Password reset by email, and an admin screen to add officer/vendor/NGO accounts (today they come from the seed).
+- [ ] Live push for notifications (today the bell checks every 15 seconds).

@@ -188,3 +188,36 @@ You asked me to decide the rest myself and build it. My decisions, in simple poi
 - **No AI here:** every number is arithmetic in code.
 - **All 16 vendors are invented demo businesses** and are labelled "(demo)".
 - **Left for later:** real accounts and roles, email or app notifications to vendors, NGO campaigns, long-term plans.
+
+## Full CRM, end to end (2026-10-11, late night)
+You asked me to decide and build it all. In simple points:
+- **Real logins replace the demo switch.**
+  - Passwords are stored only as bcrypt hashes.
+  - Your session is a signed token in a cookie that page scripts cannot read.
+  - Only citizens can sign up themselves, and always as "citizen". Officer, vendor and NGO accounts are given out by us.
+  - Five wrong passwords in a minute from one place pause that place, not the real user.
+- **Demo accounts** (the password is `DEMO_PASSWORD` in `backend/.env`; it is also in Secrets Manager):
+
+  | Email | Role |
+  |---|---|
+  | `officer@relief.demo` | Relief officer |
+  | `akkalkot@vendor.demo`, `solapur@vendor.demo`, `latur@vendor.demo` | Tanker vendors |
+  | `ngo@relief.demo` | NGO |
+
+- **Negotiation:**
+  - Who acts is decided by the account. A vendor can only answer its own bid.
+  - Messages in each bid thread; "raise price" for every open bid.
+  - If two people act at once, one wins and the other is asked to reload.
+  - **Bids are confidential:** the public sees the tender and the invited vendors, but only the officer and that vendor see the offers and messages.
+- **Vendor inbox:** needs your answer / waiting for the government / closed.
+- **Notifications:** a bell with private alerts. A new tender goes to the invited vendors, a reply goes to the other side, and pledges and sign-ups go to the NGO. Email through AWS SNS is left for later, because every address must click a confirmation link.
+- **AI relief brief:**
+  - The AI writes only words: a short situation summary, and actions picked from a fixed list.
+  - Code computes every number (people, kL a day, trips, price, budget) and removes any sentence in which the AI put a number.
+  - The officer approves or rejects. Approving publishes the tender.
+- **NGO side:** campaigns with pledges (promises only, no money is taken) and volunteer tasks with limited places.
+- **Long-term plans:**
+  - Options come from a fixed menu.
+  - Quantities and costs are computed in code from the zone size. They are clearly labelled **indicative**, because the unit costs are demo assumptions, not official rates.
+  - The AI writes the title and summary (no numbers). The officer approves, and there is a printable one-pager.
+- **Two fresh security reviews** were done. Every serious finding was fixed with a test: the double-action race, locking people out, "infinite" numbers, long passwords, and inputs echoed back in errors.

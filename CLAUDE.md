@@ -87,6 +87,11 @@ The pipeline (`services/pipeline.py`) runs these stages in order:
 3. **`GeocodeStage`:** a `ResolverChain` of `GazetteerResolver` then `LocatorResolver`, run in two passes.
 4. **`ZoneStage`:** `ZoneDetectionService` does PostGIS clustering, stable zone identity, `ZoneScorer`, `HazardPolicies` and `ZoneStateMachine`, and raises `ZoneEscalated` events.
 
+CRM (relief response), all behind cookie sessions (`core/security.py`: bcrypt + HS256 JWT in an httpOnly cookie; `api/dependencies.py`: `current_user`, `optional_user`, `require_role`):
+- **Auth** `api/v1/endpoints/auth.py`: login (brake per email + address), logout, me, citizen-only signup. Accounts come from `cli/seed_crm.py` with `DEMO_PASSWORD`.
+- **Tenders** `TenderService`: relief need (`domain/relief.py`), vendor matching (`domain/matching.py`), bid rules (`domain/bids.py`); the side comes from the account; bid rows are locked (`SELECT … FOR UPDATE`) and actions carry `expected_version`; offers and messages are visible only to the officer and that bid's vendor.
+- **Notifications** `NotificationService.tell_org` (private, never the actor); **briefs** `BriefService` and **plans** `PlanService` (AI words only, `domain/playbook.without_numbers` strips digits; numbers from code; `domain/plan_menu.py` indicative costs); **community** `CommunityService` (campaigns, pledges, volunteer tasks with locked slots).
+
 Hazards and zoning (`domain/hazards.py`, `HazardPolicy.zoning`):
 - **water** (supply failure), **flood**, **heat**: `posts` zoning, clusters of posts as before.
 - **drought**: `footprint` zoning. `DroughtAssessor` applies `domain/drought.py` (GoI Drought Manual: rainfall trigger from SPI, soil anomaly, official declarations) per taluka (`admin_areas.level='subdistrict'`). Data alone gives watch; posts inside the taluka (drought, or water in mostly rural talukas) or a declaration make it active. Zone population = people in the taluka's dry grid cells.
