@@ -1,0 +1,13 @@
+.venv
+.env
+.env.*
+**/__pycache__
+.pytest_tmp
+.pytest_cache
+tests
+data/raw
+openapi.json
+app/data/seed/*.geojson
+app/data/seed/*.txt
+app/data/declarations/inbox
+Dockerfile

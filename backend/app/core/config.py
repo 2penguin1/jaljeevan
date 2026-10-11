@@ -1,3 +1,6 @@
+from urllib.parse import quote
+
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -30,6 +33,19 @@ class Settings(BaseSettings):
     hf_token: str | None = None  # Hugging Face read token, for the gated IndicTrans2 model
     max_post_age_days: int = 30
     admin_token: str | None = None  # admin API stays locked until ADMIN_TOKEN is configured
+    # on AWS the database password arrives as separate values from Secrets Manager; DATABASE_URL is built from them
+    db_host: str | None = None
+    db_port: int = 5432
+    db_name: str = "jal"
+    db_user: str | None = None
+    db_password: str | None = None
+
+    @model_validator(mode="after")
+    def _database_url_from_parts(self) -> "Settings":
+        if self.db_host and self.db_user and self.db_password:
+            self.database_url = (f"postgresql+psycopg://{quote(self.db_user, safe='')}:{quote(self.db_password, safe='')}"
+                                 f"@{self.db_host}:{self.db_port}/{self.db_name}")
+        return self
 
 
 settings = Settings()
