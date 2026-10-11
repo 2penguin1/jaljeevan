@@ -27,7 +27,10 @@ Run these from `backend/` unless noted.
 - **All tests:** `uv run pytest -q`
 - **One test:** `uv run pytest tests/services/test_zone_detection.py::test_hazards_are_kept_separate -q`. Tests live in `tests/{domain,services,integrations,api}`.
 - **Load geography (one-time, ~6 min):** `uv run python -m app.cli.seed_geo`. Data files go in `app/data/seed/`; that folder's README lists the download URLs.
-- **Pipeline once:** `uv run python -m app.cli.run_pipeline`. Options: `--skip ingest|classify|geocode|zones` and `--no-locator`.
+- **Pipeline once:** `uv run python -m app.cli.run_pipeline`. Options: `--skip ingest|indicators|classify|geocode|zones` and `--no-locator`.
+- **Drought data:** `seed_geo` also loads talukas (`india_subdistrict.geojson`, its own guard) and the pipeline's `indicators` stage downloads CHIRPS SPI + GDO soil anomaly only when a newer period exists (WorldPop raster `ind_pop_2025_..._1km...tif` in `app/data/seed/`).
+- **After a taxonomy hazard change:** `uv run python -m app.cli.retag_hazards` (recomputes `signals.hazards`, no AI calls).
+- **Official drought declarations:** `uv run python -m app.cli.extract_declarations --pdf GR.pdf --state MH --date YYYY-MM-DD` (or `--text list.txt --lang en`) writes a CSV + a `_check.csv` to review; then `uv run python -m app.cli.load_declarations <csv>`. Marathi severity words use local IndicTrans2: `uv sync --extra indic` + `HF_TOKEN` (gated model).
 - **API:** `uv run fastapi dev` (entrypoint `app.main:app`). Admin routes `/admin/pipeline/*` need the header `X-Admin-Token`.
 - **Evals:**
   - `uv run python -m app.evals.export --n 60`, then hand-label the output into `app/evals/gold.jsonl`;
@@ -71,10 +74,16 @@ Layers, per the LLD:
   - `/api/v1/live` is SSE, fed by `LiveEventRelay`: one Postgres `LISTEN` per process fans out to per-client queues.
 
 The pipeline (`services/pipeline.py`) runs these stages in order:
-1. **`IngestStage`:** fetchers, `IngestionService`, weather.
+1. **`IngestStage`:** fetchers, `IngestionService`, weather. Then **`IndicatorStage`:** `IndicatorRefreshService` writes per-taluka SPI, soil anomaly and people-in-dry-cells to `area_indicators` (fresh-period check; each source isolated) and the IMD district cross-check.
 2. **`ClassifyStage`:** `ClassificationService` sends batches of 10 to Bedrock; `EvidenceValidator` keeps only verbatim quotes.
 3. **`GeocodeStage`:** a `ResolverChain` of `GazetteerResolver` then `LocatorResolver`, run in two passes.
 4. **`ZoneStage`:** `ZoneDetectionService` does PostGIS clustering, stable zone identity, `ZoneScorer`, `HazardPolicies` and `ZoneStateMachine`, and raises `ZoneEscalated` events.
+
+Hazards and zoning (`domain/hazards.py`, `HazardPolicy.zoning`):
+- **water** (supply failure), **flood**, **heat**: `posts` zoning, clusters of posts as before.
+- **drought**: `footprint` zoning. `DroughtAssessor` applies `domain/drought.py` (GoI Drought Manual: rainfall trigger from SPI, soil anomaly, official declarations) per taluka (`admin_areas.level='subdistrict'`). Data alone gives watch; posts inside the taluka (drought, or water in mostly rural talukas) or a declaration make it active. Zone population = people in the taluka's dry grid cells.
+- Every zone's population comes from the WorldPop grid inside its own shape (`PopulationGrid` port), gazetteer as fallback.
+- Schema changes to existing tables go in `core/schema_patches.py` (idempotent SQL run by `init_db`); there are no migrations.
 
 Known limits:
 - Social sources use paid pay-per-result Apify actors (Reddit is `harshmaur/reddit-scraper`, about $2.2 per 1,000 posts; X is `kaitoeasyapi/...`, about $0.25 per 1,000 posts). Per-run caps keep a run at roughly $0.2; the user's Apify balance is about $8.

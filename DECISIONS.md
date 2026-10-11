@@ -67,3 +67,35 @@ Simple notes on decisions Claude made for you, especially overnight. Newest at t
   - the district tint can be up to 10 minutes stale after a run;
   - a few tiny cleanups (timers, caching, a line-ending settings file).
 - **Branch not merged yet.** All P3 work is on `feat/p3-frontend` (nothing pushed, nothing deployed). Tell me "merge" and I'll merge it into `main` locally.
+
+## Drought footprint (2026-10-11)
+- **Drought is now decided by measured data, per taluka**, using the Government of India Drought Manual rules:
+  - **Rain test:** a very dry last month (SPI −1 or below), or a severely dry last 3 months (SPI −1.5 or below).
+  - **Soil test:** the Copernicus soil moisture anomaly.
+  - **Official declarations** lift a taluka to at least the declared level.
+- **News can no longer make a drought zone by itself.** "Solapur district" (one Times of India article) is gone. It became Akkalkot, Mangalvedhe, Sangole and Solapur South talukas.
+- **Data alone gives "watch", not "active".** The Drought Manual asks for ground checks before declaring, so a zone goes active only when posts from that taluka confirm it, or the state has declared it. Dry talukas with no reports show as shading on the map, not as zones. (Before this, data alone made 1,144 active zones.)
+- **People affected = people living in the dry parts of the taluka** (WorldPop 2025, about 1 km grid), split urban and rural. Every other zone also counts only people inside its own shape (fixes "a few Hyderabad colonies = all of Hyderabad").
+- **Water supply is a new, 4th hazard** (violet). City tap and tanker complaints go there.
+  - They count as drought evidence only in mostly rural talukas, where dry wells really follow the rain.
+  - That's why Chennai is a water supply problem plus a "watch" drought, not an active drought.
+- **Data sources:**
+  - **Rainfall:** CHIRPS SPI (UCSB), every 5 days.
+  - **Soil:** Copernicus GDO, every 10 days, about 3 weeks behind, so soil data up to 30 days old is still used.
+  - **Population:** WorldPop 2025.
+  - **Talukas:** geoBoundaries (6,810 matched to districts).
+  - All free, no login. They're not on AWS; the daily refresh can run on AWS Lambda later.
+- **IMD district rainfall is only a cross-check**, and it's ignored in a season's first 3 weeks. Right now the post-monsoon season started on 1 Oct, so every district reads −100%, which is meaningless.
+- **Official declarations:** a new tool reads state orders.
+  - Marathi taluka names are converted to English letters and matched, with unsure matches put on a list for you to check.
+  - Severity words are translated by **IndicTrans2**, which runs locally. It needs your free Hugging Face token (see REMINDERS.md).
+  - I could not download the Maharashtra order myself (its website has a captcha), so the declarations table is empty until you give me the PDF or the lists.
+- **Bugs caught by running it on real data:**
+  - Saving data for 6,800 talukas hit a database limit, so it now saves in batches.
+  - Data alone was making active zones.
+  - IMD's new-season numbers were wrong.
+  - Chennai's tap complaints were turning it into a drought.
+
+  Each one now has a test.
+- **Speed:** a pipeline run takes about 30 seconds when the data hasn't changed, about 3 minutes when new rainfall/soil files arrive.
+
