@@ -17,6 +17,10 @@ Claude keeps this list up to date. Tick items off as you finish them.
   4. Put it in `backend/.env` as `HF_TOKEN=...` (never in chat). Then tell Claude.
   - **Why:** the model is "gated", so it only downloads after you accept its terms. Until then, drought orders still work through name matching, and only the sentence translation waits.
 
+## AWS deploy
+- [ ] **Remove the AWS stack after judging** so credits are not used up: `cd infra && npx cdk destroy --profile spice` (about $60–65/month while it runs). The database leaves a final snapshot; delete it in the RDS console if not needed.
+- [ ] **After rotating the Groq / Apify keys**, update `backend/.env` and run `cd backend && uv run python ../infra/scripts/put_app_secret.py`, then restart the API service (ECS → service → Force new deployment).
+
 ## Security (after the hackathon)
 - [ ] **Rotate the Apify API token** (apify.com → Settings → API & Integrations). It was pasted in chat.
 - [ ] **Rotate the Groq API key** (console.groq.com → API Keys). It was pasted in chat.

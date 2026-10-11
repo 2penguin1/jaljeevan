@@ -158,3 +158,21 @@ You asked me to decide the rest myself and build it. My decisions, in simple poi
   - 53 articles talk about drought but give no names; 7 had lists that were not declarations (for example "left off the list", a demand letter) and were correctly skipped; 10 could not be downloaded (ANI blocks robots, one site rate-limited us). They get one retry tomorrow.
   - **Nothing declared yet, on purpose:** only one website printed the names, and the rule needs two. 35 Karnataka talukas now wait; they are on your review list (`declaration_review`).
 - **Final check by a fresh reviewer:** it found one serious problem (a single broken PDF could stop the whole watch and make it re-download everything on every run) and five important ones (listed above as fixed). All fixed, each with a test. Left for later (small): names with initials like "H.D. Kote" can cut a list short (missed names, never wrong ones); checking where a link redirects to before we deploy on AWS.
+
+## Deployed on AWS (2026-10-11, evening)
+- **Live site:** https://d77gmqy6y3kav.cloudfront.net (Mumbai region, account ending 8840).
+- **Built as code** with AWS CDK (`infra/`). One command deploys and one removes it.
+- **What runs where:**
+  - website: S3 + CloudFront;
+  - API: ECS Fargate behind a load balancer;
+  - database: RDS PostgreSQL with PostGIS, in a private network only the API can reach;
+  - pipeline: twice a day (05:30 and 17:30 IST), started by EventBridge;
+  - keys: Secrets Manager;
+  - AI: Amazon Bedrock (Nova Lite) as a fallback after Groq;
+  - raw posts: archived in S3.
+- **Cheaper choices:**
+  - no NAT gateway (saves about $35 a month); the database stays private anyway;
+  - one container image for both the API and the pipeline;
+  - no Step Functions; a scheduled task does the same job today.
+- **Data:** the local database (all zones, declarations, drought data, posts) was copied up once. From now on the cloud pipeline adds new data by itself.
+- **Cost:** about $60–65 a month from the $128 credits. Remove it after judging.
